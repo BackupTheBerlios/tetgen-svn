@@ -746,13 +746,24 @@ static int minus1mod3[3];
 // org(), dest(), apex(), oppo() -- return the origin, destination, apex,
 //   and opposite vertices of the triface.
     
-#define org(t) ((point) (t).tet[locver2org[(t).loc][(t).ver] + 4])
+#define org(t) (point) (t).tet[locver2org[(t).loc][(t).ver] + 4]
 
-#define dest(t) ((point) (t).tet[locver2dest[(t).loc][(t).ver] + 4])
+#define dest(t) (point) (t).tet[locver2dest[(t).loc][(t).ver] + 4]
 
-#define apex(t) ((point) (t).tet[locver2apex[(t).loc][(t).ver] + 4])
+#define apex(t) (point) (t).tet[locver2apex[(t).loc][(t).ver] + 4]
 
-#define oppo(t) ((point) (t).tet[loc2oppo[(t).loc] + 4])
+#define oppo(t) (point) (t).tet[loc2oppo[(t).loc] + 4]
+
+#define setorg(t, p) \
+  (t).tet[locver2org[(t).loc][(t).ver] + 4] = (tetrahedron) (p)
+
+#define setdest(t, p) \
+  (t).tet[locver2dest[(t).loc][(t).ver] + 4] = (tetrahedron) (p)
+
+#define setapex(t, p) \
+  (t).tet[locver2apex[(t).loc][(t).ver] + 4] = (tetrahedron) (p)
+
+#define setoppo(t, p) (t).tet[loc2oppo[(t).loc] + 4] = (tetrahedron) (p)
 
 // esym(), enext(), enext2() -- primitives for moving edges in face.
 //   The face remains the same.
@@ -760,21 +771,21 @@ static int minus1mod3[3];
 #define esym(t1, t2) \
   (t2).tet = (t1).tet; (t2).loc = (t1).loc;\
   (t2).ver = (t1).ver + (((t1).ver & 01) ? -1 : 1)
-    
+
 #define esymself(t) (t).ver += (((t).ver & 01) ? -1 : 1)
-    
+
 #define enext(t1, t2) \
   (t2).tet = (t1).tet; (t2).loc = (t1).loc;\
   (t2).ver = ve[(t1).ver]
-    
+
 #define enextself(t) (t).ver = ve[(t).ver]
-    
+
 #define enext2(t1, t2) \
   (t2).tet = (t1).tet; (t2).loc = (t1).loc;\
   (t2).ver = ve[ve[(t1).ver]]
-    
+
 #define enext2self(t) (t).ver = ve[ve[(t).ver]]
-    
+
 // enextfnext(), enext2fnext() -- primitives for moving faces in tet.
 //   the tetrahedron remains the same. 
 // Note: The input edge version is in {0, 2, 4}.
@@ -789,7 +800,7 @@ static int minus1mod3[3];
   iptr = &(locver2nextf[(t).loc * 6 + (t).ver]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
-    
+
 #define enextfnext(t1, t2) \
   iptr = &(locver2nextf[(t1).loc * 6 + ve[(t1).ver]]);\
   (t2).tet = (t1).tet;\
@@ -800,7 +811,7 @@ static int minus1mod3[3];
   iptr = &(locver2nextf[(t).loc * 6 + ve[(t).ver]]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
-    
+
 #define enext2fnext(t1, t2) \
   iptr = &(locver2nextf[(t1).loc * 6 + ve[ve[(t1).ver]]]);\
   (t2).tet = (t1).tet;\
@@ -811,7 +822,7 @@ static int minus1mod3[3];
   iptr = &(locver2nextf[(t).loc * 6 + ve[ve[(t).ver]]]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
-    
+
 // fnext() -- given an edge (i, j) of a face (i, j, k1) = t1, find the
 //   next face t2 in the face ring of (i, j), i.e. a face (i, j, k2),
 //   where (i, j, k1) and (i, j, k2) belong to two tetrahedra.
@@ -863,7 +874,7 @@ void fnextself(triface& t) {
     }
   }
 }
-    
+
 // bond() -- to setup the connections between 't1.loc' <==> 't2.loc'.
 //   From t1 --> t2, we bond the edge in 't2' corresponding to the 0-th
 //   edge in 't1', and vice versa for t1 <-- t2.  
@@ -888,7 +899,7 @@ void bond(triface& t1, triface& t2) {
   // t1 <-- t2
   t2.tet[t2.loc] = encode(t1);
 }
-    
+
 // infect(), infected(), uninfect() -- primitives to flag or unflag a
 //   tetrahedron. The last fourth bit of the pointer to an adjacent
 //   subface is flagged (1) or unflagged (0).
@@ -896,12 +907,16 @@ void bond(triface& t1, triface& t2) {
 //   it assumes that all shellfaces are aligned to 16-byte boundaries.
 
 #define infect(t) \
-  t.tet[8] = (tetrahedron) ((unsigned long) t.tet[8] | (unsigned long) 8l)
+  (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | (unsigned long) 8l)
 
 #define uninfect(t) \
-  t.tet[8] = (tetrahedron)((unsigned long) t.tet[8] | ~(unsigned long) 8l)
+  (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | ~(unsigned long) 8l)
     
-#define infected(t) (((unsigned long) t.tet[8] & (unsigned long) 8l) != 0)
+#define infected(t) ((unsigned long) (t).tet[8] & (unsigned long) 8l) != 0
+
+// ishulltet()  -- return true if t is a hull tetrahedron.
+
+#define ishulltet(t) (t).tet[7] == (tetrahedron) dummypoint
 
 // elemattribute() -- to check or set element attributes.
 
@@ -957,6 +972,22 @@ void bond(triface& t1, triface& t2) {
 #define point2tet(pt) ((tetrahedron *) (pt))[point2tetindex]
     
 #define point2ppt(pt) (point) ((tetrahedron *) (pt))[point2tetindex + 1]
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Linear algebra operators.                                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+#define NORM2(x, y, z) (x) * (x) + (y) * (y) + (z) * (z)
+
+#define DIST(p1, p2) \
+  sqrt(NORM2((p2)[0] - (p1)[0], (p2)[1] - (p1)[1], (p2)[2] - (p1)[2]))
+
+#define CROSS(v1, v2, n) \
+  (n)[0] =   (v1)[1] * (v2)[2] - (v2)[1] * (v1)[2];\
+  (n)[1] = -((v1)[0] * (v2)[2] - (v2)[0] * (v1)[2]);\
+  (n)[2] =   (v1)[0] * (v2)[1] - (v2)[0] * (v1)[1]
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1234,7 +1265,7 @@ void badfacedealloc(memorypool*, badface*);
 badface *badfacetraverse(memorypool*);
 void pointdealloc(point);
 point pointtraverse();
-void maketetrahedron(memorypool*, tetrahedron*);
+void maketetrahedron(memorypool*, triface*);
 void makepoint(point*);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1249,6 +1280,21 @@ void makepoint(point*);
 unsigned long randomnation(unsigned long choices);
 enum locateresult locate(point searchpt, triface* searchtet);
 enum locateresult preciselocate(point searchpt, triface* searchtet);
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Functions for generating Delaunay tetrahedralizations.                    //
+//                                                                           //
+// Bowyer and Watson's incrmental insertion algorithm [Bowyer81, Watson81],  //
+// and Edelsbrunner and Shah's incrmental flip algorithm [Edelsbrunner96].   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void initialDT(point pa, point pb, point pc, point pd);
+void inserthullvertex(enum locateresult loc, point insertpt, triface* hulltet);
+void bowyerwatsoninsert(point insertpt, triface* firsttet);
+void flipinsert(point insertpt, triface* firsttet);
+void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

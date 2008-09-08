@@ -65,11 +65,14 @@ memorypool.o:	memorypool.cxx
 ptloc.o:	ptloc.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c ptloc.cxx
 
+delaunay.o:	delaunay.cxx
+	$(CXX) -I./ $(CXXFLAGS) -c delaunay.cxx
+
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o behavior.o memorypool.o ptloc.o predicates.o
-	ar r libtet.a io.o behavior.o memorypool.o ptloc.o predicates.o
+tetlib:	io.o behavior.o memorypool.o ptloc.o delaunay.o predicates.o
+	ar r libtet.a io.o behavior.o memorypool.o ptloc.o delaunay.o predicates.o
 
 clean:
 	$(RM) *.o *.a *~

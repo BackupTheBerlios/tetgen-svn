@@ -3,8 +3,6 @@
 
 #include "tetgen.h"
 
-#define NORM2(x, y, z) (x) * (x) + (y) * (y) + (z) * (z)
-
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // randomnation()    Generate a random number between 0 and 'choices' - 1.   //
@@ -355,7 +353,7 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
             // Go to the face opposite to origin.
             enextfnextself(*searchtet);
             if (oridest == 0) {
-              enextself(*searchtet);
+              enextself(*searchtet); // edge apex->oppo
               return ONEDGE;
             }
             if (oriapex == 0) {

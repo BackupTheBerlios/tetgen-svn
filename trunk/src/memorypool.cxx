@@ -696,15 +696,16 @@ void tetgenmesh::initializepools()
   wtype = (sizeof(REAL) >= sizeof(tetrahedron)) ? FLOATINGPOINT : POINTER;
   // Initialize the pool of vertices.
   pointpool = new memorypool(ptsize, VERPERBLOCK, wtype, 0);
+  
+  // Initialize spaces for 'dummypoint'.
+  dummypoint = new REAL[(ptsize + sizeof(REAL) - 1) / sizeof(REAL)];
+  dummypoint[0] = dummypoint[1] = dummypoint[2] = dummypoint[3] = 0.0;
+  pointmark(dummypoint) = -1;
 
   // The number of bytes occupied by a tetrahedron.  There are 4 pointers
-  //   to other tetrahedra, 4 pointers to corners, and possibly 6 pointers
-  //   to subfaces (and subsegments).
-  elesize = (8 + b->useshelles * 6) * sizeof(tetrahedron);
-  // If Voronoi diagram is wanted, make sure we have additional space.
-  if (b->voroout && (b->useshelles == 0)) {
-    elesize = (8 + 4) * sizeof(tetrahedron);
-  }
+  //   to other tetrahedra, 4 pointers to corners, and possibly 4 pointers
+  //   to subfaces (or 4 face markers used for flips).
+  elesize = 12 * sizeof(tetrahedron);
   // The index within each element at which its attributes are found, where
   //   the index is measured in REALs. 
   elemattribindex = (elesize + sizeof(REAL) - 1) / sizeof(REAL);
@@ -732,12 +733,14 @@ void tetgenmesh::initializepools()
   if (b->order == 2) {
     elesize = (highorderindex + 1) * sizeof(tetrahedron);
   }
-  // Having determined the memory size of an element, initialize the pool.
+  // If -p option is used, make sure we have additional space for saving
+  //   subsegments attached to the edges of tetrahedra.
+  if (b->plc && (elesize / sizeof(tetrahedron) < 14)) {
+    elesize = 14 * sizeof(tetrahedron);
+  }
+  // Having determined the memory size of an element, initialize the pools.
   tetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
-  
-  // Initialize spaces for 'dummypoint'.
-  dummypoint = new REAL[4 + in->numberofpointattributes];
-  dummypoint[0] = dummypoint[1] = dummypoint[2] = dummypoint[3] = 0.0;
+  hulltetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -873,20 +876,22 @@ tetgenmesh::point tetgenmesh::pointtraverse()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::maketetrahedron(memorypool* pool, tetrahedron *newtet)
+void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
 {
   int i;
 
-  newtet = (tetrahedron *) pool->alloc();
-  for (i = 0; i < 8; i++) {
-    newtet[i] = (tetrahedron) NULL;
+  newtet->tet = (tetrahedron *) pool->alloc();
+  for (i = 0; i < 12; i++) {
+    newtet->tet[i] = (tetrahedron) NULL;
   }
   for (i = 0; i < in->numberoftetrahedronattributes; i++) {
-    elemattribute(newtet, i) = 0.0;
+    elemattribute(newtet->tet, i) = 0.0;
   }
   if (b->varvolume) {
-    volumebound(newtet) = -1.0;
+    volumebound(newtet->tet) = -1.0;
   }
+  newtet->loc = 0;
+  newtet->ver = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
