@@ -81,6 +81,69 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// bowyerwatsoninsert()    Insert a point by Bowyer-Watson algorithm.        //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
+{
+  list *cavetetlist, *cavebdrylist;
+  triface *cavetet, neightet;
+  point pa, pb, pc, pd;
+  REAL sign, ori;
+  bool enqflag;
+  int i;
+
+  // Initialize working lists.
+  cavetetlist = new list(sizeof(triface));
+  cavebdrylist = new list(sizeof(triface));
+
+  // Collect all non-Delaunay tetrahedra. Start from 'firsttet', do a
+  //   breath-first search in its adjacent tetrahedra.
+  infect(*firsttet);
+  cavetetlist->append(firsttet);
+  for (i = 0; i < cavetetlist->len(); i++) {
+    cavetet = (triface *) cavetetlist->get(i);
+    for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
+      sym(*cavetet, neightet);
+      enqflag = false;
+      if (neightet.tet != NULL) { 
+        pa = (point) neightet.tet[4];
+        pb = (point) neightet.tet[5];
+        pc = (point) neightet.tet[6];
+        pd = (point) neightet.tet[7];
+        if (pd == dummypoint) {
+          // It is a hull tet. Check the following two cases:
+          //   (1) its base face is visible by 'insertpt'. This is the case
+          //       when 'insertpt' lies outside the hull face;
+          //   (2) its base face is coplanar with 'insertpt'.  This is the
+          //       case when 'insertpt' lies just on the face.
+          // In both cases, the cuurent convex hull need to be updated.
+          ori = orient3d(pa, pb, pc, insertpt);
+          enqflag = (ori <= 0.0);
+        } else {
+          // A normal tet.
+          sign = insphere(pa, pb, pc, pd, insertpt);
+          enqflag = (sign < 0.0);
+        }
+      } // if (neightet.tet != NULL)
+      if (enqflag) {
+        // A non-Delaunay tet or a dead hull tet.
+        infect(neightet);
+        cavetetlist->append(&neightet);
+      } else {
+        // Found a boubdary face of the cavity.
+        cavebdrylist->append(cavetet);
+      }
+    } // for (cavetet->loc = 0;
+  } // for (i = 0;
+  
+  delete cavetetlist;
+  delete cavebdrylist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // incrementaldelaunay()    Form a Delaunay tetrahedralization by increment- //
 //                          ally inserting vertices.                         //
 //                                                                           //
@@ -191,11 +254,13 @@ void tetgenmesh::incrementaldelaunay()
   }
 
   for (i = 4; i < in->numberofpoints; i++) {
-    
-    // Locate the inserting point in DT.
+    // Locate the point in DT.
     searchtet.tet = NULL;
     ptloc = locate(permutarray[i], &searchtet);
+    // Insert the point by Bowyer-Watson algorithm.
+    bowyerwatsoninsert(permutarray[i], &searchtet);
     
+    /*
     // Update the convex hull if the new point lies outside of (or on) the
     //   convex hull of the old DT.
     if (ptloc == OUTSIDE) {
@@ -219,7 +284,7 @@ void tetgenmesh::incrementaldelaunay()
         fnext(searchtet, neightet);
       }
     }
-    
+    */
 
   } // for (i = 4; i < in->numberofpoints; i++)
 

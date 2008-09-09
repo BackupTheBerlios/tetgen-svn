@@ -1061,6 +1061,7 @@ class list {
   int  items, maxitems, expandsize;
 
   void *operator[](int i) { return (void *) (base + i * itembytes); }
+  void *get(int i) {return (void *) (base + i * itembytes); }
   void clear() { items = 0; }
   int  len() { return items; }
   void *append(void* appitem);
@@ -1291,7 +1292,6 @@ enum locateresult preciselocate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-void inserthullvertex(enum locateresult loc, point insertpt, triface* hulltet);
 void bowyerwatsoninsert(point insertpt, triface* firsttet);
 void flipinsert(point insertpt, triface* firsttet);
 void incrementaldelaunay();
