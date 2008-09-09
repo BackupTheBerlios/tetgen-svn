@@ -889,7 +889,9 @@ void bond(triface& t1, triface& t2) {
     if (org(t2) == dest(t1)) break;
     enextself(t2);
   }
+#ifdef SELF_CHECK
   assert(i < 3); // the edge must match.
+#endif
   // t1 --> t2
   t1.tet[t1.loc] = encode(t2);
   // Adjust t1's edge to the 0th edge of t2.
@@ -901,10 +903,10 @@ void bond(triface& t1, triface& t2) {
 }
 
 // infect(), infected(), uninfect() -- primitives to flag or unflag a
-//   tetrahedron. The last fourth bit of the pointer to an adjacent
-//   subface is flagged (1) or unflagged (0).
-// Note: these primitives can only be used when subfaces are used. And
-//   it assumes that all shellfaces are aligned to 16-byte boundaries.
+//   tetrahedron. The last fourth bit of the pointer tet[8] is flagged (1)
+//   or unflagged (0).
+// Note: these primitives relies on the fact that all shellfaces are aligned
+//   to 16-byte boundaries.
 
 #define infect(t) \
   (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | (unsigned long) 8l)
@@ -913,6 +915,22 @@ void bond(triface& t1, triface& t2) {
   (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | ~(unsigned long) 8l)
     
 #define infected(t) ((unsigned long) (t).tet[8] & (unsigned long) 8l) != 0
+
+// marktest(), marktested(), unmarktest() -- primitives to flag or unflag a
+//   tetrahedron. One needs them in forming Bowyer-Watson cavity, to mark a
+//   tetrahedron if it has been checked (for Delaunay case) so later check
+//   can be avoided.  The last fourth bit of the pointer tet[9] is marked (1)
+//   or unmarked (0).
+// Note: these primitives relies on the fact that all shellfaces are aligned
+//   to 16-byte boundaries.
+
+#define marktest(t) \
+  (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] | (unsigned long) 8l)
+
+#define unmarktest(t) \
+  (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] | ~(unsigned long) 8l)
+    
+#define marktested(t) ((unsigned long) (t).tet[9] & (unsigned long) 8l) != 0
 
 // ishulltet()  -- return true if t is a hull tetrahedron.
 

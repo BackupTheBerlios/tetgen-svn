@@ -87,9 +87,9 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
 void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
 {
-  list *cavetetlist, *cavebdrylist;
-  triface *cavetet, neightet;
-  point pa, pb, pc, pd;
+  list *cavetetlist, *cavebdrylist, *newtetlist;
+  triface *cavetet, neightet, newtet;
+  point *pts;
   REAL sign, ori;
   bool enqflag;
   int i;
@@ -97,49 +97,101 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   // Initialize working lists.
   cavetetlist = new list(sizeof(triface));
   cavebdrylist = new list(sizeof(triface));
+  newtetlist = new list(sizeof(triface));
 
-  // Collect all non-Delaunay tetrahedra. Start from 'firsttet', do a
-  //   breath-first search in its adjacent tetrahedra.
+  // Collect all non-Delaunay tetrahedra. Form the Bowyer-Watson cavity.
+  //   Starting from 'firsttet', do breath-first search around in its
+  //   adjacent tetrahedra, and the adjacent of adjacent tetrahedra ...
   infect(*firsttet);
   cavetetlist->append(firsttet);
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
     for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
       sym(*cavetet, neightet);
-      enqflag = false;
-      if (neightet.tet != NULL) { 
-        pa = (point) neightet.tet[4];
-        pb = (point) neightet.tet[5];
-        pc = (point) neightet.tet[6];
-        pd = (point) neightet.tet[7];
-        if (pd == dummypoint) {
+      // Do check if it is not outside or does not been checked.
+      if ((neightet.tet != NULL) && !infected(neightet)) {
+        enqflag = false;
+        pts = &((point) neightet.tet[4]);
+        if (pts[3] != dummypoint) {
+          // A voolume tet. Do Delaunay check if it has not been tested yet. 
+          if (!marktested(neightet)) {
+            sign = insphere(pts[0], pts[1], pts[2], pts[3], insertpt);
+            marktest(neightet); // Only test it once.
+            enqflag = (sign < 0.0);
+          }
+        } else {
           // It is a hull tet. Check the following two cases:
           //   (1) its base face is visible by 'insertpt'. This is the case
           //       when 'insertpt' lies outside the hull face;
           //   (2) its base face is coplanar with 'insertpt'.  This is the
           //       case when 'insertpt' lies just on the face.
           // In both cases, the cuurent convex hull need to be updated.
-          ori = orient3d(pa, pb, pc, insertpt);
+          ori = orient3d(pts[0], pts[1], pts[2], insertpt);
           enqflag = (ori <= 0.0);
+        } 
+        if (enqflag) {
+          // A non-Delaunay tet or a dead hull tet.
+          infect(neightet);
+          cavetetlist->append(&neightet);
         } else {
-          // A normal tet.
-          sign = insphere(pa, pb, pc, pd, insertpt);
-          enqflag = (sign < 0.0);
+          // Found a boubdary face of the cavity.
+          cavebdrylist->append(cavetet);
         }
       } // if (neightet.tet != NULL)
-      if (enqflag) {
-        // A non-Delaunay tet or a dead hull tet.
-        infect(neightet);
-        cavetetlist->append(&neightet);
-      } else {
-        // Found a boubdary face of the cavity.
-        cavebdrylist->append(cavetet);
-      }
     } // for (cavetet->loc = 0;
   } // for (i = 0;
   
+  // Create new tetrahedra in the Bowyer-Watson cavity. Connect them to the
+  //   tetrahedra at outside of the cavity, also disconnect the non-Delaunay
+  //   tetrahedra in the cavity.
+  for (i = 0; i < cavebdrylist->len(); i++) {
+    cavetet = (triface *) cavebdrylist->get(i);
+    sym(*cavetet, neightet);
+    if (neightet.tet != NULL) {
+      // cavetet is not a hull tet, although neightet may be.
+      unmarktest(neightet); // Unmark it.
+      neightet.ver = 0; // Orient the face. 
+      // Create a new tetrahedron.
+      maketetrahedron(tetrahedronpool, &newtet);
+      setorg(newtet, dest(neightet));
+      setdest(newtet, org(neightet));
+      setapex(newtet, apex(neightet));
+      setoppo(newtet, insertpt);
+      // Connect newtet <==> neightet, this also disconnect the old bond at
+      //   neightet, note that cavetet still holds a pointer to neightet.
+      bond(newtet, neightet);
+    } else {
+      // cavetet is a hull tet.
+      cavetet->ver = 4; // The edge's apex is 'dummypoint' (see Fig. 1.4).
+      assert(apex(*cavetet) == dummypoint); // SELF_CHECK
+      // Create a new hull tetrahedron.
+      maketetrahedron(hulltetrahedronpool, &newtet);
+      setorg(newtet, dest(*cavetet));  // Refer to Fig. 1.4.
+      setdest(newtet, org(*cavetet));
+      setapex(newtet, apex(insertpt));
+      setoppo(newtet, dummypoint);
+    }
+    newtetlist->append(&newtet);
+  }
+  
+  // Connect the set of new tetrahedra together.
+  for (i = 0; i < newtetlist->len(); i++) {
+    cavetet = (triface *) newtetlist->get(i);
+
+  }
+
+  // Delete the non-Delaunay tetrahedra.
+  for (i = 0; i < cavetetlist->len(); i++) {
+    cavetet = (triface *) cavetetlist->get(i);
+
+  }
+  
+  // Set a handle for the point location.
+  recenttet = * (triface *) newtetlist->get(0);
+  
   delete cavetetlist;
   delete cavebdrylist;
+  delete newtetlist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,34 +310,7 @@ void tetgenmesh::incrementaldelaunay()
     searchtet.tet = NULL;
     ptloc = locate(permutarray[i], &searchtet);
     // Insert the point by Bowyer-Watson algorithm.
-    bowyerwatsoninsert(permutarray[i], &searchtet);
-    
-    /*
-    // Update the convex hull if the new point lies outside of (or on) the
-    //   convex hull of the old DT.
-    if (ptloc == OUTSIDE) {
-      inserthullvertex(ptloc, permutarray[i], &searchtet);
-    } else if (ptloc == ONFACE) {
-      // Check if searchtet's face is a hull face.
-      sym(searchtet, neightet);
-      if (ishulltet(neightet)) {
-        searchtet = neightet;
-        inserthullvertex(ptloc, permutarray[i], &searchtet);
-      }
-    } else if (ptloc == ONEDGE) {
-      // Check if searchtet's edge is a hull edge.
-      fnext(searchtet, neightet);
-      while (neightet.tet != searchtet->tet) {
-        if (ishulltet(neightet)) {
-          searchtet = neightet;
-          inserthullvertex(ptloc, permutarray[i], &searchtet);
-          break;
-        }
-        fnext(searchtet, neightet);
-      }
-    }
-    */
-
+    bowyerwatsoninsert(permutarray[i], &searchtet);    
   } // for (i = 4; i < in->numberofpoints; i++)
 
   delete [] permutarray;
