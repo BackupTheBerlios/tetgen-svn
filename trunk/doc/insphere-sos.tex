@@ -2,6 +2,54 @@
 
 This chapter describes a simple symbolic perturbation method for the {\tt insphere} test, so that we can assume there are no five points in $\mathbb{R}^3$ share a common circumscribed sphere. 
 
+\section{The {\tt orient3d} Test}
+
+Let ${\bf a}, {\bf b}, {\bf c}$ be three non-collinear points in $\mathbb{R}^3$.  Let $H$ be the unique plane passing through ${\bf a}$, ${\bf b}$, and ${\bf c}$. We use the {\it left-hand rule} to define the orientation of $H$, i.e., make a fist using your left hand, let the fingers follow the orientation of the sequence $\{{\bf a}$, ${\bf b}$, ${\bf c}\}$, now the half space at the direction of your thumb is defined as the {\it positive open half space} at $H$, denoted as $\mathbb{H}^+$, the other half space is defined as the {\it negative open half space} at $H$, denoted as $\mathbb{H}^-$, see figure~\ref{fig:orient3d}.
+
+\begin{figure}
+\centering{
+\includegraphics[width=0.6\textwidth]{../figs/orient3d}
+}
+\caption{The orientation of the plane $H$.}
+\label{fig:orient3d}
+\end{figure}
+
+Let ${\bf d} \in \mathbb{R}^3$ be a fourth point. The {\tt orient3d} test is defined as follows
+\begin{equation}
+  \textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d})
+  \left\{
+  \begin{array}{ccl}
+  > & 0, & \textrm{if ${\bf d}$ lies in $\mathbb{H}^+$},\\
+  = & 0, & \textrm{if ${\bf d}$ lies on $H$},\\
+  < & 0, & \textrm{if ${\bf d}$ lies in $\mathbb{H}^-$}.  
+  \end{array}
+  \right.
+\end{equation}
+Geometrically, the plane $H$ has the equation
+\[
+ n_x x + n_y y + n_z z + d = 0,
+\]
+where $(n_x, n_y, n_z)$ is a unit normal on $H$ and $d$ is the negative of the offset of $H$ from the origin. Every point in $H$ (such as ${\bf a}$, ${\bf b}$ and ${\bf c}$) must satisfy the plane equation. The points in $\mathbb{H}^+$ must satisfy the equation
+\[
+ n_x x + n_y y + n_z z + d > 0.
+\]
+Hence the points in $\mathbb{H}^+$ are those points in $\mathbb{R}^3$ which lie "above" $H$. Similarly, the points on $\mathbb{H}^-$ are those points  in $\mathbb{R}^3$ which lie "below" $H$. Note that the terms "above" and "below" are relative to the normal of $H$.
+
+Finally, it is well-known that the {\tt orient3d} test on four points can be calculated by taking the sign of the determinat of the matrix of their homogenous coordinates, i.e.,
+\begin{equation}
+  \textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d}) = \textrm{det}({\bf A}).
+\end{equation}
+where ${\bf A}$ is a $4 \times 4$ matrix
+\[
+  {\bf A} = \left[\begin{array}{cccc}
+      a_x & a_y & a_z & 1\\
+      b_x & b_y & b_z  & 1\\
+      c_x & c_y & c_z  & 1\\
+      d_x & d_y & d_z  & 1
+      \end{array}\right].
+\]
+Geometrically, $\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d})$ is $6$ times of the signed volume of the tetrahedron ${\bf abcd}$.
+
 \section{The {\tt insphere} Test}
 
 Let ${\bf a}, {\bf b}, {\bf c}, {\bf d}$ be four non-coplanar points in $\mathbb{R}^3$ and ${\bf e} \in \mathbb{R}^3$ be a fifth point.% and they form a positive orientation, i.e., $a, b, c$ follow the fingers of your left-hand's fist with thumb pointing to $d$. 
@@ -18,9 +66,9 @@ Let $\Sigma$ be the unique circumscribed sphere passing through the four points.
 \end{equation}
 It is well known that such test can be computed in the following way:
 \begin{equation}\label{equ:insph}
- \textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf d}, {\bf e}) = \textrm{sign}\left(\frac{\textrm{det}({\bf A})}{\textrm{det}({\bf B})}\right).
+ \textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf d}, {\bf e}) = \frac{\textrm{det}({\bf A})}{\textrm{sign}(\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d}))},
 \end{equation}
-where ${\bf A}$ and ${\bf B}$ are two square matrices given below, $\textrm{det}()$ is the determinant function, and $\textrm{sign}(x)$ is the sign function, i.e., it returns one of $\{1, 0, -1\}$ depending on $x$ is large than, equal, or less than $0$, respectively.
+where ${\bf A}$ is a $5 \times 5$ matrix
 \begin{equation}
   {\bf A} = \left[\begin{array}{ccccc}
       a_x & a_y & a_z & a_l & 1\\
@@ -28,19 +76,12 @@ where ${\bf A}$ and ${\bf B}$ are two square matrices given below, $\textrm{det}
       c_x & c_y & c_z & c_l & 1\\
       d_x & d_y & d_z & d_l & 1\\
       e_x & e_y & e_z & e_l & 1 
-      \end{array}\right],
-      \quad
-  {\bf B} = \left[\begin{array}{cccc}
-      a_x & a_y & a_z & 1\\
-      b_x & b_y & b_z  & 1\\
-      c_x & c_y & c_z  & 1\\
-      d_x & d_y & d_z  & 1
       \end{array}\right].
 \end{equation}
 In the above, $a_l$ is obtained from the coordinates of $a$ by,
-$a_l = a_x^2 + a_y^2 + a_z^2$.  The same for $b_l$, $c_l$, and $d_l$.
+$a_l = a_x^2 + a_y^2 + a_z^2$.  The same for $b_l$, $c_l$, and $d_l$. $\textrm{sign}(x)$ is the sign function, i.e., it returns one of $\{1, 0, -1\}$ depending on $x$ is large than, equal, or less than $0$, respectively.
 
-The $\textrm{insphere}$ test in $\mathbb{R}^3$ can be seen as an orientation test in $\mathbb{R}^4$ if there is a {\it lifting map} $\omega: \mathbb{R}^3 \to \mathbb{R}^4$ such that for each point ${\bf s} = (s_x, s_y, s_z)$ of $\mathbb{R}^3$ $\omega({\bf s}) = (s_x, s_y, s_z, s_l)$ of $\mathbb{R}^4$ with $s_l = s_x^2 + s_y^2 + s_z^2$.
+Geometrically, the {\tt insphere} test in $\mathbb{R}^3$ can be seen as an orientation test in $\mathbb{R}^4$ if there is a {\it lifting map} $\omega: \mathbb{R}^3 \to \mathbb{R}^4$ such that for each point ${\bf s} = (s_x, s_y, s_z)$ of $\mathbb{R}^3$ $\omega({\bf s}) = (s_x, s_y, s_z, s_l)$ of $\mathbb{R}^4$ with $s_l = s_x^2 + s_y^2 + s_z^2$.  The return value of the {\tt insphere} test is the $4! = 24$ times of the signed volume of the $4$-dimensional simplex ${\bf abcde}$. 
 
 \section{Symbolic Perturbation}
 
@@ -54,7 +95,7 @@ where $s_w$ is an infinitesimal and $s_w > 0$. The quantity of the perturbation 
 
 Now assume ${\bf a}, {\bf b}, {\bf c}, {\bf d}, {\bf e}$ lie on a common circumscribed sphere, i.e., $\textrm{det}({\bf A}) = 0$. We re-compute the {\tt insphere} test by using the five perturbed points $\omega({\bf a}), \omega({\bf b}), \omega({\bf c}), \omega({\bf d}), \omega({\bf e})$, i.e., 
 \[
-  \textrm{insphere}(\omega({\bf a}), \omega({\bf b}), \omega({\bf c}), \omega({\bf d}), \omega({\bf e})) = \textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{det}({\bf B})}\right)
+  \textrm{insphere}(\omega({\bf a}), \omega({\bf b}), \omega({\bf c}), \omega({\bf d}), \omega({\bf e})) = \frac{\textrm{det}({\bf A}^{\omega})}{\textrm{sign}\left(\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d})\right)}
 \]
 Where
 \begin{equation}
@@ -148,7 +189,7 @@ where
 
 Since we assume that the four points ${\bf a}$, ${\bf b}$, ${\bf c}$, and ${\bf d}$ are non-coplanar, hence $\textrm{det}({\bf A}_e) \neq 0$. Moreover, this assumption implies that there are at most one determinant in $\textrm{det}({\bf A}_a), ..., \textrm{det}({\bf A}_d)$ can be zero, otherwise, ${\bf a}$, ${\bf b}$, ${\bf c}$, and ${\bf d}$ would be coplanar. It is possible to let $\textrm{det}({\bf A}^{\omega})$ not be zero by appropriate choosing the perturbations $a_w, ..., e_w$.
 
-A simple strategy is to choose such a perturbations i to let $a_w >> b_w >> c_w >> d_w >> e_w$. Then the sign of $\textrm{det}({\bf A}^{\omega})$ is determined by the first non-zero determinant in the right hand side of (\ref{equ:perturb}). 
+A simple strategy is to choose such a perturbations i to let $a_w >> b_w >> c_w >> d_w >> e_w$. Then the sign of $\textrm{det}({\bf A}^{\omega})$ is determined by the first non-zero determinant in the right hand side of (\ref{equ:perturb}).
 
 One way to implement the above strategy is to use the index of the points, i.e., {\it the one with smaller index gets bigger perturbation than the one with higher index}.
 
@@ -176,12 +217,12 @@ a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})\\
 &\approx& a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})
 \end{array}
 \]
-Hence
+Then
 \[
 \begin{array}{rcl}
 \textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf e}, {\bf d}) &=&
-\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e})}\right)\\
-&=& \textrm{sign}\left(\frac{a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})}{\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e})}\right)\\
+\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{sign}(\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e}))}\\
+&=& \frac{a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})}{\textrm{sign}\left(\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e})\right)}\\
 &<& 0.
 \end{array}
 \]
@@ -197,12 +238,12 @@ e_w\textrm{orient3d}({\bf d}, {\bf b}, {\bf a}, {\bf c})\\
 &\approx& -a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})
 \end{array}
 \]
-Hence
+Then
 \[
 \begin{array}{rcl}
 \textrm{insphere}({\bf e}, {\bf d}, {\bf b}, {\bf a}, {\bf c}) &=&
-\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})}\right)\\
-&=& \textrm{sign}\left(\frac{-a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})}{\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})}\right)\\
+\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{sign}\left(\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})\right)}\\
+&=& \frac{-a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})}{\textrm{sign}\left(\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})\right)}\\
 &>& 0
 \end{array}
 \]
@@ -226,15 +267,16 @@ d_w\textrm{orient3d}({\bf c},{\bf a},{\bf b},{\bf e})\\
 & & -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})\\
 & & +e_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})\\
 &\approx& +a_w\textrm{orient3d}({\bf d},{\bf c},{\bf b},{\bf e})\\
-& & -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})
+& & -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})\\
+&=& -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})
 \end{array}
 \]
 Then
 \[
 \begin{array}{rcl}
 \textrm{insphere}({\bf d},{\bf c},{\bf a},{\bf b},{\bf e}) &=&
-\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})}\right)\\
-&=& \textrm{sign}\left(\frac{-b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})}{\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})}\right)\\
+\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{sign}\left(\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})\right)}\\
+&=& \frac{-b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})}{\textrm{sign}\left(\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})\right)}\\
 &>& 0
 \end{array}
 \]
@@ -249,15 +291,16 @@ b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})\\
 & & -c_w\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf d})\\
 & & +d_w\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})\\
 &\approx& +a_w\textrm{orient3d}({\bf b},{\bf e},{\bf c},{\bf d})\\
-& & +b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})
+& & +b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})\\
+&=& b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})
 \end{array}
 \]
 Then
 \[
 \begin{array}{rcl}
 \textrm{insphere}({\bf b},{\bf e},{\bf a},{\bf c},{\bf d}) &=&
-\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})}\right)\\
-&=& \textrm{sign}\left(\frac{b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})}{\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})}\right)\\
+\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{sign}\left(\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})\right)}\\
+&=& \frac{b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})}{\textrm{sign}\left(\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})\right)}\\
 &<& 0
 \end{array}
 \]
