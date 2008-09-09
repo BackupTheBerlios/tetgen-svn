@@ -343,12 +343,12 @@ $8$ & {\tt oriA} = $\textrm{orient3d}(\beta, \gamma, \delta, \epsilon)$;\\
 $9$ & {\bf if} {\tt oriA} $\neq$ 0 {\bf then}\\
 $10$ & $\quad$ {\bf if} ${\tt swaps}$ is odd {\bf then} {\tt oriA} = -{\tt oriA}; {\bf endif}\\
 $11$ & $\quad$ {\bf if} {\tt ori} $<$ 0 {\bf then} {\tt oriA} = -{\tt oriA}; {\bf endif}\\
-$12$ & $\quad$ return {\tt oriA};\\
+$12$ & $\quad$ {\bf return} {\tt oriA};\\
 $13$ & {\bf endif}\\
 $14$ & {\tt oriB} = -$\textrm{orient3d}(\alpha, \gamma, \delta, \epsilon)$; // assert({\tt oriB} $\neq$ 0)\\
 $15$ & {\bf if} ${\tt swaps}$ is odd {\bf then} {\tt oriB} = -{\tt oriB}; {\bf endif}\\
 $16$ & {\bf if} {\tt ori} $<$ 0 {\bf then} {\tt oriB} = -{\tt oriB}; {\bf endif}\\
-$17$ & return {\tt oriB};\\
+$17$ & {\bf return} {\tt oriB};\\
 \end{tabular}
 \end{figure}
 
