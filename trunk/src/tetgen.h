@@ -357,31 +357,31 @@ class tetgenio {
     void deinitialize();
 
     // Input & output routines.
-    bool load_node_call(FILE* infile, int markers, char* nodefilename);
-    bool load_node(char* filename);
-    bool load_pbc(char* filename);
-    bool load_var(char* filename);
-    bool load_mtr(char* filename);
-    bool load_poly(char* filename);
-    bool load_off(char* filename);
-    bool load_ply(char* filename);
-    bool load_stl(char* filename);
-    bool load_medit(char* filename);
-    bool load_vtk(char* filename);
-    bool load_plc(char* filename, int object);
-    bool load_tetmesh(char* filename);
-    bool load_voronoi(char* filename);
-    void save_nodes(char* filename);
-    void save_elements(char* filename);
-    void save_faces(char* filename);
-    void save_edges(char* filename);
-    void save_neighbors(char* filename);
-    void save_poly(char* filename);
+    bool load_node_call(FILE* infile, int markers, const char* nodefilename);
+    bool load_node(const char* filename);
+    bool load_pbc(const char* filename);
+    bool load_var(const char* filename);
+    bool load_mtr(const char* filename);
+    bool load_poly(const char* filename);
+    bool load_off(const char* filename);
+    bool load_ply(const char* filename);
+    bool load_stl(const char* filename);
+    bool load_medit(const char* filename);
+    bool load_vtk(const char* filename);
+    bool load_plc(const char* filename, int object);
+    bool load_tetmesh(const char* filename);
+    bool load_voronoi(const char* filename);
+    void save_nodes(const char* filename);
+    void save_elements(const char* filename);
+    void save_faces(const char* filename);
+    void save_edges(const char* filename);
+    void save_neighbors(const char* filename);
+    void save_poly(const char* filename);
 
     // Read line and parse string functions.
     char *readline(char* string, FILE* infile, int *linenumber);
     char *findnextfield(char* string);
-    char *readnumberline(char* string, FILE* infile, char* infilename);
+    char *readnumberline(char* string, FILE* infile, const char* infilename);
     char *findnextnumber(char* string);
 
     // Constructor and destructor.
@@ -467,8 +467,8 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
   void usage();
 
   // Command line parse routine.
-  bool parse_commandline(int argc, char **argv);
-  bool parse_commandline(char *switches) {
+  bool parse_commandline(int argc, const char **argv);
+  bool parse_commandline(const char *switches) {
     return parse_commandline(0, &switches);
   }
   

@@ -206,7 +206,7 @@ void tetgenbehavior::usage()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenbehavior::parse_commandline(int argc, char **argv)
+bool tetgenbehavior::parse_commandline(int argc, const char **argv)
 {
   int startindex;
   int increment;

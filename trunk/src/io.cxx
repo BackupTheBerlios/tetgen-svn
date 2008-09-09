@@ -214,7 +214,7 @@ void tetgenio::deinitialize()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_node_call(FILE* infile, int markers, char* infilename)
+bool tetgenio::load_node_call(FILE* infile,int markers,const char* infilename)
 {
   char inputline[INPUTLINESIZE];
   char *stringptr;
@@ -330,7 +330,7 @@ bool tetgenio::load_node_call(FILE* infile, int markers, char* infilename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_node(char* filename)
+bool tetgenio::load_node(const char* filename)
 {
   FILE *infile;
   char innodefilename[FILENAMESIZE];
@@ -414,7 +414,7 @@ bool tetgenio::load_node(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_pbc(char* filename)
+bool tetgenio::load_pbc(const char* filename)
 {
   FILE *infile;
   char pbcfilename[FILENAMESIZE];
@@ -517,7 +517,7 @@ bool tetgenio::load_pbc(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_var(char* filename)
+bool tetgenio::load_var(const char* filename)
 {
   FILE *infile;
   char varfilename[FILENAMESIZE];
@@ -632,7 +632,7 @@ bool tetgenio::load_var(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_mtr(char* filename)
+bool tetgenio::load_mtr(const char* filename)
 {
   FILE *infile;
   char mtrfilename[FILENAMESIZE];
@@ -699,7 +699,7 @@ bool tetgenio::load_mtr(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_poly(char* filename)
+bool tetgenio::load_poly(const char* filename)
 {
   FILE *infile, *polyfile;
   char innodefilename[FILENAMESIZE];
@@ -1229,7 +1229,7 @@ bool tetgenio::load_poly(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_off(char* filename)
+bool tetgenio::load_off(const char* filename)
 {
   FILE *fp;
   tetgenio::facet *f;
@@ -1382,7 +1382,7 @@ bool tetgenio::load_off(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_ply(char* filename)
+bool tetgenio::load_ply(const char* filename)
 {
   FILE *fp;
   tetgenio::facet *f;
@@ -1592,7 +1592,7 @@ bool tetgenio::load_ply(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_stl(char* filename)
+bool tetgenio::load_stl(const char* filename)
 {
   FILE *fp;
   facet *f;
@@ -1727,7 +1727,7 @@ bool tetgenio::load_stl(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_medit(char* filename)
+bool tetgenio::load_medit(const char* filename)
 {
   FILE *fp;
   tetgenio::facet *tmpflist, *f;
@@ -1972,7 +1972,7 @@ bool testIsBigEndian()
     return false;
 }
 
-bool tetgenio::load_vtk(char* filename)
+bool tetgenio::load_vtk(const char* filename)
 {
   FILE *fp;
   tetgenio::facet *f;
@@ -2194,7 +2194,7 @@ bool tetgenio::load_vtk(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_plc(char* filename, int object)
+bool tetgenio::load_plc(const char* filename, int object)
 {
   enum objecttype type;
 
@@ -2229,7 +2229,7 @@ bool tetgenio::load_plc(char* filename, int object)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_tetmesh(char* filename)
+bool tetgenio::load_tetmesh(const char* filename)
 {
   FILE *infile;
   char innodefilename[FILENAMESIZE];
@@ -2566,7 +2566,7 @@ bool tetgenio::load_tetmesh(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenio::load_voronoi(char* filename)
+bool tetgenio::load_voronoi(const char* filename)
 {
   FILE *infile;
   char innodefilename[FILENAMESIZE];
@@ -2725,7 +2725,7 @@ bool tetgenio::load_voronoi(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenio::save_nodes(char* filename)
+void tetgenio::save_nodes(const char* filename)
 {
   FILE *fout;
   char outnodefilename[FILENAMESIZE];
@@ -2780,7 +2780,7 @@ void tetgenio::save_nodes(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenio::save_elements(char* filename)
+void tetgenio::save_elements(const char* filename)
 {
   FILE *fout;
   char outelefilename[FILENAMESIZE];
@@ -2829,7 +2829,7 @@ void tetgenio::save_elements(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenio::save_faces(char* filename)
+void tetgenio::save_faces(const char* filename)
 {
   FILE *fout;
   char outfacefilename[FILENAMESIZE];
@@ -2860,7 +2860,7 @@ void tetgenio::save_faces(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenio::save_edges(char* filename)
+void tetgenio::save_edges(const char* filename)
 {
   FILE *fout;
   char outedgefilename[FILENAMESIZE];
@@ -2890,7 +2890,7 @@ void tetgenio::save_edges(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenio::save_neighbors(char* filename)
+void tetgenio::save_neighbors(const char* filename)
 {
   FILE *fout;
   char outneighborfilename[FILENAMESIZE];
@@ -2925,7 +2925,7 @@ void tetgenio::save_neighbors(char* filename)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenio::save_poly(char* filename)
+void tetgenio::save_poly(const char* filename)
 {
   FILE *fout;
   facet *f;
@@ -3084,7 +3084,8 @@ char* tetgenio::findnextfield(char *string)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-char* tetgenio::readnumberline(char *string, FILE *infile, char *infilename)
+char* tetgenio::readnumberline(char *string, FILE *infile, 
+  const char *infilename)
 {
   char *result;
 
