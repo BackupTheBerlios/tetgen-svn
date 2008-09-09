@@ -306,3 +306,50 @@ Then
 \]
 
 The tests show that the two tetrahedra containing edge ${\bf cd}$ are non-Delaunay, while the two containing edge ${\bf be}$ are Delaunay, which are consistent. 
+
+\section{The {\tt insphere\_sos} Test}
+
+In this section, we implement a {\tt insphere} test which returns only either a positive or negative value, no zero. Define
+\begin{equation}
+  \textrm{insphere\_sos}({\bf a}, {\bf b}, {\bf c}, {\bf d}, {\bf e})
+  \left\{
+  \begin{array}{ccl}
+  > & 0, & \textrm{if ${\bf e}$ lies inside the circumsphere of ${\bf abcd}$},\\
+  < & 0, & \textrm{if ${\bf e}$ lies outside the circumsphere of ${\bf abcd}$}.  
+  \end{array}
+  \right.
+\end{equation}
+
+The algorithm is listed below. The input assumption is that the tetrahedron ${\bf abcd}$ is not degenerate, i.e., its volume is not zero.
+
+\begin{figure}[h]
+\begin{tabular}{l}
+{\tt REAL} {\sc inspshere\_sos}(${\bf a}$, ${\bf b}$, ${\bf c}$, ${\bf d}$, ${\bf e}$)\\
+// The input points ${\bf a}$, ${\bf b}$, ${\bf c}$, and ${\bf d}$ are non-coplanar.
+\end{tabular}\\
+\begin{tabular}{rl}
+$1$ & {\tt ori} = $\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d})$; // assert({\tt ori} $\neq$ 0);\\ 
+$2$ & {\tt sign} = $\textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf d}, {\bf e})$;\\
+$3$ & {\bf if} {\tt sign} $\neq$ 0 {\bf then}\\
+$4$ & $\quad$ {\bf if} {\tt ori} $<$ 0 {\bf then} {\tt sign} = -{\tt sign}; {\bf endif}\\
+$5$ & $\quad$ {\bf return} {\tt sign};\\
+$6$ & {\bf endif}\\
+ & // Symbolic perturbation.\\
+$7$ & sort the input sequence $\{ {\bf a}, {\bf b}, {\bf c}, {\bf d}, {\bf e}\}$ according to  the increasing order\\
+ & of their indices;\\
+ & Let the new sequence of the five points be $\{\alpha, \beta, \gamma, \delta, \epsilon\}$.\\
+ & Let ${\tt swaps}$ be the number of position switches between the two sequences.\\
+$8$ & {\tt oriA} = $\textrm{orient3d}(\beta, \gamma, \delta, \epsilon)$;\\
+$9$ & {\bf if} {\tt oriA} $\neq$ 0 {\bf then}\\
+$10$ & $\quad$ {\bf if} ${\tt swaps}$ is odd {\bf then} {\tt oriA} = -{\tt oriA}; {\bf endif}\\
+$11$ & $\quad$ {\bf if} {\tt ori} $<$ 0 {\bf then} {\tt oriA} = -{\tt oriA}; {\bf endif}\\
+$12$ & $\quad$ return {\tt oriA};\\
+$13$ & {\bf endif}\\
+$14$ & {\tt oriB} = -$\textrm{orient3d}(\alpha, \gamma, \delta, \epsilon)$; // assert({\tt oriB} $\neq$ 0)\\
+$15$ & {\bf if} ${\tt swaps}$ is odd {\bf then} {\tt oriB} = -{\tt oriB}; {\bf endif}\\
+$16$ & {\bf if} {\tt ori} $<$ 0 {\bf then} {\tt oriB} = -{\tt oriB}; {\bf endif}\\
+$17$ & return {\tt oriB};\\
+\end{tabular}
+\end{figure}
+
+This algorithm assumes that we don't know the orientation of the point sequence ${\bf a}$, ${\bf b}$, ${\bf c}$, and ${\bf d}$. In our implementation of Delaunay algorithm, we actually know the positive orientation of any tetrahedron. Hence we can speed up the test by giving the positive sequence for ${\bf a}$, ${\bf b}$, ${\bf c}$, and ${\bf d}$. Hence {\tt ori} $>$ 0. So the lines $1, 4, 11, 16$ can be skipped.
