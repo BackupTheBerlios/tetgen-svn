@@ -69,16 +69,17 @@ Where
 
 Since the determinant is a linear function and by the assumption that ${\bf a}$, ${\bf b}$, ${\bf c}$, ${\bf d}$, and ${\bf e}$ are co-spherical. We can compute $\textrm{det}({\bf A}^{\omega})$ by
 \[
-  \begin{array}{rcl}
-  \textrm{det}({\bf A}^{\omega}) &=& \textrm{det}\left(
+  \begin{array}{rcccl}
+  \textrm{det}({\bf A}^{\omega}) 
+   &=& \textrm{det}\left(
       \left[\begin{array}{ccccc}
       a_x & a_y & a_z & a_l & 1\\
       b_x & b_y & b_z & b_l & 1\\
       c_x & c_y & c_z & c_l & 1\\
       d_x & d_y & d_z & d_l & 1\\
       e_x & e_y & e_z & e_l & 1 
-      \end{array}\right]\right)
-    + \textrm{det}\left(
+      \end{array}\right]\right) &+& 
+      \textrm{det}\left(
       \left[\begin{array}{ccccc}
       a_x & a_y & a_z & 1 & a_w\\
       b_x & b_y & b_z & 1 & b_w\\
@@ -86,7 +87,7 @@ Since the determinant is a linear function and by the assumption that ${\bf a}$,
       d_x & d_y & d_z & 1 & d_w\\
       e_x & e_y & e_z & 1 & e_w
       \end{array}\right]\right)\\
-    &=& \textrm{det}\left(
+    &=& 0 &+& \textrm{det}\left(
       \left[\begin{array}{ccccc}
       a_x & a_y & a_z & 1 & a_w\\
       b_x & b_y & b_z & 1 & b_w\\
@@ -163,62 +164,49 @@ This section gives few examples to illustrate how the perturbation technique of 
 \label{fig:ex1}
 \end{figure}
 
-The first example (see Figure~\ref{fig:ex1}) is in the case which no four points are coplanar. The two pictures show the same five points but the labeling of points are different.  In the left figure, let's evaluate
+The first example (see Figure~\ref{fig:ex1}) is in the case which no four points are coplanar. The two pictures show the same five points but the labeling of points are different.  In the left figure, let's evaluate $\textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf e}, {\bf d})$ with their perturbed points. Since
 \[
 \begin{array}{rcl}
-\textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf e}, {\bf d}) &=&
+\textrm{det}({\bf A}^{\omega}) &=& 
 a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})\\
 & & -b_w\textrm{orient3d}({\bf a}, {\bf c}, {\bf e}, {\bf d})\\
 & & +c_w\textrm{orient3d}({\bf a}, {\bf b}, {\bf e}, {\bf d})\\
 & & -e_w\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf d})\\
 & & +d_w\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e})\\
-&\approx& a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})\\
-&<& 0
+&\approx& a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})
 \end{array}
 \]
-and
+Hence
 \[
 \begin{array}{rcl}
-\textrm{insphere}({\bf e}, {\bf d}, {\bf b}, {\bf a}, {\bf c}) &=&
+\textrm{insphere}({\bf a}, {\bf b}, {\bf c}, {\bf e}, {\bf d}) &=&
+\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e})}\right)\\
+&=& \textrm{sign}\left(\frac{a_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf d})}{\textrm{orient3d}({\bf a}, {\bf b}, {\bf c}, {\bf e})}\right)\\
+&<& 0.
+\end{array}
+\]
+It shows that the tetrahedron ${\bf abce}$ is Delaunay. Next we evaluate $\textrm{insphere}({\bf e}, {\bf d}, {\bf b}, {\bf a}, {\bf c})$ in the left figure. Since
+\[
+\begin{array}{rcl}
+\textrm{det}({\bf A}^{\omega}) &=& 
 e_w\textrm{orient3d}({\bf d}, {\bf b}, {\bf a}, {\bf c})\\
 & & -d_w\textrm{orient3d}({\bf e}, {\bf b}, {\bf a}, {\bf c})\\
 & & +b_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf a}, {\bf c})\\
 & & -a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})\\
 & & +c_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})\\
-&\approx& -a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})\\
-&>& 0  \quad \textrm{(non-Delaunay)}
+&\approx& -a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})
 \end{array}
 \]
-
-The tests show that tetrahedra ${\bf abcd}$ and ${\bf bace}$ are Delaunay.  While ${\bf edab}$, ${\bf edbc}$, and ${\bf edca}$ are not, which are consistent.
-
-In the right figure, let's evaluate 
+Hence
 \[
 \begin{array}{rcl}
-\textrm{insphere}({\bf d}, {\bf b}, {\bf c}, {\bf e}, {\bf a}) &=&
-d_w\textrm{orient3d}({\bf b}, {\bf c}, {\bf e}, {\bf a})\\
-& & -b_w\textrm{orient3d}({\bf d}, {\bf c}, {\bf e}, {\bf a})\\
-& & +c_w\textrm{orient3d}({\bf d}, {\bf b}, {\bf e}, {\bf a})\\
-& & -e_w\textrm{orient3d}({\bf d}, {\bf b}, {\bf c}, {\bf a})\\
-& & +a_w\textrm{orient3d}({\bf d}, {\bf b}, {\bf c}, {\bf e})\\
-&\approx& a_w\textrm{orient3d}({\bf d}, {\bf b}, {\bf c}, {\bf e})\\
-&>& 0 \quad \textrm{(non-Delaunay)}
+\textrm{insphere}({\bf e}, {\bf d}, {\bf b}, {\bf a}, {\bf c}) &=&
+\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})}\right)\\
+&=& \textrm{sign}\left(\frac{-a_w\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf c})}{\textrm{orient3d}({\bf e}, {\bf d}, {\bf b}, {\bf a})}\right)\\
+&>& 0
 \end{array}
 \]
-and
-\[
-\begin{array}{rcl}
-\textrm{insphere}({\bf e}, {\bf a}, {\bf b}, {\bf d}, {\bf c}) &=&
-e_w\textrm{orient3d}({\bf a}, {\bf b}, {\bf d}, {\bf c})\\
-& & -a_w\textrm{orient3d}({\bf e}, {\bf b}, {\bf d}, {\bf c})\\
-& & +b_w\textrm{orient3d}({\bf e}, {\bf a}, {\bf d}, {\bf c})\\
-& & -d_w\textrm{orient3d}({\bf e}, {\bf a}, {\bf b}, {\bf c})\\
-& & +c_w\textrm{orient3d}({\bf e}, {\bf a}, {\bf b}, {\bf d})\\
-&\approx& -a_w\textrm{orient3d}({\bf e}, {\bf b}, {\bf d}, {\bf c})\\
-&<& 0
-\end{array}
-\]
-The tests are consistent.
+It shows that the tetrahedron ${\bf edba}$ is non-Delaunay. Both tests are consistent (no contradiction).  The right figure has the same set of vertices as the left but different labeling (indices) of the vertices. Hence the Delaunay tetrahedra are different as the left. The check is left as an exercise.\\*
 
 \begin{figure}
 \centering{
@@ -228,32 +216,50 @@ The tests are consistent.
 \label{fig:ex2}
 \end{figure}
 
-The second example (see Fig.~\ref{fig:ex2}) illustrates the case which four points ${\bf b}, {\bf c}, {\bf d}, {\bf e}$ are coplanar and cospherical. Let's evaluate 
+The second example (see Fig.~\ref{fig:ex2}) illustrates the case which four points ${\bf b}, {\bf c}, {\bf d}, {\bf e}$ are both coplanar and cospherical. Let's evaluate $\textrm{insphere}({\bf d},{\bf c},{\bf a},{\bf b},{\bf e})$ in its perturbed case. Since
 \[
 \begin{array}{rcl}
-\textrm{insphere}({\bf d},{\bf c},{\bf a},{\bf b},{\bf e}) &=&
+\textrm{det}({\bf A}^{\omega}) &=&
 d_w\textrm{orient3d}({\bf c},{\bf a},{\bf b},{\bf e})\\
 & & -c_w\textrm{orient3d}({\bf d},{\bf a},{\bf b},{\bf e})\\
 & & +a_w\textrm{orient3d}({\bf d},{\bf c},{\bf b},{\bf e})\\
 & & -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})\\
 & & +e_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})\\
 &\approx& +a_w\textrm{orient3d}({\bf d},{\bf c},{\bf b},{\bf e})\\
-& & -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})\\
-&>& 0  \quad \textrm{(non-Delaunay)}
+& & -b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})
 \end{array}
 \]
-and
+Then
 \[
 \begin{array}{rcl}
-\textrm{insphere}({\bf b},{\bf e},{\bf a},{\bf c},{\bf d}) &=&
+\textrm{insphere}({\bf d},{\bf c},{\bf a},{\bf b},{\bf e}) &=&
+\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})}\right)\\
+&=& \textrm{sign}\left(\frac{-b_w\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf e})}{\textrm{orient3d}({\bf d},{\bf c},{\bf a},{\bf b})}\right)\\
+&>& 0
+\end{array}
+\]
+
+Next let evaluate $\textrm{insphere}({\bf b},{\bf e},{\bf a},{\bf c},{\bf d})$ in its perturbed case. Since
+\[
+\begin{array}{rcl}
+\textrm{det}({\bf A}^{\omega}) &=&
 b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})\\
 & & -e_w\textrm{orient3d}({\bf b},{\bf a},{\bf c},{\bf d})\\
 & & +a_w\textrm{orient3d}({\bf b},{\bf e},{\bf c},{\bf d})\\
 & & -c_w\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf d})\\
 & & +d_w\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})\\
 &\approx& +a_w\textrm{orient3d}({\bf b},{\bf e},{\bf c},{\bf d})\\
-& & +b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})\\
+& & +b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})
+\end{array}
+\]
+Then
+\[
+\begin{array}{rcl}
+\textrm{insphere}({\bf b},{\bf e},{\bf a},{\bf c},{\bf d}) &=&
+\textrm{sign}\left(\frac{\textrm{det}({\bf A}^{\omega})}{\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})}\right)\\
+&=& \textrm{sign}\left(\frac{b_w\textrm{orient3d}({\bf e},{\bf a},{\bf c},{\bf d})}{\textrm{orient3d}({\bf b},{\bf e},{\bf a},{\bf c})}\right)\\
 &<& 0
 \end{array}
 \]
-The tests show that the two tetrahedra containing edge ${\bf cd}$ are non-Delaunay, while the two containing edge ${\bf be}$ are Delaunay, which are consistent.
+
+The tests show that the two tetrahedra containing edge ${\bf cd}$ are non-Delaunay, while the two containing edge ${\bf be}$ are Delaunay, which are consistent. 
