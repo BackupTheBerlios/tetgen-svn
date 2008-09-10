@@ -155,9 +155,9 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 //                                                                           //
 // If 'bowyerwatson' is TRUE, the Bowyer-Watson algorithm is used to recover //
 // the Delaunayness of T. If 'bowyerwatson' is FALSE and 'incrflip' is TRUE, //
-// the incremental flip algorithm is used instead. If both these two options //
+// then the incremental flip algorithm is used. If both of these two options //
 // are FALSE, only p is inserted, do nothing with regard to the Delaunayness //
-// of T (T may be non-Delaunay).                                             //
+// of T (T may be non-Delaunay after this function).                         //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 

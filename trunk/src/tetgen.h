@@ -648,40 +648,21 @@ struct face {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-// For enext() primitive, uses 'ver' as the index. 
-
+// For enext() primitive, uses 'ver' as the key.
 static int ve[6];
 
-// For org(), dest() and apex() primitives, uses 'ver' as the index.
-
-static int vo[6], vd[6], va[6];
-
-// For org(), dest() and apex() primitives, uses 'loc' as the first
-//   index and 'ver' as the second index.
-
+// For org(), dest() and apex() primitives, use ('loc', 'ver') as the key.
 static int locver2org[4][6];
 static int locver2dest[4][6];
 static int locver2apex[4][6];
 
-// For oppo() primitives, uses 'loc' as the index.
-
+// For oppo() primitives, uses 'loc' as the key.
 static int loc2oppo[4];
 
-// For fnext() primitives, uses 'loc' as the first index and 'ver' as
-//   the second index,  returns an array containing a new 'loc' and a
-//   new 'ver'. Note: Only valid for 'ver' equals one of {0, 2, 4}.
-
+// For fnext() primitives, uses ('loc' * 6 + 'ver') as the key. Returns
+//   an array containing a new ('loc', 'ver'). 
+// Note: Only valid for 'ver' equals one of {0, 2, 4}.
 static int locver2nextf[24];
-
-// The edge number (from 0 to 5) of a tet is defined as follows:
-
-static int locver2edge[4][6];
-static int edge2locver[6][2];
-
-// For enumerating three edges of a triangle.
-
-static int plus1mod3[3];
-static int minus1mod3[3];
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -876,8 +857,8 @@ void fnextself(triface& t) {
 }
 
 // bond() -- to setup the connections between 't1.loc' <==> 't2.loc'.
-//   From t1 --> t2, we bond the edge in 't2' corresponding to the 0-th
-//   edge in 't1', and vice versa for t1 <-- t2.  
+//   From t1 <-- t2, we bond the edge in 't2' corresponding to the 0-th
+//   edge in 't1', and vice versa for t1 --> t2.  
 // Note: This function will modify 't1.ver' and 't2.ver'.
 
 void bond(triface& t1, triface& t2) {
@@ -890,13 +871,13 @@ void bond(triface& t1, triface& t2) {
     enextself(t2);
   }
   assert(i < 3); // SELF_CHECK the edge must match.
-  // t1 --> t2
+  // t1 <-- t2
   t1.tet[t1.loc] = encode(t2);
   // Adjust t1's edge to the 0th edge of t2.
   for (i = (t2.ver >> 1); i > 0; i--) {
     enextself(t1);
   }
-  // t1 <-- t2
+  // t1 --> t2
   t2.tet[t2.loc] = encode(t1);
 }
 
@@ -1372,5 +1353,43 @@ void terminatetetgen(int x)
   exit(x);
 #endif // #ifdef TETLIBRARY
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Initialize fast look-up tables.                                           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+int tetgenmesh::ve[6] = { 2, 5, 4, 1, 0, 3 };
+
+int tetgenmesh::locver2org[4][6]  = {
+  {0, 1, 1, 2, 2, 0},
+  {0, 3, 3, 1, 1, 0},
+  {1, 3, 3, 2, 2, 1},
+  {2, 3, 3, 0, 0, 2} 
+};
+
+int tetgenmesh::locver2dest[4][6] = { 
+  {1, 0, 2, 1, 0, 2},
+  {3, 0, 1, 3, 0, 1},
+  {3, 1, 2, 3, 1, 2},
+  {3, 2, 0, 3, 2, 0}
+};
+
+int tetgenmesh::locver2apex[4][6] = { 
+  {2, 2, 0, 0, 1, 1},
+  {1, 1, 0, 0, 3, 3},
+  {2, 2, 1, 1, 3, 3},
+  {0, 0, 2, 2, 3, 3}
+};
+
+int tetgenmesh::loc2oppo[4] = { 3, 2, 0, 1 };
+
+int tetgenmesh::locver2nextf[24] = {
+  1, 5, 2, 5, 3, 5,
+  3, 3, 2, 1, 0, 1,
+  1, 3, 3, 1, 0, 3,
+  2, 3, 1, 1, 0, 5
+};
 
 #endif // #ifndef tetgenH
