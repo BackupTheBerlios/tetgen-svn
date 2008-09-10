@@ -87,7 +87,7 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
 void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
 {
-  list *cavetetlist, *cavebdrylist, *newtetlist;
+  list *cavetetlist, *cavebdrylist;
   triface *cavetet, neightet, newtet;
   point *pts;
   REAL sign, ori;
@@ -98,7 +98,6 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   // Initialize working lists.
   cavetetlist = new list(sizeof(triface));
   cavebdrylist = new list(sizeof(triface));
-  newtetlist = new list(sizeof(triface));
 
   // Collect all non-Delaunay tetrahedra. Form the Bowyer-Watson cavity.
   //   Starting from 'firsttet', do breath-first search around in its
@@ -174,13 +173,13 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
     // Connect newtet <==> neightet, this also disconnect the old bond at
     //   neightet (while cavetet still holds a pointer to neightet).
     bond(newtet, neightet);
-    // Save this tet in list.
-    newtetlist->append(&newtet);
+    // Replace the old boundary face with the new tet in list.
+    *cavetet = newtet;
   }
   
   // Connect the set of new tetrahedra together.
-  for (i = 0; i < newtetlist->len(); i++) {
-    cavetet = (triface *) newtetlist->get(i);
+  for (i = 0; i < cavebdrylist->len(); i++) {
+    cavetet = (triface *) cavebdrylist->get(i);
     cavetet->ver = 0;
     for (j = 0; j < 3; j++) {
       // Go to the face needs to be connected.
@@ -216,11 +215,10 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   }
   
   // Set a handle for the point location.
-  recenttet = * (triface *) newtetlist->get(0);
+  recenttet = * (triface *) cavebdrylist->get(0);
   
   delete cavetetlist;
   delete cavebdrylist;
-  delete newtetlist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
