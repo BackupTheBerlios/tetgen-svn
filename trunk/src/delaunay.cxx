@@ -41,7 +41,7 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
   // Sort the five points such that their indices are in the increasing
   //   order. An optimized bubble sort algorithm is used, i.e., it has
   //   the worst case O(n^2) runtime, but it is usually much faster.
-  swaps = 0;
+  swaps = 0; // Record the total number of swaps.
   n = 5;
   do {
     count = 0;
@@ -52,8 +52,8 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
         count++;
       }
     }
-    swaps += count; // Record the number of swaps.
-  } while (count > 0); // Continue if points are swapped.
+    swaps += count;
+  } while (count > 0); // Continue if some points are swapped.
 
   oriA = orient3d(pt[1], pt[2], pt[3], pt[4]);
   if (oriA != 0.0) {
@@ -147,11 +147,12 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// bowyerwatsoninsert()    Insert a point by Bowyer-Watson algorithm.        //
+// insertvertex()    Insert a point into current tetrahedralization.         //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
+void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
+  bool bowyerwatson, bool increflip)
 {
   list *cavetetlist, *cavebdrylist;
   triface *cavetet, neightet, newtet;
@@ -165,9 +166,9 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   cavetetlist = new list(sizeof(triface));
   cavebdrylist = new list(sizeof(triface));
 
-  // Collect all non-Delaunay tetrahedra. Form the Bowyer-Watson cavity.
+  // Form a star-shaped cavity with respect to the inserting point.
   //   Starting from 'firsttet', do breath-first search around in its
-  //   adjacent tetrahedra, and the adjacent of adjacent tetrahedra ...
+  //   adjacent tet, and the adjacent of adjacent tets ...
   infect(*firsttet);
   cavetetlist->append(firsttet);
   for (i = 0; i < cavetetlist->len(); i++) {
@@ -179,11 +180,19 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
         enqflag = false;
         pts = (point *) neightet.tet;
         if (pts[7] != dummypoint) {
-          // A voolume tet. Do Delaunay check if it has not been tested yet. 
+          // A voolume tet. Operate on it if it has not been tested yet.
           if (!marktested(neightet)) {
-            sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
+            if (bowyerwatson) {
+              // Use Bowyer-Watson algorithm, do Delaunay check.
+              sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
+              enqflag = (sign < 0.0);
+            } else {
+              // Check if the point lies on neightet's face (or edge).
+              ori = orient3d(dest(neightet), org(neightet), apex(neightet),
+                             insertpt);
+              enqflag = (ori == 0.0);
+            }
             marktest(neightet); // Only test it once.
-            enqflag = (sign < 0.0);
           }
         } else {
           // It is a hull tet. Check the following two cases:
@@ -196,14 +205,14 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
           enqflag = (ori <= 0.0);
         } 
         if (enqflag) {
-          // A non-Delaunay tet or a dead hull tet.
+          // Found a tet in the cavity.
           infect(neightet);
           cavetetlist->append(&neightet);
         } else {
           // Found a boubdary face of the cavity.
           cavebdrylist->append(cavetet);
         }
-      } // if (neightet.tet != NULL)
+      } // if (!infected(neightet)
     } // for (cavetet->loc = 0;
   } // for (i = 0;
   
@@ -242,14 +251,14 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
     *cavetet = newtet;
   }
   
-  // Connect the set of new tetrahedra together.
+  // Connect the set of new tetrahedra of the cavity together.
   for (i = 0; i < cavebdrylist->len(); i++) {
     cavetet = (triface *) cavebdrylist->get(i);
     cavetet->ver = 0;
     for (j = 0; j < 3; j++) {
       // Go to the face needs to be connected.
       enext0fnext(*cavetet, newtet);
-      // Do connection if it has not yet been connected.
+      // Operate on it if it has not yet been connected.
       if (newtet.tet[newtet.loc] == NULL) {
         // Find its adjacent face by rotating faces around the edge of
         //   cavetet. The rotating direction is opposite to newtet.
@@ -268,7 +277,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
     }
   }
 
-  // Delete the non-Delaunay tetrahedra.
+  // Delete the old tetrahedra of the cavity.
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
     if ((point) cavetet->tet[7] != dummypoint) {
@@ -277,7 +286,12 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
       tetrahedrondealloc(hulltetrahedronpool, cavetet->tet);
     }
   }
-  
+
+  // If the flip option is used.
+  if (!bowyerwatson && increflip) {
+    // flip(cavebdrylist);
+  }
+
   // Set a handle for the point location.
   recenttet = * (triface *) cavebdrylist->get(0);
   
@@ -363,7 +377,7 @@ void tetgenmesh::incrementaldelaunay()
   i = 3;
   ori = orient3d(permutarray[0], permutarray[1], permutarray[2], 
                  permutarray[i]);
-  while ( (fabs(ori) / bboxsize3) < b->epsilon) {
+  while ((fabs(ori) / bboxsize3) < b->epsilon) {
     i++;
     if (i == in->numberofpoints - 1) {
       printf("Exception:  All vertices are (nearly) coplanar (Tol = %g).\n",
@@ -401,8 +415,8 @@ void tetgenmesh::incrementaldelaunay()
     searchtet.tet = NULL;
     ptloc = locate(permutarray[i], &searchtet);
     // Insert the point by Bowyer-Watson algorithm.
-    bowyerwatsoninsert(permutarray[i], &searchtet);    
-  } // for (i = 4; i < in->numberofpoints; i++)
+    insertvertex(permutarray[i], &searchtet, true, false);    
+  } // for (i = 4;
 
   delete [] permutarray;
 }

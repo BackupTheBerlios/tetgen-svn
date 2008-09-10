@@ -1295,7 +1295,7 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Functions for point locations.                                            //
+// Jump-and-Walk point location algorithm.                                   //
 //                                                                           //
 // The following functions implemented the randomized jump-and-walk point    //
 // location algorithm of Muecke, Saias, and Zhu [MueckeSaiasZhu96].          //
@@ -1308,7 +1308,7 @@ enum locateresult preciselocate(point searchpt, triface* searchtet);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Functions for generating Delaunay tetrahedralizations.                    //
+// Incremental (flip) Delaunay tetrahedralization algorithms.                //
 //                                                                           //
 // Bowyer and Watson's incrmental insertion algorithm [Bowyer81, Watson81],  //
 // and Edelsbrunner and Shah's incrmental flip algorithm [Edelsbrunner96].   //
@@ -1316,8 +1316,7 @@ enum locateresult preciselocate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-void bowyerwatsoninsert(point insertpt, triface* firsttet);
-void flipinsert(point insertpt, triface* firsttet);
+void insertvertex(point insertpt, triface* firsttet, bool, bool);
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
