@@ -991,22 +991,6 @@ void bond(triface& t1, triface& t2) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Linear algebra operators.                                                 //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-#define NORM2(x, y, z) (x) * (x) + (y) * (y) + (z) * (z)
-
-#define DIST(p1, p2) \
-  sqrt(NORM2((p2)[0] - (p1)[0], (p2)[1] - (p1)[1], (p2)[2] - (p1)[2]))
-
-#define CROSS(v1, v2, n) \
-  (n)[0] =   (v1)[1] * (v2)[2] - (v2)[1] * (v1)[2];\
-  (n)[1] = -((v1)[0] * (v2)[2] - (v2)[0] * (v1)[2]);\
-  (n)[2] =   (v1)[0] * (v2)[1] - (v2)[0] * (v1)[1]
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // Primitives for debugging                                                  //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1226,7 +1210,7 @@ class queue : public link {
   bool empty() { return linkitems == 0; }
   void *push(void* newitem) {return link::add(newitem);} 
   void *pop() {return link::deletenode((void **) *head);}
-  
+
   queue(int bytes, int count = 256) : link(bytes, count) {}
 };
 
@@ -1284,6 +1268,30 @@ void pointdealloc(point);
 point pointtraverse();
 void maketetrahedron(memorypool*, triface*);
 void makepoint(point*);
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Linear algebra operators.                                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+#define NORM2(x, y, z) (x) * (x) + (y) * (y) + (z) * (z)
+
+#define DIST(p1, p2) \
+  sqrt(NORM2((p2)[0] - (p1)[0], (p2)[1] - (p1)[1], (p2)[2] - (p1)[2]))
+
+#define CROSS(v1, v2, n) \
+  (n)[0] =   (v1)[1] * (v2)[2] - (v2)[1] * (v1)[2];\
+  (n)[1] = -((v1)[0] * (v2)[2] - (v2)[0] * (v1)[2]);\
+  (n)[2] =   (v1)[0] * (v2)[1] - (v2)[0] * (v1)[1]
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Symbolic perturbation of the insphere test.                               //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

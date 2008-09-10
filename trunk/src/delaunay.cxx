@@ -5,6 +5,72 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// insphere_sos()    Insphere test with symbolic perturbation.               //
+//                                                                           //
+// Given four points pa, pb, pc, and pd, test if the point pe lies inside or //
+// outside the circumscirbed sphere of the four points.  Here we assume that //
+// the orientation of the sequence {pa, pb, pc, pd} is negative (NOT zero),  //
+// i.e., pd lies at the negative side of the plane defined by pa, pb, and pc.//
+//                                                                           //
+// Return a positive value (> 0) if pe lies outside, a negative value (< 0)  //
+// if pe lies inside the sphere, the returned value will not be zero.        //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
+{
+  REAL sign;
+  
+  sign = insphere(pa, pb, pc, pd, pe);
+  if (sign != 0.0) {
+    return sign;
+  }
+  
+  // Symbolic perturbation.
+  point pt[5], swappt;
+  REAL oriA, oriB;
+  int swaps, count;
+  int n, i;
+
+  pt[0] = pa;
+  pt[1] = pb;
+  pt[2] = pc;
+  pt[3] = pd;
+  pt[4] = pe;
+  
+  // Sort the five points such that their indices are in the increasing
+  //   order. An optimized bubble sort algorithm is used, i.e., it has
+  //   the worst case O(n^2) runtime, but it is usually much faster.
+  swaps = 0;
+  n = 5;
+  do {
+    count = 0;
+    n = n - 1;
+    for (i = 0; i < n; i++) {
+      if (pointmark(pt[i]) > pointmark(pt[i+1])) {
+        swappt = pt[i]; pt[i] = pt[i+1]; pt[i+1] = swappt;
+        count++;
+      }
+    }
+    swaps += count; // Record the number of swaps.
+  } while (count > 0); // Continue if points are swapped.
+
+  oriA = orient3d(pt[1], pt[2], pt[3], pt[4]);
+  if (oriA != 0.0) {
+    // Flip the sign if there are odd number of swaps.
+    if ((swaps % 2) != 0) oriA = -oriA;
+    return oriA;
+  }
+  
+  oriB = -orient3d(pt[0], pt[2], pt[3], pt[4]);
+  assert(oriB != 0.0); // SELF_CHECK
+  // Flip the sign if there are odd number of swaps.
+  if ((swaps % 2) != 0) oriB = -oriB;
+  return oriB;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // initialDT()    Create an initial Delaunay tetrahedralization.             //
 //                                                                           //
 // The tetrahedralization contains only one tetrahedron abcd, and four hull  //
@@ -115,7 +181,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
         if (pts[7] != dummypoint) {
           // A voolume tet. Do Delaunay check if it has not been tested yet. 
           if (!marktested(neightet)) {
-            sign = insphere(pts[4], pts[5], pts[6], pts[7], insertpt);
+            sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
             marktest(neightet); // Only test it once.
             enqflag = (sign < 0.0);
           }
@@ -146,8 +212,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   for (i = 0; i < cavebdrylist->len(); i++) {
     cavetet = (triface *) cavebdrylist->get(i);
     sym(*cavetet, neightet); // neightet may be a hull tet.
-    pts = (point *) cavetet->tet;
-    if (pts[7] != dummypoint) {
+    if ((point) cavetet->tet[7] != dummypoint) {
       // Create a new tet in the cavity.
       unmarktest(neightet); // Unmark it.
       neightet.ver = 0; // Orient the face. 
@@ -167,7 +232,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
       setdest(newtet, org(*cavetet));
       setapex(newtet, insertpt);
       setoppo(newtet, dummypoint);
-      // Note: the hull face is at the enext0fnext place.
+      // Note: the acvity boundary face is at the enext0fnext place.
       enext0fnextself(newtet);
     }
     // Connect newtet <==> neightet, this also disconnect the old bond at
@@ -206,8 +271,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   // Delete the non-Delaunay tetrahedra.
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
-    pts = (point *) cavetet->tet;
-    if (pts[7] != dummypoint) {
+    if ((point) cavetet->tet[7] != dummypoint) {
       tetrahedrondealloc(tetrahedronpool, cavetet->tet);
     } else {
       tetrahedrondealloc(hulltetrahedronpool, cavetet->tet);
