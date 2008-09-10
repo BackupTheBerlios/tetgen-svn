@@ -889,9 +889,7 @@ void bond(triface& t1, triface& t2) {
     if (org(t2) == dest(t1)) break;
     enextself(t2);
   }
-#ifdef SELF_CHECK
-  assert(i < 3); // the edge must match.
-#endif
+  assert(i < 3); // SELF_CHECK the edge must match.
   // t1 --> t2
   t1.tet[t1.loc] = encode(t2);
   // Adjust t1's edge to the 0th edge of t2.

@@ -92,6 +92,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   point *pts;
   REAL sign, ori;
   bool enqflag;
+  int *iptr;
   int i;
 
   // Initialize working lists.
@@ -108,25 +109,25 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
     cavetet = (triface *) cavetetlist->get(i);
     for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
       sym(*cavetet, neightet);
-      // Do check if it is not outside or does not been checked.
-      if ((neightet.tet != NULL) && !infected(neightet)) {
+      // Do check if it is not included in 'cavetetlist' yet.
+      if (!infected(neightet)) {
         enqflag = false;
-        pts = &((point) neightet.tet[4]);
-        if (pts[3] != dummypoint) {
+        pts = (point *) neightet.tet;
+        if (pts[7] != dummypoint) {
           // A voolume tet. Do Delaunay check if it has not been tested yet. 
           if (!marktested(neightet)) {
-            sign = insphere(pts[0], pts[1], pts[2], pts[3], insertpt);
+            sign = insphere(pts[4], pts[5], pts[6], pts[7], insertpt);
             marktest(neightet); // Only test it once.
             enqflag = (sign < 0.0);
           }
         } else {
           // It is a hull tet. Check the following two cases:
-          //   (1) its base face is visible by 'insertpt'. This is the case
+          //   (1) its base face is visible by 'insertpt'. This happens
           //       when 'insertpt' lies outside the hull face;
-          //   (2) its base face is coplanar with 'insertpt'.  This is the
-          //       case when 'insertpt' lies just on the face.
+          //   (2) its base face is coplanar with 'insertpt'.  This happens
+          //       when 'insertpt' lies just on a hull face or a hull edge.
           // In both cases, the cuurent convex hull need to be updated.
-          ori = orient3d(pts[0], pts[1], pts[2], insertpt);
+          ori = orient3d(pts[4], pts[5], pts[6], insertpt);
           enqflag = (ori <= 0.0);
         } 
         if (enqflag) {
@@ -142,35 +143,38 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   } // for (i = 0;
   
   // Create new tetrahedra in the Bowyer-Watson cavity. Connect them to the
-  //   tetrahedra at outside of the cavity, also disconnect the non-Delaunay
-  //   tetrahedra in the cavity.
+  //   tetrahedra at outside of the cavity.
   for (i = 0; i < cavebdrylist->len(); i++) {
     cavetet = (triface *) cavebdrylist->get(i);
-    sym(*cavetet, neightet);
-    if (neightet.tet != NULL) {
-      // cavetet is not a hull tet, although neightet may be.
+    sym(*cavetet, neightet); // neightet may be a hull tet.
+    pts = (point *) cavetet->tet;
+    if (pts[7] != dummypoint) {
+      // Create a new tet in the cavity.
       unmarktest(neightet); // Unmark it.
       neightet.ver = 0; // Orient the face. 
-      // Create a new tetrahedron.
       maketetrahedron(tetrahedronpool, &newtet);
       setorg(newtet, dest(neightet));
       setdest(newtet, org(neightet));
       setapex(newtet, apex(neightet));
       setoppo(newtet, insertpt);
-      // Connect newtet <==> neightet, this also disconnect the old bond at
-      //   neightet, note that cavetet still holds a pointer to neightet.
       bond(newtet, neightet);
     } else {
-      // cavetet is a hull tet.
+      // Create a new hull tet (insertpt is on the hull).
       cavetet->ver = 4; // The edge's apex is 'dummypoint' (see Fig. 1.4).
       assert(apex(*cavetet) == dummypoint); // SELF_CHECK
       // Create a new hull tetrahedron.
       maketetrahedron(hulltetrahedronpool, &newtet);
       setorg(newtet, dest(*cavetet));  // Refer to Fig. 1.4.
       setdest(newtet, org(*cavetet));
-      setapex(newtet, apex(insertpt));
+      setapex(newtet, insertpt);
       setoppo(newtet, dummypoint);
+      // Note: the hull face is at the enext0fnext place.
+      enext0fnextself(newtet);
     }
+    // Connect newtet <==> neightet, this also disconnect the old bond at
+    //   neightet (while cavetet still holds a pointer to neightet).
+    bond(newtet, neightet);
+    // Save this tet in list.
     newtetlist->append(&newtet);
   }
   
