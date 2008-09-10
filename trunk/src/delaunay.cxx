@@ -147,7 +147,17 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// insertvertex()    Insert a point into current tetrahedralization.         //
+// insertvertex()    Insert a point (p) into current tetrahedralization (T). //
+//                                                                           //
+// 'firsttet' is a tetrahedron containing p. 'firsttet' may be a hull tetra- //
+// hedron, which means that p lies outside T. In such case, the convex hull  //
+// of T will be updated to include p as a vertex.                            //
+//                                                                           //
+// If 'bowyerwatson' is TRUE, the Bowyer-Watson algorithm is used to recover //
+// the Delaunayness of T. If 'bowyerwatson' is FALSE and 'incrflip' is TRUE, //
+// the incremental flip algorithm is used instead. If both these two options //
+// are FALSE, only p is inserted, do nothing with regard to the Delaunayness //
+// of T (T may be non-Delaunay).                                             //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
