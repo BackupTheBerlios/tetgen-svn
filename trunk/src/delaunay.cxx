@@ -93,7 +93,7 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   REAL sign, ori;
   bool enqflag;
   int *iptr;
-  int i;
+  int i, j;
 
   // Initialize working lists.
   cavetetlist = new list(sizeof(triface));
@@ -181,13 +181,38 @@ void tetgenmesh::bowyerwatsoninsert(point insertpt, triface* firsttet)
   // Connect the set of new tetrahedra together.
   for (i = 0; i < newtetlist->len(); i++) {
     cavetet = (triface *) newtetlist->get(i);
-
+    cavetet->ver = 0;
+    for (j = 0; j < 3; j++) {
+      // Go to the face needs to be connected.
+      enext0fnext(*cavetet, newtet);
+      // Do connection if it has not yet been connected.
+      if (newtet.tet[newtet.loc] == NULL) {
+        // Find its adjacent face by rotating faces around the edge of
+        //   cavetet. The rotating direction is opposite to newtet.
+        //   Stop the rotate at a face which has no adjacent tet.
+        esym(*cavetet, neightet); // Set the rotate dir.
+        do {
+          // Go to the face in the adjacent tet.
+          fnextself(neightet);
+          // Continue if the adjacent tet exists.
+        } while (neightet.tet[neightet.loc] != NULL);
+        assert(apex(neightet) == dummypoint); // SELF_CHECK.
+        // Connect newtet <==> neightet.
+        bond(newtet, neightet);
+      }
+      enextself(*cavetet);
+    }
   }
 
   // Delete the non-Delaunay tetrahedra.
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
-
+    pts = (point *) cavetet->tet;
+    if (pts[7] != dummypoint) {
+      tetrahedrondealloc(tetrahedronpool, cavetet->tet);
+    } else {
+      tetrahedrondealloc(hulltetrahedronpool, cavetet->tet);
+    }
   }
   
   // Set a handle for the point location.
