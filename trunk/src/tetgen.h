@@ -1388,11 +1388,12 @@ void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Mesh data transfer functions.                                             //
+// Mesh input & output functions.                                            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 void transfernodes();
+void reconstructmesh();
 void jettisonnodes();
 void highorder();
 void numberedges();
@@ -1412,7 +1413,7 @@ void outvoronoi(tetgenio* out);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void checkmesh();
+void checkmesh(memorypool* pool);
 void checkshells();
 void checkdelaunay();
 void checkconforming();
