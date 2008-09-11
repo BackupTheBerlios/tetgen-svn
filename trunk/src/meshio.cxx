@@ -108,7 +108,8 @@ void tetgenmesh::jettisonnodes()
     printf("  %d duplicated vertices have been removed.\n", dupverts);
     // printf("  %d unused vertices have been removed.\n", unuverts);
   }
-  dupverts = 0; // unuverts = 0;
+  // dupverts = 0; 
+  // unuverts = 0;
 
   // The following line ensures that dead items in the pool of nodes cannot
   //   be allocated for the new created nodes. This ensures that the input

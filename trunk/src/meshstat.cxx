@@ -175,4 +175,112 @@ void tetgenmesh::checkmesh(memorypool* pool)
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// checkdelaunay()    Ensure that the mesh is (constrained) Delaunay.        //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::checkdelaunay()
+{
+  triface tetloop;
+  triface symtet;
+  point pa, pb, pc, pd, pe;
+  REAL sign;
+  int horrors;
+
+  if (!b->quiet) {
+    printf("  Checking Delaunay property of the mesh...\n");
+  }
+  
+  horrors = 0;
+  // Run through the list of triangles, checking each one.
+  tetrahedronpool->traversalinit();
+  tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  while (tetloop.tet != (tetrahedron *) NULL) {
+    pa = (point) tetloop.tet[4];
+    pb = (point) tetloop.tet[5];
+    pc = (point) tetloop.tet[6];
+    pd = (point) tetloop.tet[7];
+    // Check all four faces of the tetrahedron.
+    for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
+      sym(tetloop, symtet);
+      // Only do test if its adjoining tet is not a hull tet or its pointer
+      //   is larger (to ensure that each pair isn't tested twice).
+      if (((point) symtet.tet[7] != dummypoint)&&(tetloop.tet < symtet.tet)) {
+        pe = oppo(symtet);
+        sign = insphere_sos(pa, pb, pc, pd, pe);
+        if (sign < 0.0) {
+          printf("  !! Non-locally Delaunay (%d, %d, %d) - %d, %d\n",
+            pointmark(pa), pointmark(pb), pointmark(pc), pointmark(pd),
+            pointmark(pe));
+        }
+        horrors++;
+      }
+    }
+    tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+
+  if (horrors == 0) {
+    if (!b->quiet) {
+      printf("  The mesh is Delaunay.\n");
+    }
+  } else {
+    printf("  !! !! !! !! Found %d non-Delaunay faces.\n", horrors);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// statistics()    Print all sorts of cool facts.                            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::statistics()
+{
+  printf("\nStatistics:\n\n");
+  printf("  Input points: %d\n", in->numberofpoints);
+  if (b->refine) {
+    printf("  Input tetrahedra: %d\n", in->numberoftetrahedra);
+  }
+  if (b->plc) {
+    printf("  Input facets: %d\n", in->numberoffacets);
+    printf("  Input segments: %ld\n", insegments);
+    printf("  Input holes: %d\n", in->numberofholes);
+    printf("  Input regions: %d\n", in->numberofregions);
+  }
+
+  printf("\n  Mesh points: %ld\n", pointpool->items);
+  printf("  Mesh tetrahedra: %ld\n", tetrahedronpool->items);
+  printf("  Mesh faces: %ld\n", (tetrahedronpool->items * 4 + 
+    hulltetrahedronpool->items) / 2l);
+  printf("  Mesh edges: %ld\n", meshedges);
+
+  if (b->plc || b->refine) {
+    // printf("  Mesh boundary faces: %ld\n", subfaces->items);
+    // printf("  Mesh boundary edges: %ld\n\n", subsegs->items);
+  } else {
+    printf("  Convex hull faces: %ld\n\n", hulltetrahedronpool->items);
+  }
+  if (b->verbose > 0) {
+    // qualitystatistics();
+    unsigned long totalmeshbytes;
+    printf("Memory allocation statistics:\n\n");
+    printf("  Maximum number of vertices: %ld\n", pointpool->maxitems);
+    totalmeshbytes = pointpool->maxitems * pointpool->itembytes;
+    printf("  Maximum number of tetrahedra: %ld\n", tetrahedronpool->maxitems);
+    totalmeshbytes += tetrahedronpool->maxitems * tetrahedronpool->itembytes;
+    //if (subfaces != (memorypool *) NULL) {
+    //  printf("  Maximum number of subfaces: %ld\n", subfaces->maxitems);
+    //  totalmeshbytes += subfaces->maxitems * subfaces->itembytes;
+    //}
+    //if (subsegs != (memorypool *) NULL) {
+    //  printf("  Maximum number of segments: %ld\n", subsegs->maxitems);
+    //  totalmeshbytes += subsegs->maxitems * subsegs->itembytes;
+    //}
+    printf("  Heap memory used by the mesh (K bytes): %g\n\n",
+           (double) totalmeshbytes / 1024.0);
+  }
+}
+
 #endif // #ifndef meshstatCXX

@@ -1230,6 +1230,9 @@ REAL xmax, xmin, ymax, ymin, zmax, zmin;
 // Count the number of duplicated vertices (useful in proc STL files).
 long dupverts;
 
+// The number of input segments.
+long insegments;
+
 // Count the total number mesh edges.
 long meshedges;
 
@@ -1355,6 +1358,7 @@ tetgenmesh() {
   recenttet.loc = recenttet.ver = 0;
   xmax = xmin = ymax = ymin = zmax = zmin = 0.0;
   dupverts = 0l;
+  insegments = 0l;
   meshedges = 0l;
 }
 
