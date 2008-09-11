@@ -84,6 +84,11 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
   triface worktet, worktet1;
   int *iptr;
 
+  if (b->verbose > 1) {
+    printf("    Create init tet (%d, %d, %d, %d)\n", pointmark(pa),
+      pointmark(pb), pointmark(pc), pointmark(pd));
+  }
+
   // Create the first tetrahedron.
   maketetrahedron(tetrahedronpool, &firsttet);
   setorg(firsttet, pa);
@@ -185,6 +190,13 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
   bool enqflag;
   int *iptr;
   int i, j;
+
+  if (b->verbose > 1) {
+    printf("    Insert point %d in tet (%d, %d, %d, %d).\n", 
+      pointmark(insertpt), pointmark(org(*firsttet)), 
+      pointmark(dest(*firsttet)), pointmark(apex(*firsttet)),
+      pointmark(oppo(*firsttet)));
+  }
 
   // Initialize working lists.
   cavetetlist = new list(sizeof(triface));

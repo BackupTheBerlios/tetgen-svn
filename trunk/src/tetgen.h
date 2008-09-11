@@ -625,18 +625,48 @@ typedef REAL *point;
 //   of 'tet', and 'ver' (range from 0 to 5) indicates a directed edge
 //   edge of that face.
 
-struct triface {
+class triface {
+
+  public:
+
   tetrahedron* tet;
   int loc, ver;
+
+  // Constructors;
+  triface() : tet(0), loc(0), ver(0) {}
+  // Operators;
+  triface& operator=(const triface& t) {
+    tet = t.tet; loc = t.loc; ver = t.ver;
+    return *this;
+  }
+  bool operator==(triface& t) {
+    return tet == t.tet && loc == t.loc && ver == t.ver;
+  }
+  bool operator!=(triface& t) {
+    return tet != t.tet || loc != t.loc || ver != t.ver;
+  }
 };
 
 // A 'face' holds a shellface 'sh'. In particular, it holds one directed
 //   edge of the shellface. There are 6 directed edges in a triangle.
 //   'shver' (range from 0 to 5) indicates a directed edge in 'sh'.
 
-struct face {
+class face {
+
+  public:
+
   shellface *sh;
   int shver;
+
+  // Constructors;
+  face() : sh(0), shver(0) {}
+  // Operators;
+  face& operator=(const face& s) {
+    sh = s.sh; shver = s.shver;
+    return *this;
+  }
+  bool operator==(face& s) {return (sh == s.sh) && (shver == s.shver);}
+  bool operator!=(face& s) {return (sh != s.sh) || (shver != s.shver);}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -863,10 +893,10 @@ void fnextself(triface& t) {
 // bond() -- to setup the connections between 't1.loc' <==> 't2.loc'.
 //   From t1 <-- t2, we bond the edge in 't2' corresponding to the 0-th
 //   edge in 't1', and vice versa for t1 --> t2.  
-// Note: This function will modify 't1.ver' and 't2.ver'.
 
 void bond(triface& t1, triface& t2) {
-  int i;
+  // We will modify 't1.ver' and 't2.ver', backup them.
+  int t1ver = t1.ver, t2ver = t2.ver, i;
   t1.ver = 0;
   // Make sure that t2's edge is in the 0th edge ring.
   t2.ver &= 01; // t2.ver Mod2;
@@ -883,6 +913,8 @@ void bond(triface& t1, triface& t2) {
   }
   // t1 --> t2
   t2.tet[t2.loc] = encode(t1);
+  // Restore the original vers.
+  t1.ver = t1ver; t2.ver = t2ver;
 }
 
 // infect(), infected(), uninfect() -- primitives to flag or unflag a
@@ -1376,6 +1408,14 @@ tetgenmesh() {
     delete [] dummypoint;
   }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Debug functions.                                                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+int pmark(point p);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;

@@ -84,4 +84,4 @@ tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet
 
 clean:
-	$(RM) *.o *.a *~
+	$(RM) *.o *.a *~ tetgen
