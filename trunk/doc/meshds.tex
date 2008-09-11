@@ -12,9 +12,11 @@ For storing and maintaining a tetrahedral mesh ${\cal T}$ as well as its subcomp
 \end{itemize}
 Where subfaces and subsegments are those faces and edges belong to both ${\cal T}$ and {\cal F}, respectively. Since we store all tetrahedra, there is no need to store faces and edges of ${\cal T}$. While subfaces and subsegments are stored explicitly. 
 
+\section{Basic Mesh Data Types}
+
 There are four types of mesh elements: vertices, tetrahedra, subfaces, and subsegments. The elements of all the four types consist of a tetrahedral mesh of a 3D domain.  Three data structures are declared:  {\it tetrahedron}, {\it shellface}, and {\it point}. A tetrahedron is a tetrahedron;  a shellface can be either a subface or a subsegment;  and a point is a point. These three data types, linked by pointers comprise a mesh.
 
-\section{Point}
+\subsection{Point}
 
 The {\it point} data structure is a list of floating-point numbers. This list contains the following data of the point:
 \begin{itemize}
@@ -28,7 +30,7 @@ The {\it point} data structure is a list of floating-point numbers. This list co
 \item $1$ integer for the vertex type.
 \end{itemize}
 
-\section{Shellface}
+\subsection{Shellface}
 
 The {\it shellface} data structure represents either a subface or a subsegment. It contains the following data (see Fig.~\ref{fig:shellface-tetrahedron} left):
 \begin{itemize}
@@ -53,7 +55,7 @@ Fig.~\ref{fig:shellface} shows a subface with its adjacent subfaces, subsegments
 
 Note that a shellface is also used to store a subsegment. In such case, the third point of it is set to {\tt null}. And it has only one pointer to an adjacent subface.  Since there may be arbitrary number of subfaces containing a subsegment, chose one arbitrarily.
 
-\section{Tetrahedron}
+\subsection{Tetrahedron}
 
 The {\it tetrahedron} data structure represent a tetrahedron. It contains the following data (see Fig.~\ref{fig:tetrahedron} right):
 \begin{itemize}
@@ -119,16 +121,24 @@ Let the four faces of a tetrahedron be numbered from $f_0, ..., f_3$.  Each face
  
 The {\it triface} handle holds a directed edge of a terahedron. A set of mesh manipulation primitives are defined for various operation on trifaces.
 
-\begin{figure}
-  \centering
-  \includegraphics[width=1.0\textwidth]{../figs/fnext-base}
-\caption{The {\tt fnext()} primitive.}
-\label{fig:fnext}
-\end{figure}
-
 \section{Primitives for Mesh Manipulations}
 
 The mesh data structures additionally store geometric informations which help for fast queries.
 
+\subsection{bond}
 
+Suppose two trifaces $t_1$ and $t_2$ share the same faces. The {\tt bond} primitive connects $t_1$ and $t_2$ together. It also encodes the $0$-th edge informations of $t_1$ and $t_2$, i.e., at $t_1$ side, the edge of $t_2$ which corresponding to the $0$-th edge of $t_1$ is bonded, and vice versa at $t_2$ side.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=1.0\textwidth]{../figs/fnext-base}
+\caption{The {\tt bond()} and {\tt fnext()} primitives.}
+\label{fig:fnext}
+\end{figure}
+
+For an example, in Fig.~\ref{fig:fnext} left, let $t_1$ be the bottom shaded face, and $t_2$ be the top shaded face. Then $t_1$ connects to the $4$-th edge of $t_2$, and $t_2$ connects the $4$-th edge of $t_1$.
+
+\subsection{fnext}
+
+Let $t_1$ be a triface representing the tetrahedron $(v_0, v_1, v_2, v_3)$, and $t_1$ also represents the face $(v_0, v_1, v2)$ (see Fig.~\ref{fig:fnext}), and it holds the edge $[v_0, v_1]$. The {\tt fnext} primitive returns a new triface $t_2$ such that $t_2$ holds the same edge $[v_0, v_1]$, and it represents a face $v_0, v_1, v_k]$ which is the next face in the face ring of the edge $[v_0, v_1]$, and $t_1$, $t_2$ represent different tetrahedra, respectively. 
 
