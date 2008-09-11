@@ -898,6 +898,9 @@ void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
 //                                                                           //
 // makepoint()    Create a new point.                                        //
 //                                                                           //
+// The new point is indexed (starting from 'in->firstnumber'). It's type is  //
+// initialized as UNUSEDVERTEX.                                              //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::makepoint(point* pnewpoint)

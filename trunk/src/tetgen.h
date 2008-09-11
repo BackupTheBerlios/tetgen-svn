@@ -664,6 +664,10 @@ static int loc2oppo[4];
 // Note: Only valid for 'ver' equals one of {0, 2, 4}.
 static int locver2nextf[24];
 
+// Twos maps between ('loc', 'ver') and the edge number (from 0 to 5).
+static int locver2edge[4][6];
+static int edge2locver[6][2];
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Mesh manipulation primitives                                              //
@@ -968,7 +972,7 @@ void bond(triface& t1, triface& t2) {
     
 #define point2tet(pt) ((tetrahedron *) (pt))[point2tetindex]
     
-#define point2ppt(pt) (point) ((tetrahedron *) (pt))[point2tetindex + 1]
+#define point2ppt(pt) ((tetrahedron *) (pt))[point2tetindex + 1]
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -976,7 +980,83 @@ void bond(triface& t1, triface& t2) {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void printtet(triface* t);
+void printtet(triface* t)
+{
+  triface tmpface, prtface;
+  point tmppt;
+  int facecount;
+
+  printf("Tetra x%lx with loc(%i) and ver(%i):",
+         (unsigned long)(t->tet), t->loc, t->ver);
+  if ((point) t->tet[7] == dummypoint) {
+    printf("  (hull tet)");
+  }
+  if (infected(*t)) {
+    printf(" (infected)");
+  }
+  if (marktested(*t)) {
+    printf(" (marktested)");
+  }
+  printf("\n");
+
+  tmpface = *t;
+  facecount = 0;
+  while(facecount < 4) {
+    tmpface.loc = facecount;
+    sym(tmpface, prtface);
+    if (prtface.tet == NULL) {
+      printf("      [%i] Open !!\n", facecount);
+    } else {
+      printf("      [%i] x%lx  loc(%i).", facecount,
+             (unsigned long)(prtface.tet), prtface.loc);
+      if ((point) prtface.tet[7] == dummypoint) {
+        printf("  (hull tet)");
+      }
+      if (infected(prtface)) {
+        printf(" (infected)");
+      }
+      if (marktested(prtface)) {
+        printf(" (marktested)");
+      }
+      printf("\n");
+    }
+    facecount++;
+  }
+
+  tmppt = org(*t);
+  if(tmppt == (point) NULL) {
+    printf("      Org [%i] NULL\n", locver2org[t->loc][t->ver]);
+  } else {
+    printf("      Org [%i] x%lx (%.12g,%.12g,%.12g) %d\n",
+           locver2org[t->loc][t->ver], (unsigned long)(tmppt),
+           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
+  }
+  tmppt = dest(*t);
+  if(tmppt == (point) NULL) {
+    printf("      Dest[%i] NULL\n", locver2dest[t->loc][t->ver]);
+  } else {
+    printf("      Dest[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
+           locver2dest[t->loc][t->ver], (unsigned long)(tmppt),
+           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
+  }
+  tmppt = apex(*t);
+  if(tmppt == (point) NULL) {
+    printf("      Apex[%i] NULL\n", locver2apex[t->loc][t->ver]);
+  } else {
+    printf("      Apex[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
+           locver2apex[t->loc][t->ver], (unsigned long)(tmppt),
+           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
+  }
+  tmppt = oppo(*t);
+  if(tmppt == (point) NULL) {
+    printf("      Oppo[%i] NULL\n", loc2oppo[t->loc]);
+  } else {
+    printf("      Oppo[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
+           loc2oppo[t->loc], (unsigned long)(tmppt),
+           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
+  }
+}
+
 void printsh(face* s);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1201,7 +1281,7 @@ class queue : public link {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Pointer to the input data (a a PLC or a mesh).
+// Pointer to the input data (a PLC or a mesh).
 tetgenio *in;
 
 // Pointer to the options (and filenames).
@@ -1231,6 +1311,12 @@ triface recenttet;
 
 // The size of bounding boxes.
 REAL xmax, xmin, ymax, ymin, zmax, zmin;
+
+// Count the number of duplicated vertices (useful in proc STL files).
+long dupverts;
+
+// Count the total number mesh edges.
+long meshedges;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1302,6 +1388,39 @@ void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// Mesh data transfer functions.                                             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void transfernodes();
+void jettisonnodes();
+void highorder();
+void numberedges();
+void outnodes(tetgenio* out);
+void outelements(tetgenio* out);
+void outfaces(tetgenio* out);
+void outhullfaces(tetgenio* out);
+void outsubfaces(tetgenio* out);
+void outedges(tetgenio* out);
+void outsubsegments(tetgenio* out);
+void outneighbors(tetgenio* out);
+void outvoronoi(tetgenio* out);
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Mesh statistic functions.                                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void checkmesh();
+void checkshells();
+void checkdelaunay();
+void checkconforming();
+void qualitystatistics();
+void statistics();
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // Class Constructor and Destructor.                                         //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1318,6 +1437,8 @@ tetgenmesh() {
   recenttet.tet = (tetrahedron *) NULL;
   recenttet.loc = recenttet.ver = 0;
   xmax = xmin = ymax = ymin = zmax = zmin = 0.0;
+  dupverts = 0l;
+  meshedges = 0l;
 }
 
 ~tetgenmesh() {
@@ -1338,21 +1459,6 @@ tetgenmesh() {
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;
 ///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// terminatetetgen()    Terminate TetGen with a given exit code.             //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-void terminatetetgen(int x)
-{
-#ifdef TETLIBRARY
-  throw x;
-#else
-  exit(x);
-#endif // #ifdef TETLIBRARY
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1391,5 +1497,36 @@ int tetgenmesh::locver2nextf[24] = {
   1, 3, 3, 1, 0, 3,
   2, 3, 1, 1, 0, 5
 };
+
+int tetgenmesh::locver2edge[4][6] = {
+  {0, 0, 1, 1, 2, 2},
+  {3, 3, 4, 4, 0, 0},
+  {4, 4, 5, 5, 1, 1},
+  {5, 5, 3, 3, 2, 2}
+};
+
+int tetgenmesh::edge2locver[6][2] = {
+  {0, 0}, // 0  v0 -> v1
+  {0, 2}, // 1  v1 -> v2
+  {0, 4}, // 2  v2 -> v0
+  {1, 0}, // 3  v0 -> v3
+  {1, 2}, // 4  v1 -> v3
+  {2, 2}  // 5  v2 -> v3
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// terminatetetgen()    Terminate TetGen with a given exit code.             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void terminatetetgen(int x)
+{
+#ifdef TETLIBRARY
+  throw x;
+#else
+  exit(x);
+#endif // #ifdef TETLIBRARY
+}
 
 #endif // #ifndef tetgenH

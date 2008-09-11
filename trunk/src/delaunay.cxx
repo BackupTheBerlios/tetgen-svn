@@ -141,6 +141,20 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
   enextfnext(tetopa, worktet1);
   bond(worktet, worktet1);
 
+  // Set the vertex type.
+  if (pointtype(pa) == UNUSEDVERTEX) {
+    pointtype(pa) = VOLVERTEX;
+  }
+  if (pointtype(pb) == UNUSEDVERTEX) {
+    pointtype(pb) = VOLVERTEX;
+  }
+  if (pointtype(pc) == UNUSEDVERTEX) {
+    pointtype(pc) = VOLVERTEX;
+  }
+  if (pointtype(pd) == UNUSEDVERTEX) {
+    pointtype(pd) = VOLVERTEX;
+  }
+
   // Remember the first tetrahedron.
   recenttet = firsttet;
 }
@@ -302,6 +316,11 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
     // flip(cavebdrylist);
   }
 
+  // Set the point type.
+  if (pointtype(insertpt) == UNUSEDVERTEX) {
+    pointtype(insertpt) = VOLVERTEX;
+  }
+
   // Set a handle for the point location.
   recenttet = * (triface *) cavebdrylist->get(0);
   
@@ -424,8 +443,15 @@ void tetgenmesh::incrementaldelaunay()
     // Locate the point in DT.
     searchtet.tet = NULL;
     ptloc = locate(permutarray[i], &searchtet);
-    // Insert the point by Bowyer-Watson algorithm.
-    insertvertex(permutarray[i], &searchtet, true, false);    
+    if (ptloc == ONVERTEX) {
+      // The point already exists. Mark it and do nothing on it.
+      point2ppt(permutarray[i]) = (tetrahedron) org(searchtet);
+      pointtype(permutarray[i]) = DUPLICATEDVERTEX;
+      dupverts++;
+    } else {
+      // Insert the point by Bowyer-Watson algorithm.
+      insertvertex(permutarray[i], &searchtet, true, false);
+    }
   } // for (i = 4;
 
   delete [] permutarray;

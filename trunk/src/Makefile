@@ -68,11 +68,14 @@ ptloc.o:	ptloc.cxx
 delaunay.o:	delaunay.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c delaunay.cxx
 
+meshio.o:	meshio.cxx
+	$(CXX) -I./ $(CXXFLAGS) -c meshio.cxx
+
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o behavior.o memorypool.o ptloc.o delaunay.o predicates.o
-	ar r libtet.a io.o behavior.o memorypool.o ptloc.o delaunay.o predicates.o
+tetlib:	io.o behavior.o memorypool.o ptloc.o delaunay.o meshio.o predicates.o
+	ar r libtet.a io.o behavior.o memorypool.o ptloc.o delaunay.o meshio.o predicates.o
 
 clean:
 	$(RM) *.o *.a *~
