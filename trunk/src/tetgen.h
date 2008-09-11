@@ -467,8 +467,8 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
   void usage();
 
   // Command line parse routine.
-  bool parse_commandline(int argc, const char **argv);
-  bool parse_commandline(const char *switches) {
+  bool parse_commandline(int argc, char **argv);
+  bool parse_commandline(char *switches) {
     return parse_commandline(0, &switches);
   }
   
@@ -1383,71 +1383,31 @@ tetgenmesh() {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Initialize fast look-up tables.                                           //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-int tetgenmesh::ve[6] = { 2, 5, 4, 1, 0, 3 };
-
-int tetgenmesh::locver2org[4][6]  = {
-  {0, 1, 1, 2, 2, 0},
-  {0, 3, 3, 1, 1, 0},
-  {1, 3, 3, 2, 2, 1},
-  {2, 3, 3, 0, 0, 2} 
-};
-
-int tetgenmesh::locver2dest[4][6] = { 
-  {1, 0, 2, 1, 0, 2},
-  {3, 0, 1, 3, 0, 1},
-  {3, 1, 2, 3, 1, 2},
-  {3, 2, 0, 3, 2, 0}
-};
-
-int tetgenmesh::locver2apex[4][6] = { 
-  {2, 2, 0, 0, 1, 1},
-  {1, 1, 0, 0, 3, 3},
-  {2, 2, 1, 1, 3, 3},
-  {0, 0, 2, 2, 3, 3}
-};
-
-int tetgenmesh::loc2oppo[4] = { 3, 2, 0, 1 };
-
-int tetgenmesh::locver2nextf[24] = {
-  1, 5, 2, 5, 3, 5,
-  3, 3, 2, 1, 0, 1,
-  1, 3, 3, 1, 0, 3,
-  2, 3, 1, 1, 0, 5
-};
-
-int tetgenmesh::locver2edge[4][6] = {
-  {0, 0, 1, 1, 2, 2},
-  {3, 3, 4, 4, 0, 0},
-  {4, 4, 5, 5, 1, 1},
-  {5, 5, 3, 3, 2, 2}
-};
-
-int tetgenmesh::edge2locver[6][2] = {
-  {0, 0}, // 0  v0 -> v1
-  {0, 2}, // 1  v1 -> v2
-  {0, 4}, // 2  v2 -> v0
-  {1, 0}, // 3  v0 -> v3
-  {1, 2}, // 4  v1 -> v3
-  {2, 2}  // 5  v2 -> v3
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // terminatetetgen()    Terminate TetGen with a given exit code.             //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void terminatetetgen(int x)
-{
-#ifdef TETLIBRARY
-  throw x;
-#else
-  exit(x);
-#endif // #ifdef TETLIBRARY
-}
+void terminatetetgen(int x);
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tetrahedralize()    Interface for using TetGen's library to generate      //
+//                     Delaunay tetrahedralizations, constrained Delaunay    //
+//                     tetrahedralizations, quality tetrahedral meshes.      //
+//                                                                           //
+// 'in' is an object of 'tetgenio' which contains a PLC you want to tetrahed-//
+// ralize or a previously generated tetrahedral mesh you want to refine.  It //
+// must not be a NULL. 'out' is another object of 'tetgenio' for storing the //
+// generated tetrahedral mesh. It can be a NULL. If so, the output will be   //
+// saved to file(s). If 'bgmin' != NULL, it contains a background mesh which //
+// defines a mesh size distruction function.                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out, 
+                    tetgenio *addin = NULL, tetgenio *bgmin = NULL);
+
+void tetrahedralize(char *switches, tetgenio *in, tetgenio *out,
+                    tetgenio *addin = NULL, tetgenio *bgmin = NULL);
 
 #endif // #ifndef tetgenH

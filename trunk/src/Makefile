@@ -80,5 +80,8 @@ predicates.o: predicates.cxx
 tetlib:	io.o behavior.o memorypool.o ptloc.o delaunay.o meshio.o meshstat.o predicates.o
 	ar r libtet.a io.o behavior.o memorypool.o ptloc.o delaunay.o meshio.o meshstat.o predicates.o
 
+tetgen:	main.cxx
+	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet
+
 clean:
 	$(RM) *.o *.a *~
