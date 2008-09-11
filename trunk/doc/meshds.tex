@@ -18,17 +18,29 @@ There are four types of mesh elements: vertices, tetrahedra, subfaces, and subse
 
 \subsection{Point}
 
-The {\it point} data structure is a list of floating-point numbers. This list contains the following data of the point:
-\begin{itemize}
-\item $3$ coordinates;
-\item $n$ user-defined attributes (optional);
-\item $1$ user-defined metric tensor (optional);
-\item $1$ pointer to a simplex (tet, tri, edge); 
-\item $1$ pointer to a parent (or duplicate) point;
-\item $1$ pointer to a tet in background mesh (optional);
-\item $1$ integer index (also for boundary marker);
-\item $1$ integer for the vertex type.
-\end{itemize}
+The {\it point} data structure is a list of floating-point numbers. This list contains the following data of the point:\\
+\begin{tabular}{l | l | c | c}
+ index & contents & type & comments\\ \hline
+ $1$ & $x$-coord & {\tt double} & \\
+ $2$ & $y$-coord & {\tt double} & \\
+ $3$ & $z$-coord & {\tt double} & \\ \hline
+ $4$ & weight    & {\tt double} & (metric) \\ \hline
+ $4 + 1$ & $1$st attribute & {\tt double} & optional \\
+ $\vdots$ & $\vdots$ & $\vdots$ & \\
+ $4 + n$ & $n$-th attribute & {\tt double} & \\ \hline
+ $i$ & tetrahedron & {\tt pointer} & $i =$ {\tt point2tetindex} \\
+ $i + 1$ & point & {\tt pointer} & parent point\\ \hline
+ $j$ & marker & {\tt integer} & $j = $ {\tt pointmarkindex}\\
+ $j + 1$ & type & {\tt integer} & vertex type
+\end{tabular}\\
+
+Without point attributes ($n = 0$), the total size (in byte) of a point is the maximal of the following two numbers:
+\[
+  4 * \textrm{sizeof(double)} + 2 * \textrm{sizeof(pointer)} + 2 * \textrm{sizeof(integer)}
+\]
+\[
+  (\textrm{pointmarkindex} + 1) * \textrm{sizeof(integer)}.
+\]
 
 \subsection{Shellface}
 
