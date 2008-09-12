@@ -20,12 +20,16 @@
 REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 {
   REAL sign;
-  
+
+  insphere_count++;
+
   sign = insphere(pa, pb, pc, pd, pe);
   if (sign != 0.0) {
     return sign;
   }
-  
+
+  insphere_sos_count++;
+
   // Symbolic perturbation.
   point pt[5], swappt;
   REAL oriA, oriB;

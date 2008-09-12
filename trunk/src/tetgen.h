@@ -1268,6 +1268,9 @@ long insegments;
 // Count the total number mesh edges.
 long meshedges;
 
+// Algorithm statistical counters.
+long insphere_count, insphere_sos_count;
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Functions for using memorypools.                                          //
@@ -1392,6 +1395,7 @@ tetgenmesh() {
   dupverts = 0l;
   insegments = 0l;
   meshedges = 0l;
+  insphere_count = insphere_sos_count = 0l;
 }
 
 ~tetgenmesh() {

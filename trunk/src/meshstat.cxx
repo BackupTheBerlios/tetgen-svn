@@ -214,8 +214,8 @@ void tetgenmesh::checkdelaunay()
           printf("  !! Non-locally Delaunay (%d, %d, %d) - %d, %d\n",
             pointmark(pa), pointmark(pb), pointmark(pc), pointmark(pd),
             pointmark(pe));
+          horrors++;
         }
-        horrors++;
       }
     }
     tetloop.tet = tetrahedrontraverse(tetrahedronpool);
@@ -264,6 +264,8 @@ void tetgenmesh::statistics()
   }
   if (b->verbose > 0) {
     // qualitystatistics();
+    
+    // Report memory usages.
     unsigned long totalmeshbytes;
     printf("Memory allocation statistics:\n\n");
     printf("  Maximum number of vertices: %ld\n", pointpool->maxitems);
@@ -280,6 +282,11 @@ void tetgenmesh::statistics()
     //}
     printf("  Heap memory used by the mesh (K bytes): %g\n\n",
            (double) totalmeshbytes / 1024.0);
+
+    // Report algorithmic performances.
+    printf("Algorithmic statistics:\n\n");
+    printf("  Number of insphere tests: %ld\n", insphere_count);
+    printf("  Number of insphere sos tests: %ld\n\n", insphere_sos_count);
   }
 }
 
