@@ -141,6 +141,8 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     printf("  %g\n", (tv[2] - tv[1]) / (REAL) CLOCKS_PER_SEC);
   }
 
+  printf("\n");
+
   if (out != (tetgenio *) NULL) {
     out->firstnumber = in->firstnumber;
     out->mesh_dim = in->mesh_dim;
