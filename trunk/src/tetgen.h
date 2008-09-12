@@ -895,11 +895,11 @@ void fnextself(triface& t) {
 //   edge in 't1', and vice versa for t1 --> t2.  
 
 void bond(triface& t1, triface& t2) {
-  // We will modify 't1.ver' and 't2.ver', backup them.
+  // We will modify edge vers, backup them.
   int t1ver = t1.ver, t2ver = t2.ver, i;
   t1.ver = 0;
   // Make sure that t2's edge is in the 0th edge ring.
-  t2.ver &= 01; // t2.ver Mod2;
+  if (t2.ver &= 01) esymself(t2);
   for (i = 0; i < 3; i++) {
     if (org(t2) == dest(t1)) break;
     enextself(t2);
@@ -927,7 +927,7 @@ void bond(triface& t1, triface& t2) {
   (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | (unsigned long) 8l)
 
 #define uninfect(t) \
-  (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | ~(unsigned long) 8l)
+  (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] & ~(unsigned long) 8l)
     
 #define infected(t) ((unsigned long) (t).tet[8] & (unsigned long) 8l) != 0
 
@@ -943,7 +943,7 @@ void bond(triface& t1, triface& t2) {
   (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] | (unsigned long) 8l)
 
 #define unmarktest(t) \
-  (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] | ~(unsigned long) 8l)
+  (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] & ~(unsigned long) 8l)
     
 #define marktested(t) ((unsigned long) (t).tet[9] & (unsigned long) 8l) != 0
 

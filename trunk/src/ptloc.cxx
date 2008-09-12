@@ -161,7 +161,7 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
   int *iptr;
 
   // Let searchtet point to its face such that 'searchpt' lies above to it.
-  searchtet->ver &= 01; // Keep the CCW edge ring.
+  if (searchtet->ver &= 01) esymself(*searchtet); // Keep the CCW edge ring.
   for (; ; searchtet->loc = (searchtet->loc + 1) % 4) { 
     torg = org(*searchtet);
     tdest = dest(*searchtet);
@@ -210,9 +210,9 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
     //   faces are viable moves. Use the opposite points of thier neighbors
     //   to discriminate, i.e., we choose the face whose opposite point has
     //   the shortest distance to searchpt.
-    if (oriorg > 0) {
-      if (oridest > 0) {
-        if (oriapex > 0) {
+    if (oriorg < 0) {
+      if (oridest < 0) {
+        if (oriapex < 0) {
           // Any of the three faces is a viable move. 
           nextmove = ORGMOVE;
           enextfnext(*searchtet, neightet);
@@ -279,7 +279,7 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
           }
         }
       } else {
-        if (oriapex > 0) {
+        if (oriapex < 0) {
           // Two faces, opposite to origin and apex, are viable.
           nextmove = ORGMOVE;
           enextfnext(*searchtet, neightet);
@@ -311,8 +311,8 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
         }
       }
     } else {
-      if (oridest > 0) {
-        if (oriapex > 0) {
+      if (oridest < 0) {
+        if (oriapex < 0) {
           // Two faces, opposite to destination and apex, are viable.
           nextmove = DESTMOVE;
           enext2fnext(*searchtet, neightet);
@@ -343,7 +343,7 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
           nextmove = DESTMOVE;
         }
       } else {
-        if (oriapex > 0) {
+        if (oriapex < 0) {
           // Only the face opposite to apex is viable.
           nextmove = APEXMOVE;
         } else {

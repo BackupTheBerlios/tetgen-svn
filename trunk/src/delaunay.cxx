@@ -245,7 +245,11 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
           infect(neightet);
           cavetetlist->append(&neightet);
         } else {
-          // Found a boubdary face of the cavity.
+          // Found a boubdary face of the cavity. It may be a face of a hull
+          //   tet which contains 'dummypoint'. Choose the edge in the face 
+          //   such that its endpoints are not 'dummypoint', while its apex
+          //   may be 'dummypoint' (see Fig. 1.4).
+          cavetet->ver = 4;
           cavebdrylist->append(cavetet);
         }
       } // if (!infected(neightet)
@@ -257,23 +261,20 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
   for (i = 0; i < cavebdrylist->len(); i++) {
     cavetet = (triface *) cavebdrylist->get(i);
     sym(*cavetet, neightet); // neightet may be a hull tet.
-    if ((point) cavetet->tet[7] != dummypoint) {
-      // Create a new tet in the cavity.
+    if (apex(*cavetet) != dummypoint) {
+      // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
       unmarktest(neightet); // Unmark it.
-      neightet.ver = 0; // Orient the face. 
+      neightet.ver = 0; // Choose the 0th edge ring.
       maketetrahedron(tetrahedronpool, &newtet);
       setorg(newtet, dest(neightet));
       setdest(newtet, org(neightet));
       setapex(newtet, apex(neightet));
       setoppo(newtet, insertpt);
-      bond(newtet, neightet);
     } else {
-      // Create a new hull tet (insertpt is on the hull).
-      cavetet->ver = 4; // The edge's apex is 'dummypoint' (see Fig. 1.4).
-      assert(apex(*cavetet) == dummypoint); // SELF_CHECK
-      // Create a new hull tetrahedron.
+      // Create a new hull tet (see Fig. bowyerwatson 2).
       maketetrahedron(hulltetrahedronpool, &newtet);
-      setorg(newtet, dest(*cavetet));  // Refer to Fig. 1.4.
+      assert(cavetet->ver == 4); // SELF_CHECK (see Fig. 1.4).
+      setorg(newtet, dest(*cavetet));
       setdest(newtet, org(*cavetet));
       setapex(newtet, insertpt);
       setoppo(newtet, dummypoint);
@@ -305,7 +306,6 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
           fnextself(neightet);
           // Continue if the adjacent tet exists.
         } while (neightet.tet[neightet.loc] != NULL);
-        assert(apex(neightet) == dummypoint); // SELF_CHECK.
         // Connect newtet <==> neightet.
         bond(newtet, neightet);
       }
