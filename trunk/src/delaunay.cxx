@@ -172,9 +172,9 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 //                                                                           //
 // insertvertex()    Insert a point (p) into current tetrahedralization (T). //
 //                                                                           //
-// 'firsttet' is a tetrahedron containing p. 'firsttet' may be a hull tetra- //
-// hedron, which means that p lies outside T. In such case, the convex hull  //
-// of T will be updated to include p as a vertex.                            //
+// The point p will be first located in T. 'searchtet' is a suggested start- //
+// tetrahedron, it can be NULL. Note that p may lies outside T. In such case,//
+// the convex hull of T will be updated to include p as a vertex.            //
 //                                                                           //
 // If 'bowyerwatson' is TRUE, the Bowyer-Watson algorithm is used to recover //
 // the Delaunayness of T. If 'bowyerwatson' is FALSE and 'incrflip' is TRUE, //
@@ -184,33 +184,62 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
+void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   bool bowyerwatson, bool increflip)
 {
   list *cavetetlist, *cavebdrylist;
   triface *cavetet, neightet, newtet;
   point *pts;
+  enum locateresult loc;
   REAL sign, ori;
   bool enqflag;
   int *iptr;
   int i, j;
 
   if (b->verbose > 1) {
-    printf("    Insert point %d in tet (%d, %d, %d, %d).\n", 
-      pointmark(insertpt), pointmark(org(*firsttet)), 
-      pointmark(dest(*firsttet)), pointmark(apex(*firsttet)),
-      pointmark(oppo(*firsttet)));
+    printf("    Insert point %d\n", pointmark(insertpt));
+  }
+
+  // Locate the point p.
+  loc = locate(insertpt, searchtet);
+  
+  if (loc == ONVERTEX) {
+    // The point already exists. Mark it and do nothing on it.
+    point2ppt(insertpt) = (tetrahedron) org(*searchtet);
+    pointtype(insertpt) = DUPLICATEDVERTEX;
+    dupverts++;
+    return;
+  }
+
+  if (b->verbose > 1) {
+    printf("    Located (%d) tet (%d, %d, %d, %d).\n", (int) loc,
+      pointmark(org(*searchtet)), pointmark(dest(*searchtet)), 
+      pointmark(apex(*searchtet)), pointmark(oppo(*searchtet)));
   }
 
   // Initialize working lists.
   cavetetlist = new list(sizeof(triface));
   cavebdrylist = new list(sizeof(triface));
 
+  // Add the searchtet into list.
+  infect(*searchtet);
+  cavetetlist->append(searchtet);
+  if (loc == ONFACE) {
+    // Add its neighbor tet into list.
+    sym(*searchtet, neightet);
+    infect(neightet);
+    cavetetlist->append(&neightet);
+  } else if (loc == ONEDGE) {
+    // Add all tets sharing its edge into list.
+    fnext(*searchtet, neightet);
+    while (neightet.tet != searchtet->tet) {
+      infect(neightet);
+      cavetetlist->append(&neightet);
+      fnextself(neightet);
+    }
+  }
+
   // Form a star-shaped cavity with respect to the inserting point.
-  //   Starting from 'firsttet', do breath-first search around in its
-  //   adjacent tet, and the adjacent of adjacent tets ...
-  infect(*firsttet);
-  cavetetlist->append(firsttet);
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
     for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
@@ -220,29 +249,20 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
         enqflag = false;
         pts = (point *) neightet.tet;
         if (pts[7] != dummypoint) {
-          // A voolume tet. Operate on it if it has not been tested yet.
+          // A volume tet. Operate on it if it has not been tested yet.
           if (!marktested(neightet)) {
             if (bowyerwatson) {
               // Use Bowyer-Watson algorithm, do Delaunay check.
               sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
               enqflag = (sign < 0.0);
-            } else {
-              // Check if the point lies on neightet's face (or edge).
-              ori = orient3d(dest(neightet), org(neightet), apex(neightet),
-                             insertpt);
-              enqflag = (ori == 0.0);
             }
             marktest(neightet); // Only test it once.
           }
         } else {
-          // It is a hull tet. Check the following two cases:
-          //   (1) its base face is visible by 'insertpt'. This happens
-          //       when 'insertpt' lies outside the hull face;
-          //   (2) its base face is coplanar with 'insertpt'.  This happens
-          //       when 'insertpt' lies just on a hull face or a hull edge.
-          // In both cases, the cuurent convex hull need to be updated.
+          // It is a hull tet. Check if its base face is visible by p. 
+          //   This happens when p lies lies outside the hull face.
           ori = orient3d(pts[4], pts[5], pts[6], insertpt);
-          enqflag = (ori <= 0.0);
+          enqflag = (ori < 0.0);
         } 
         if (enqflag) {
           // Found a tet in the cavity.
@@ -306,9 +326,7 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
         //   Stop the rotate at a face which has no adjacent tet.
         esym(*cavetet, neightet); // Set the rotate dir.
         do {
-          // Go to the face in the adjacent tet.
-          fnextself(neightet);
-          // Continue if the adjacent tet exists.
+          fnextself(neightet); // Go to the face in the adjacent tet.
         } while (neightet.tet[neightet.loc] != NULL);
         // Connect newtet <==> neightet.
         bond(newtet, neightet);
@@ -353,9 +371,8 @@ void tetgenmesh::insertvertex(point insertpt, triface* firsttet,
 
 void tetgenmesh::incrementaldelaunay()
 {
-  triface searchtet, neightet;
+  triface searchtet;
   point *permutarray, swapvertex;
-  enum locateresult ptloc;
   REAL v1[3], v2[3], n[3];
   REAL bboxsize, bboxsize2, bboxsize3, ori;
   int randindex, i, j;
@@ -363,10 +380,17 @@ void tetgenmesh::incrementaldelaunay()
   // Form a random permuation (uniformly at random) of the set of vertices.
   permutarray = new point[in->numberofpoints];
   pointpool->traversalinit();
-  for (i = 0; i < in->numberofpoints; i++) {
-    randindex = randomnation(i + 1);
-    permutarray[i] = permutarray[randindex];
-    permutarray[randindex] = (point) pointpool->traverse();
+  if (b->nojettison) { // '-J' option (only for debug)
+    // Skip the permutation.
+    for (i = 0; i < in->numberofpoints; i++) {
+      permutarray[i] = (point) pointpool->traverse();
+    }
+  } else {
+    for (i = 0; i < in->numberofpoints; i++) {
+      randindex = randomnation(i + 1);
+      permutarray[i] = permutarray[randindex];
+      permutarray[randindex] = (point) pointpool->traverse();
+    }
   }
 
   // Calculate the diagonal size of its bounding box.
@@ -406,8 +430,7 @@ void tetgenmesh::incrementaldelaunay()
       terminatetetgen(1);
     }
     for (j = 0; j < 3; j++) {
-      v1[j] = permutarray[1][j] - permutarray[0][j];
-      v2[j] = permutarray[i][j] - permutarray[i][j];
+      v2[j] = permutarray[i][j] - permutarray[0][j];
     }
     CROSS(v1, v2, n);
   }
@@ -435,8 +458,8 @@ void tetgenmesh::incrementaldelaunay()
   if (i > 3) {
     // Swap to move the non-indetical vertex from index i to index 1.
     swapvertex = permutarray[i];
-    permutarray[i] = permutarray[2];
-    permutarray[2] = swapvertex;
+    permutarray[i] = permutarray[3];
+    permutarray[3] = swapvertex;
   }
 
   // Orient the first four vertices in permutarray so that they follow the
@@ -456,19 +479,10 @@ void tetgenmesh::incrementaldelaunay()
   }
 
   for (i = 4; i < in->numberofpoints; i++) {
-    // Locate the point in DT.
+    // Insert the point by Bowyer-Watson algorithm.
     searchtet.tet = NULL;
-    ptloc = locate(permutarray[i], &searchtet);
-    if (ptloc == ONVERTEX) {
-      // The point already exists. Mark it and do nothing on it.
-      point2ppt(permutarray[i]) = (tetrahedron) org(searchtet);
-      pointtype(permutarray[i]) = DUPLICATEDVERTEX;
-      dupverts++;
-    } else {
-      // Insert the point by Bowyer-Watson algorithm.
-      insertvertex(permutarray[i], &searchtet, true, false);
-    }
-  } // for (i = 4;
+    insertvertex(permutarray[i], &searchtet, true, false);
+  }
 
   delete [] permutarray;
 }

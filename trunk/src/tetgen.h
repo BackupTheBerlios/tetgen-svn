@@ -1336,7 +1336,7 @@ enum locateresult preciselocate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-void insertvertex(point insertpt, triface* firsttet, bool, bool);
+void insertvertex(point insertpt, triface* searchtet, bool, bool);
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
