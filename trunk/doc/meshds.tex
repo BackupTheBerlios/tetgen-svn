@@ -34,13 +34,11 @@ The {\it point} data structure is a list of floating-point numbers. This list co
  $j + 1$ & type & {\tt integer} & vertex type
 \end{tabular}\\
 
-Without point attributes ($n = 0$), the total size (in byte) of a point is the maximal of the following two numbers:
+Without the point attributes ($n = 0$), the total size (in byte) of a point can be calculated as follows:
 \[
   4 * \textrm{sizeof(double)} + 2 * \textrm{sizeof(pointer)} + 2 * \textrm{sizeof(integer)}
 \]
-\[
-  (\textrm{pointmarkindex} + 1) * \textrm{sizeof(integer)}.
-\]
+On a $32$-bit machine, $\textrm{sizeof(double)} = 8$, $\textrm{sizeof(pointer)} = 8$, and $\textrm{sizeof(int)} = 4$. The total size of a point is $(\textrm{pointmarkindex} + 1) * \textrm{sizeof(integer)} = 56$ (bytes).
 
 \subsection{Shellface}
 
