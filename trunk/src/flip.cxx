@@ -24,6 +24,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 {
   tetrahedron ptr;
   triface newface, casface;
+  point pa, pb, pc, pd, pe;
   int *iptr, i, j;
 
   // Check if e is the 'dummypoint'.
@@ -55,30 +56,32 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     }
   }
 
+  pa = apex(oldtets[0]);
+  pb = apex(oldtets[1]);
+  pc = apex(oldtets[2]);
+  pd = dest(oldtets[0]);
+  pe = org(oldtets[0]);
+
   // Check if c is a dummypointc.
-  if (apex(oldtets[2]) != dummypoint) {
+  if (pc != dummypoint) {
     // Create abcd. Check if d is a dummypoint.
-    if (dest(oldtets[0]) != dummypoint) {
+    if (pd != dummypoint) {
       maketetrahedron(tetrahedronpool, &(newtets[0]));
     } else {
       maketetrahedron(hulltetrahedronpool, &(newtets[0])); // a hull tet.
     }
-    setvertices(newtets[0], apex(oldtets[0]), apex(oldtets[1]),
-                apex(oldtets[2]), dest(oldtets[0]));
+    setvertices(newtets[0], pa, pb, pc, pd);
     // Create bace.
     maketetrahedron(tetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], apex(oldtets[1]), apex(oldtets[0]),
-                apex(oldtets[2]), org(oldtets[0]));
+    setvertices(newtets[1], pb, pa, pc, pe);
   } else {
     // c is dummypoint. The two new tets are hull tets.
     // Create badc.
     maketetrahedron(hulltetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], apex(oldtets[1]), apex(oldtets[0]),
-                dest(oldtets[0]), apex(oldtets[2]));
+    setvertices(newtets[0], pb, pa, pd, pc);
     // Create abec
     maketetrahedron(hulltetrahedronpool, &(newtets[1]));
-    setvertices(newtets[0], apex(oldtets[0]), apex(oldtets[1]),
-                org(oldtets[0]), apex(oldtets[2]));
+    setvertices(newtets[0], pa, pb, pe, pc);
     // Adjust badc -> abcd.
     enext0fnextself(newtets[0]);
     esymself(newtets[0]);
@@ -126,6 +129,7 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
 {
   tetrahedron ptr;
   triface newface, casface;
+  point pa, pb, pc, pd, pe;
   int *iptr, i, j;
 
   // Check if e is dummypoint.
@@ -148,47 +152,46 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     }
   }
 
+  pa = org(oldtets[0]);
+  pb = dest(oldtets[0]);
+  pc = apex(oldtets[0]);
+  pd = oppo(oldtets[0]);
+  pe = oppo(oldtets[1]);
+
   // Check if d is dummytet.
-  if (oppo(oldtets[0]) != dummypoint) {
+  if (pd != dummypoint) {
     // Create edab.
     maketetrahedron(tetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], oppo(oldtets[1]), oppo(oldtets[0]),
-                org(oldtets[0]), dest(oldtets[0]));
+    setvertices(newtets[0], pe, pd, pa, pb);
     // Check if c is dummypoint.
-    if (apex(oldtets[0]) != dummypoint) {
+    if (pc != dummypoint) {
       // Create edbc
       maketetrahedron(tetrahedronpool, &(newtets[1]));
       // Create edca
       maketetrahedron(tetrahedronpool, &(newtets[2]));
-      setvertices(newtets[2], oppo(oldtets[1]), oppo(oldtets[0]),
-                  apex(oldtets[0]), org(oldtets[0]));
+      setvertices(newtets[2], pe, pd, pc, pa);
     } else {
       // Create edbc
       maketetrahedron(hulltetrahedronpool, &(newtets[1]));
       // Create deac
       maketetrahedron(hulltetrahedronpool, &(newtets[2]));
-      setvertices(newtets[2], oppo(oldtets[0]), oppo(oldtets[1]),
-                  org(oldtets[0]), apex(oldtets[0]));
+      setvertices(newtets[2], pd, pe, pa, pc);
       // Adjust deac->edca
       enext0fnextself(newtets[2]);
       esymself(newtets[2]);
     }
-    setvertices(newtets[1], oppo(oldtets[1]), oppo(oldtets[0]),
-                dest(oldtets[0]), apex(oldtets[0]));
+    setvertices(newtets[1], pe, pd, pb, pc);
   } else {
     // d is dummypoint. Create three new hull tets.
     // Create abed
     maketetrahedron(hulltetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], org(oldtets[0]), dest(oldtets[0]),
-                oppo(oldtets[1]), oppo(oldtets[0]));
+    setvertices(newtets[0], pa, pb, pe, pd);
     // Create bced
     maketetrahedron(hulltetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], dest(oldtets[0]), apex(oldtets[0]),
-                oppo(oldtets[1]), oppo(oldtets[0]));
+    setvertices(newtets[1], pb, pc, pe, pd);
     // Create caed
     maketetrahedron(hulltetrahedronpool, &(newtets[2]));
-    setvertices(newtets[2], apex(oldtets[0]), org(oldtets[0]),
-                oppo(oldtets[1]), oppo(oldtets[0]));
+    setvertices(newtets[2], pc, pa, pe, pd);
     // Adjust abed->edab, bced->edbc, caed->edca
     for (i = 0; i < 3; i++) {
       enext2fnextself(newtets[i]);
