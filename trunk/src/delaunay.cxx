@@ -569,6 +569,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   bool bowyerwatson, bool increflip)
 {
   list *cavetetlist, *cavebdrylist;
+  tetrahedron ptr;
   triface *cavetet, neightet, newtet;
   point *pts;
   enum locateresult loc;
@@ -651,9 +652,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           //   This happens when p lies lies outside the hull face.
           ori = orient3d(pts[4], pts[5], pts[6], insertpt);
           enqflag = (ori < 0.0);
-          // Check if this face is coplanar with p. This case will create
+          // Check if this face is coplanar with p. This case may create
           //   a degenerate tet (zero volume). 
-          // Note: this case should only happen at hull face.
+          // Note: for convex domain, it only happen at hull face.
           if (ori == 0.0) copcount++;
         }
         if (enqflag) {
@@ -736,7 +737,50 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
   
   if (bowyerwatson && (copcount > 0)) {
-    // There are zero volume new tetrahedra. Correct them.
+    // There may exist zero volume tetrahedra. Check and remove them.
+    triface oldtets[4], newtets[2];
+    for (i = 0; i < cavebdrylist->len(); i++) {
+      cavetet = (triface *) cavebdrylist->get(i);
+      pts = (point *) cavetet->tet;
+      if (pts[7] != dummypoint) {
+        // Check if the new tet is degenerate.
+        ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
+        if (ori == 0) {
+          if (b->verbose > 1) {
+            printf("    Remove bad tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+              pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
+          }
+          // Find the hull edge in cavetet.
+          cavetet->ver = 0;
+          for (j = 0; j < 3; j++) {
+            enext0fnext(*cavetet, neightet);
+            symself(neightet);
+            if ((point) neightet.tet[7] == dummypoint) break;
+            enextself(*cavetet);
+          }
+          assert(j < 3); // SELF_CHECK
+          // Collect tets for flipping the edge.
+          oldtets[0] = *cavetet;
+          for (j = 0; j < 3; j++) {
+            fnext(oldtets[j], oldtets[j + 1]);
+          }
+          if (oldtets[3].tet != cavetet->tet) {
+            printf("Internal error at insertvertex(): Unknown flip case.\n");
+            terminatetetgen(1);
+          }
+          // Do a 3-to-2 flip to remove the degenerate tet.
+          flip32(oldtets, newtets, NULL);
+          // Delete the old tets.
+          for (j = 0; j < 3; j++) {
+            if ((point) oldtets[j].tet[7] != dummypoint) {
+              tetrahedrondealloc(tetrahedronpool, oldtets[j].tet);
+            } else {
+              tetrahedrondealloc(hulltetrahedronpool, oldtets[j].tet);
+            }
+          }
+        } // if (ori == 0)
+      } // if (pts[7] != dummypoint)
+    } // for (i = 0;
   }
 
   // If the flip option is used.
