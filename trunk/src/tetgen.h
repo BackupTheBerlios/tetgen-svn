@@ -780,6 +780,12 @@ static int edge2locver[6][2];
 
 #define setoppo(t, p) (t).tet[loc2oppo[(t).loc] + 4] = (tetrahedron) (p)
 
+#define setvertices(t, p1, p2, p3, p4) \
+  setorg(t, p1); \
+  setdest(t, p2); \
+  setapex(t, p3); \
+  setoppo(t, p4)
+
 // esym(), enext(), enext2() -- primitives for moving edges in face.
 //   The face remains the same.
 

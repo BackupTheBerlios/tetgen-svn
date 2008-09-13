@@ -491,31 +491,16 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
   // Create the first tetrahedron.
   maketetrahedron(tetrahedronpool, &firsttet);
-  setorg(firsttet, pa);
-  setdest(firsttet, pb);
-  setapex(firsttet, pc);
-  setoppo(firsttet, pd);
+  setvertices(firsttet, pa, pb, pc, pd);
   // Create four hull tetrahedra.
   maketetrahedron(hulltetrahedronpool, &tetopa);
-  setorg(tetopa, pb);
-  setdest(tetopa, pc);
-  setapex(tetopa, pd);
-  setoppo(tetopa, dummypoint);
+  setvertices(tetopa, pb, pc, pd, dummypoint);
   maketetrahedron(hulltetrahedronpool, &tetopb);
-  setorg(tetopb, pc);
-  setdest(tetopb, pa);
-  setapex(tetopb, pd);
-  setoppo(tetopb, dummypoint);
+  setvertices(tetopb, pc, pa, pd, dummypoint);
   maketetrahedron(hulltetrahedronpool, &tetopc);
-  setorg(tetopc, pa);
-  setdest(tetopc, pb);
-  setapex(tetopc, pd);
-  setoppo(tetopc, dummypoint);
+  setvertices(tetopc, pa, pb, pd, dummypoint);
   maketetrahedron(hulltetrahedronpool, &tetopd);
-  setorg(tetopd, pb);
-  setdest(tetopd, pa);
-  setapex(tetopd, pc);
-  setoppo(tetopd, dummypoint);
+  setvertices(tetopd, pb, pa, pc, dummypoint);
 
   // Connect hull tetrahedra to firsttet (at four faces of firsttet).
   bond(firsttet, tetopd);
