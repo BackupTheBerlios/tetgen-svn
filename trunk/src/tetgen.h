@@ -1315,6 +1315,19 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// Mesh transformation operations.                                           //
+//                                                                           //
+// Mesh transformation operations translate an old set of tetrahedra into a  //
+// new set of tetrahedra in the same region of the tetrahedralization. Such  //
+// operations include face/edge flips, vertex insertion/deletions.           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void flip32(triface* oldtets, triface* newtets, queue* flipque);
+void flip23(triface* oldtets, triface* newtets, queue* flipque);
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // Jump-and-Walk point location algorithm.                                   //
 //                                                                           //
 // The following functions implemented the randomized jump-and-walk point    //
@@ -1366,7 +1379,6 @@ void outvoronoi(tetgenio* out);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void printtet(triface* t);
 void checkmesh(memorypool* pool);
 void checkshells();
 void checkdelaunay();
@@ -1419,6 +1431,7 @@ tetgenmesh() {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+void ptet(triface* t);
 int pmark(point p);
 
 ///////////////////////////////////////////////////////////////////////////////

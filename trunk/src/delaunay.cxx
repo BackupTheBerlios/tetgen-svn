@@ -597,7 +597,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
 
   // Locate the point p.
-  loc = locate(insertpt, searchtet);
+  if (searchtet->tet == NULL) {
+    loc = locate(insertpt, searchtet);
+  } else {
+    loc = preciselocate(insertpt, searchtet);
+  }
   
   if (loc == ONVERTEX) {
     // The point already exists. Mark it and do nothing on it.
@@ -720,19 +724,17 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     cavetet = (triface *) cavebdrylist->get(i);
     cavetet->ver = 0;
     for (j = 0; j < 3; j++) {
-      // Go to the face needs to be connected.
-      enext0fnext(*cavetet, newtet);
-      // Operate on it if it has not yet been connected.
+      enext0fnext(*cavetet, newtet); // Go to the face.
+      // Operate on it if it is open.
       if (newtet.tet[newtet.loc] == NULL) {
         // Find its adjacent face by rotating faces around the edge of
         //   cavetet. The rotating direction is opposite to newtet.
-        //   Stop the rotate at a face which has no adjacent tet.
+        //   Stop the rotate at a face which is open.
         esym(*cavetet, neightet); // Set the rotate dir.
         do {
-          fnextself(neightet); // Go to the face in the adjacent tet.
+          fnextself(neightet); // Go to the face in the adjacent tet. 
         } while (neightet.tet[neightet.loc] != NULL);
-        // Connect newtet <==> neightet.
-        bond(newtet, neightet);
+        bond(newtet, neightet); // Connect newtet <==> neightet.
       }
       enextself(*cavetet);
     }

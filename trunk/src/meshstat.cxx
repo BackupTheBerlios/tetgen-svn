@@ -5,86 +5,57 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// printtet()    Print the detail contents of a tetrahedron.                 //
+// Initialize fast look-up tables.                                           //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::printtet(triface* t)
-{
-  triface tmpface, prtface;
-  point tmppt;
-  int facecount;
+int tetgenmesh::ve[6] = { 2, 5, 4, 1, 0, 3 };
 
-  printf("Tetra x%lx with loc(%i) and ver(%i):",
-         (unsigned long)(t->tet), t->loc, t->ver);
-  if ((point) t->tet[7] == dummypoint) {
-    printf("  (hull tet)");
-  }
-  if (infected(*t)) {
-    printf(" (infected)");
-  }
-  if (marktested(*t)) {
-    printf(" (marktested)");
-  }
-  printf("\n");
+int tetgenmesh::locver2org[4][6]  = {
+  {0, 1, 1, 2, 2, 0},
+  {0, 3, 3, 1, 1, 0},
+  {1, 3, 3, 2, 2, 1},
+  {2, 3, 3, 0, 0, 2} 
+};
 
-  tmpface = *t;
-  facecount = 0;
-  while(facecount < 4) {
-    tmpface.loc = facecount;
-    sym(tmpface, prtface);
-    if (prtface.tet == NULL) {
-      printf("      [%i] Open !!\n", facecount);
-    } else {
-      printf("      [%i] x%lx  loc(%i).", facecount,
-             (unsigned long)(prtface.tet), prtface.loc);
-      if ((point) prtface.tet[7] == dummypoint) {
-        printf("  (hull tet)");
-      }
-      if (infected(prtface)) {
-        printf(" (infected)");
-      }
-      if (marktested(prtface)) {
-        printf(" (marktested)");
-      }
-      printf("\n");
-    }
-    facecount++;
-  }
+int tetgenmesh::locver2dest[4][6] = { 
+  {1, 0, 2, 1, 0, 2},
+  {3, 0, 1, 3, 0, 1},
+  {3, 1, 2, 3, 1, 2},
+  {3, 2, 0, 3, 2, 0}
+};
 
-  tmppt = org(*t);
-  if(tmppt == (point) NULL) {
-    printf("      Org [%i] NULL\n", locver2org[t->loc][t->ver]);
-  } else {
-    printf("      Org [%i] x%lx (%.12g,%.12g,%.12g) %d\n",
-           locver2org[t->loc][t->ver], (unsigned long)(tmppt),
-           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
-  }
-  tmppt = dest(*t);
-  if(tmppt == (point) NULL) {
-    printf("      Dest[%i] NULL\n", locver2dest[t->loc][t->ver]);
-  } else {
-    printf("      Dest[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
-           locver2dest[t->loc][t->ver], (unsigned long)(tmppt),
-           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
-  }
-  tmppt = apex(*t);
-  if(tmppt == (point) NULL) {
-    printf("      Apex[%i] NULL\n", locver2apex[t->loc][t->ver]);
-  } else {
-    printf("      Apex[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
-           locver2apex[t->loc][t->ver], (unsigned long)(tmppt),
-           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
-  }
-  tmppt = oppo(*t);
-  if(tmppt == (point) NULL) {
-    printf("      Oppo[%i] NULL\n", loc2oppo[t->loc]);
-  } else {
-    printf("      Oppo[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
-           loc2oppo[t->loc], (unsigned long)(tmppt),
-           tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
-  }
-}
+int tetgenmesh::locver2apex[4][6] = { 
+  {2, 2, 0, 0, 1, 1},
+  {1, 1, 0, 0, 3, 3},
+  {2, 2, 1, 1, 3, 3},
+  {0, 0, 2, 2, 3, 3}
+};
+
+int tetgenmesh::loc2oppo[4] = { 3, 2, 0, 1 };
+
+int tetgenmesh::locver2nextf[24] = {
+  1, 5, 2, 5, 3, 5,
+  3, 3, 2, 1, 0, 1,
+  1, 3, 3, 1, 0, 3,
+  2, 3, 1, 1, 0, 5
+};
+
+int tetgenmesh::locver2edge[4][6] = {
+  {0, 0, 1, 1, 2, 2},
+  {3, 3, 4, 4, 0, 0},
+  {4, 4, 5, 5, 1, 1},
+  {5, 5, 3, 3, 2, 2}
+};
+
+int tetgenmesh::edge2locver[6][2] = {
+  {0, 0}, // 0  v0 -> v1
+  {0, 2}, // 1  v1 -> v2
+  {0, 4}, // 2  v2 -> v0
+  {1, 0}, // 3  v0 -> v3
+  {1, 2}, // 4  v1 -> v3
+  {2, 2}  // 5  v2 -> v3
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

@@ -62,6 +62,9 @@ behavior.o:	behavior.cxx
 memorypool.o:	memorypool.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c memorypool.cxx
 
+flip.o:	flip.cxx
+	$(CXX) -I./ $(CXXFLAGS) -c flip.cxx
+
 delaunay.o:	delaunay.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c delaunay.cxx
 
@@ -74,8 +77,8 @@ meshstat.o:	meshstat.cxx
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o behavior.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
-	ar r libtet.a io.o behavior.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
+tetlib:	io.o behavior.o memorypool.o flip.o delaunay.o meshio.o meshstat.o predicates.o
+	ar r libtet.a io.o behavior.o flip.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
 
 tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet
