@@ -256,7 +256,8 @@ void tetgenmesh::statistics()
 
     // Report algorithmic performances.
     printf("Algorithmic statistics:\n\n");
-    printf("  Maximal number of visited tests: %ld\n", ptloc_max_tets_count);
+    printf("  Maximal point location distance (# tets): %ld\n", 
+           ptloc_max_tets_count);
     printf("  Number of insphere tests: %ld\n", insphere_count);
     printf("  Number of symbolic insphere tests: %ld\n\n", insphere_sos_count);
   }

@@ -27,7 +27,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
   point pa, pb, pc, pd, pe;
   int *iptr, i, j;
 
-  // Check if e is the 'dummypoint'.
+  // Check if e is 'dummypoint'.
   if (org(oldtets[0]) == dummypoint) {  // pe
     // Reconfigure the old tets such that d is 'dummypoint'.
     for (i = 0; i < 3; i++) {

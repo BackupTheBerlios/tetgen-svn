@@ -1333,6 +1333,7 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 
 void flip32(triface* oldtets, triface* newtets, queue* flipque);
 void flip23(triface* oldtets, triface* newtets, queue* flipque);
+bool flipnm(list* oldtetlist, list* newtetlist, queue* flipque);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
