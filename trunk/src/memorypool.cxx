@@ -704,8 +704,8 @@ void tetgenmesh::initializepools()
 
   // The number of bytes occupied by a tetrahedron.  There are 4 pointers
   //   to other tetrahedra, 4 pointers to corners, and possibly 4 pointers
-  //   to subfaces (or 4 face markers used for flips).
-  elesize = 12 * sizeof(tetrahedron);
+  //   to subfaces.
+  elesize = (8 + b->useshelles * 4) * sizeof(tetrahedron);
   // The index within each element at which its attributes are found, where
   //   the index is measured in REALs. 
   elemattribindex = (elesize + sizeof(REAL) - 1) / sizeof(REAL);
@@ -722,21 +722,13 @@ void tetgenmesh::initializepools()
   // The index within each element at which its marker is found, where the
   //   index is measured in ints.
   elemmarkerindex = (elesize + sizeof(int) - 1) / sizeof(int);
-  // If either -A, or -a, or -n, or -v option is used, an additional integer
-  //    is allocated for each element.
-  if (b->regionattrib || b->neighout || b->voroout) {
-    elesize = (elemmarkerindex + 1) * sizeof(int);
-  }
+  // Increase the size by one interger.
+  elesize = (elemmarkerindex + 1) * sizeof(int);
   // If -o2 switch is used, an additional pointer pointed to the list of
   //   higher order nodes is allocated for each element.
   highorderindex = (elesize + sizeof(tetrahedron) - 1) / sizeof(tetrahedron);
   if (b->order == 2) {
     elesize = (highorderindex + 1) * sizeof(tetrahedron);
-  }
-  // If -p option is used, make sure we have additional space for saving
-  //   subsegments attached to the edges of tetrahedra.
-  if (b->plc && (elesize / sizeof(tetrahedron) < 14)) {
-    elesize = 14 * sizeof(tetrahedron);
   }
   // Having determined the memory size of an element, initialize the pools.
   tetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
@@ -890,6 +882,7 @@ void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
   if (b->varvolume) {
     volumebound(newtet->tet) = -1.0;
   }
+  elemmarker(newtet->tet) = 0;
   newtet->loc = 0;
   newtet->ver = 0;
 }

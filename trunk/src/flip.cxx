@@ -14,9 +14,11 @@
 //                                                                           //
 // In case there are hull tets involved in this flip.  There are two cases:  //
 //   (1) If d is 'dummypoint', then abcd is hull tet, and bace is normal.    //
-//       In case e is 'dummypoint', we just reconfigure e to d.              //
+//       If e is 'dummypoint', we reconfigure e to d, i.e., turnover it.     //
 //   (2) If c is 'dummypoint' then both abcd and bace are hull tets.         //
-//       In case a or b is 'dummypoint', we just reconfigure it to c.        //
+//       If a or b is 'dummypoint', we reconfigure it to c, i.e., rotate the //
+//       three old tets counterclockwisely (right-hand rule) until a or b    //
+//       is in c's position (see Fig.).                                      //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -118,10 +120,12 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 // abcd and bace, 'newtets' returns three new tets, edab, edbc, and edca.    //
 //                                                                           //
 // In case there are hull tets involved in this flip.  There are two cases:  //
-//   (1) If d is 'dummypoint', all three new tets are hull tets,.            //
-//       In case e is 'dummypoint', we just reconfigure e to d.              //
-//   (2) If c is 'dummypoint' then two new tets edbc and edca are hull tets. //
-//       In case a or b is 'dummypoint', we just reconfigure it to c.        //
+//   (1) If d is 'dummypoint', all three new tets are hull tets.  If e is    //
+//       'dummypoint', we reconfigure e to d, i.e., turn it up-side down.    //
+//   (2) If c is 'dummypoint' , two new tets edbc and edca are hull tets.    //
+//       If a or b is 'dummypoint', we reconfigure it to c, i.e., rotate the //
+//       three old tets counterclockwisely (right-hand rule) until a or b    //
+//       is in c's position (see Fig.).                                      //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 

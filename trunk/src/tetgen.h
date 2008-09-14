@@ -567,41 +567,15 @@ enum locateresult {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-// The tetrahedron data structure.  Fields of a tetrahedron contains:
-//   - a list of four adjoining tetrahedra;
-//   - a list of four vertices;
-//   - a list of four subfaces (optional, used for -p switch);
-//   - a list of user-defined floating-point attributes (optional);
-//   - a REAL of volume constraint (optional, used for -a switch);
-//   - an integer of element marker (optional, used for -A switch);
-//   - a pointer to a list of high-ordered nodes (optional, -o2 switch);
+// The tetrahedron data structure.  
 
 typedef REAL **tetrahedron;
 
-// The shellface data structure.  Fields of a shellface contains:
-//   - a list of three adjoining subfaces;
-//   - a list of three vertices;
-//   - a list of three adjoining subsegments;
-//   - a list of two adjoining tetrahedra;
-//   - a pointer to a badface containing it (used for -q);
-//   - an area constraint (optional, used for -q);
-//   - an integer for boundary marker;
-//   - an integer for type: SHARPSEGMENT, NONSHARPSEGMENT, ...;
-//   - an integer for pbc group (optional, if in->pbcgrouplist exists);
+// The shellface data structure. 
 
 typedef REAL **shellface;
 
-// The point data structure.  It is actually an array of REALs:
-//   - x, y and z coordinates;
-//   - a point weight (REAL);
-//   - a list of user-defined point attributes (optional);
-//   - a list of REALs of a user-defined metric tensor (optional);
-//   - a pointer to a simplex (tet, tri, edge, or vertex);
-//   - a pointer to a parent (or duplicate) point;
-//   - a pointer to a tet in background mesh (optional);
-//   - a pointer to another pbc point (optional);
-//   - an integer for boundary marker;
-//   - an integer for verttype: INPUTVERTEX, FREEVERTEX, ...;
+// The point data structure.  
 
 typedef REAL *point;
 
@@ -737,7 +711,7 @@ static int edge2locver[6][2];
 #define encode(t) (tetrahedron) ((unsigned long) (t).tet | \
     ((unsigned long) ((t).ver << 1)) | (unsigned long) (t).loc)
 
-// decode() -- to decompose a pointer 'ptr' into a triface 't'. For
+// decode() -- to decompose a pointer 'ptr' into a triface 't'. 
 //   For obtaining t.ver, we first extract it (& 12l), then shift it to
 //   the right by 2 bits (>> 2), then multiply it by 2 (<< 1), hence 
 //   t.ver is in {0,2,4}. Combining the last two operations, we only
@@ -923,39 +897,31 @@ void bond(triface& t1, triface& t2) {
   t1.ver = t1ver; t2.ver = t2ver;
 }
 
+// elemmarker() -- to read or set element's marker.
+
+#define elemmarker(ptr) ((int *) (ptr))[elemmarkerindex]
+
 // infect(), infected(), uninfect() -- primitives to flag or unflag a
-//   tetrahedron. The last fourth bit of the pointer tet[8] is flagged (1)
+//   tetrahedron. The last bit of the element marker is flagged (1)
 //   or unflagged (0).
-// Note: these primitives relies on the fact that all shellfaces are aligned
-//   to 16-byte boundaries.
 
-#define infect(t) \
-  (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] | (unsigned long) 8l)
+#define infect(t) elemmarker((t).tet) |= 1
 
-#define uninfect(t) \
-  (t).tet[8] = (tetrahedron) ((unsigned long) (t).tet[8] & ~(unsigned long) 8l)
-    
-#define infected(t) ((unsigned long) (t).tet[8] & (unsigned long) 8l) != 0
+#define uninfect(t) elemmarker((t).tet) &= ~1
+
+#define infected(t) (elemmarker((t).tet) & 1) != 0
 
 // marktest(), marktested(), unmarktest() -- primitives to flag or unflag a
 //   tetrahedron. One needs them in forming Bowyer-Watson cavity, to mark a
 //   tetrahedron if it has been checked (for Delaunay case) so later check
-//   can be avoided.  The last fourth bit of the pointer tet[9] is marked (1)
+//   can be avoided.  The last second bit of the element marker is marked (1)
 //   or unmarked (0).
-// Note: these primitives relies on the fact that all shellfaces are aligned
-//   to 16-byte boundaries.
 
-#define marktest(t) \
-  (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] | (unsigned long) 8l)
+#define marktest(t) elemmarker((t).tet) |= 2
 
-#define unmarktest(t) \
-  (t).tet[9] = (tetrahedron) ((unsigned long) (t).tet[9] & ~(unsigned long) 8l)
+#define unmarktest(t) elemmarker((t).tet) &= ~2
     
-#define marktested(t) ((unsigned long) (t).tet[9] & (unsigned long) 8l) != 0
-
-// ishulltet()  -- return true if t is a hull tetrahedron.
-
-#define ishulltet(t) (t).tet[7] == (tetrahedron) dummypoint
+#define marktested(t) (elemmarker((t).tet) & 2) != 0
 
 // elemattribute() -- to check or set element attributes.
 
@@ -964,10 +930,6 @@ void bond(triface& t1, triface& t2) {
 // volumebound() -- to check or set element's maximum volume bound.
 
 #define volumebound(ptr) (((REAL *) (ptr))[volumeboundindex])
-
-// elemmarker() -- to read or set element's marker.
-
-#define elemmarker(ptr) (((int *) (ptr))[elemmarkerindex])
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1333,7 +1295,7 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 
 void flip32(triface* oldtets, triface* newtets, queue* flipque);
 void flip23(triface* oldtets, triface* newtets, queue* flipque);
-bool flipnm(list* oldtetlist, list* newtetlist, queue* flipque);
+bool flipnm(int n, triface* oldtets, triface* newtets, queue* flipque);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
