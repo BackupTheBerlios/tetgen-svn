@@ -131,7 +131,11 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
 
   if (searchtet->tet != NULL) {
     // Get the distance from the suggested starting tet to the search point.
-    torg = org(*searchtet);
+    if ((point) searchtet->tet[7] != dummypoint) {
+      torg = org(*searchtet);
+    } else {
+      torg = (point) searchtet->tet[4];
+    }
     searchdist = NORM2(searchpt[0] - torg[0], searchpt[1] - torg[1], 
                        searchpt[2] - torg[2]);
   } else {
@@ -141,7 +145,11 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
   // If a recently encountered tetrahedron has been recorded and has not
   //   been deallocated, test it as a good starting point.
   if ((recenttet.tet != NULL) && (recenttet.tet != searchtet->tet)) {
-    torg = org(recenttet);
+    if ((point) recenttet.tet[7] != dummypoint) {
+      torg = org(recenttet);
+    } else {
+      torg = (point) recenttet.tet[4];
+    }
     dist = NORM2(searchpt[0] - torg[0], searchpt[1] - torg[1],
                  searchpt[2] - torg[2]);
     if (dist < searchdist) {
@@ -159,7 +167,7 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
   // Find how much blocks in current tet pool.
   tetblocks = (tetrahedronpool->maxitems + ELEPERBLOCK - 1) / ELEPERBLOCK;
   // Find the average samles per block. Each block at least have 1 sample.
-  samplesperblock = 1 + (samples / tetblocks);
+  samplesperblock = (samples + tetblocks - 1) / tetblocks;
   sampleblocks = samples / samplesperblock;
   sampleblock = tetrahedronpool->firstblock;
   for (i = 0; i < sampleblocks; i++) {
@@ -230,8 +238,15 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
   REAL searchdist, dist;
   int *iptr;
 
-  // Let searchtet point to its face such that 'searchpt' lies above to it.
-  if (searchtet->ver &= 01) esymself(*searchtet); // Keep the CCW edge ring.
+  if ((point) searchtet->tet[7] == dummypoint) {
+    // A hull tet. Choose the neighbor of its base face.
+    searchtet->loc = 0;
+    symself(*searchtet);
+  } else {
+    // Keep the CCW edge ring.
+    if (searchtet->ver &= 01) esymself(*searchtet);
+  }
+  // Let searchtet be the face such that 'searchpt' lies above to it.
   for (; ; searchtet->loc = (searchtet->loc + 1) % 4) { 
     torg = org(*searchtet);
     tdest = dest(*searchtet);
@@ -739,48 +754,54 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   if (bowyerwatson && (copcount > 0)) {
     // There may exist zero volume tetrahedra. Check and remove them.
     triface oldtets[4], newtets[2];
-    for (i = 0; i < cavebdrylist->len(); i++) {
-      cavetet = (triface *) cavebdrylist->get(i);
-      pts = (point *) cavetet->tet;
-      if (pts[7] != dummypoint) {
-        // Check if the new tet is degenerate.
-        ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
-        if (ori == 0) {
-          if (b->verbose > 1) {
-            printf("    Remove bad tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
-              pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
-          }
-          // Find the hull edge in cavetet.
-          cavetet->ver = 0;
-          for (j = 0; j < 3; j++) {
-            enext0fnext(*cavetet, neightet);
-            symself(neightet);
-            if ((point) neightet.tet[7] == dummypoint) break;
-            enextself(*cavetet);
-          }
-          assert(j < 3); // SELF_CHECK
-          // Collect tets for flipping the edge.
-          oldtets[0] = *cavetet;
-          for (j = 0; j < 3; j++) {
-            fnext(oldtets[j], oldtets[j + 1]);
-          }
-          if (oldtets[3].tet != cavetet->tet) {
-            printf("Internal error at insertvertex(): Unknown flip case.\n");
-            terminatetetgen(1);
-          }
-          // Do a 3-to-2 flip to remove the degenerate tet.
-          flip32(oldtets, newtets, NULL);
-          // Delete the old tets.
-          for (j = 0; j < 3; j++) {
-            if ((point) oldtets[j].tet[7] != dummypoint) {
-              tetrahedrondealloc(tetrahedronpool, oldtets[j].tet);
-            } else {
-              tetrahedrondealloc(hulltetrahedronpool, oldtets[j].tet);
+    bool multiflag; 
+    do {
+      // We do known if there is multiple degenerate case yet.
+      multiflag = false;
+      for (i = 0; i < cavebdrylist->len(); i++) {
+        cavetet = (triface *) cavebdrylist->get(i);
+        pts = (point *) cavetet->tet;
+        if ((pts[4] != NULL) && (pts[7] != dummypoint)) {
+          // Check if the new tet is degenerate.
+          ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
+          if (ori == 0) {
+            if (b->verbose > 1) {
+              printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+                pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
             }
-          }
-        } // if (ori == 0)
-      } // if (pts[7] != dummypoint)
-    } // for (i = 0;
+            // Find the hull edge in cavetet.
+            cavetet->ver = 0;
+            for (j = 0; j < 3; j++) {
+              enext0fnext(*cavetet, neightet);
+              symself(neightet);
+              if ((point) neightet.tet[7] == dummypoint) break;
+              enextself(*cavetet);
+            }
+            // Because of existing multiple degenerate cases. It is possible
+            //   that the other hull face is not pop yet.
+            if (j < 3) {
+              // Collect tets for flipping the edge.
+              oldtets[0] = *cavetet;
+              for (j = 0; j < 3; j++) {
+                fnext(oldtets[j], oldtets[j + 1]);
+              }
+              if (oldtets[3].tet != cavetet->tet) {
+                printf("Internal error insertvertex(): Unknown flip case.\n");
+                terminatetetgen(1);
+              }
+              // Do a 3-to-2 flip to remove the degenerate tet.
+              flip32(oldtets, newtets, NULL);
+              // Delete the old tets.
+              tetrahedrondealloc(tetrahedronpool, oldtets[0].tet);
+              tetrahedrondealloc(hulltetrahedronpool, oldtets[1].tet);
+              tetrahedrondealloc(hulltetrahedronpool, oldtets[2].tet);
+            } else { 
+              multiflag = true;  // Wait for the next round.
+            } // if (j < 3)
+          } // if (ori == 0)
+        } // if (pts[7] != dummypoint)
+      } // for (i = 0;
+    } while (multiflag);
   }
 
   // If the flip option is used.
@@ -794,7 +815,14 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
 
   // Set a handle for the point location.
-  recenttet = * (triface *) cavebdrylist->get(0);
+  if (bowyerwatson) {
+    // Soome new tets may be dead, find a live one.
+    for (i = 0; i < cavebdrylist->len(); i++) {
+      cavetet = (triface *) cavebdrylist->get(i);
+      if (cavetet->tet[4] != NULL) break;
+    }
+    recenttet = * cavetet;
+  }
   
   delete cavetetlist;
   delete cavebdrylist;

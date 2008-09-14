@@ -81,7 +81,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     setvertices(newtets[0], pb, pa, pd, pc);
     // Create abec
     maketetrahedron(hulltetrahedronpool, &(newtets[1]));
-    setvertices(newtets[0], pa, pb, pe, pc);
+    setvertices(newtets[1], pa, pb, pe, pc);
     // Adjust badc -> abcd.
     enext0fnextself(newtets[0]);
     esymself(newtets[0]);
