@@ -266,6 +266,8 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
     // searchpt is coplanar with searchtet's face. Go to the next face.
   }
 
+  ptloc_trav_tets_count = 1l;  // Algorithimic count.
+
   // Walk through tetrahedra to locate the point.
   while (true) {
 
@@ -480,7 +482,9 @@ enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
     torg = org(*searchtet);
     tdest = dest(*searchtet);
     tapex = apex(*searchtet);
-    
+
+    ptloc_trav_tets_count++;  // Algorithimic count.
+
   } // while (true)
 }
 
@@ -602,6 +606,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     loc = locate(insertpt, searchtet);
   } else {
     loc = preciselocate(insertpt, searchtet);
+  }
+
+  // Update algorithmic counts.
+  if (ptloc_max_tets_count < ptloc_trav_tets_count) {
+    ptloc_max_tets_count = ptloc_trav_tets_count;
   }
   
   if (loc == ONVERTEX) {
