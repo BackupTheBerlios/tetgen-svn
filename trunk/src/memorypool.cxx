@@ -744,10 +744,14 @@ void tetgenmesh::initializepools()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::tetrahedrondealloc(memorypool *pool, tetrahedron *dyingtet)
+void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
 {
   dyingtet[4] = (tetrahedron) NULL;
-  pool->dealloc((void *) dyingtet);
+  if ((point) dyingtet[7] != dummypoint) {
+    tetrahedronpool->dealloc((void *) dyingtet);
+  } else {
+    hulltetrahedronpool->dealloc((void *) dyingtet);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

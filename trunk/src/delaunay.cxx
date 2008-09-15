@@ -753,11 +753,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // Delete the old tetrahedra of the cavity.
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
-    if ((point) cavetet->tet[7] != dummypoint) {
-      tetrahedrondealloc(tetrahedronpool, cavetet->tet);
-    } else {
-      tetrahedrondealloc(hulltetrahedronpool, cavetet->tet);
-    }
+    tetrahedrondealloc(cavetet->tet);
   }
   
   if (bowyerwatson && (copcount > 0)) {
@@ -801,9 +797,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
               // Do a 3-to-2 flip to remove the degenerate tet.
               flip32(oldtets, newtets, NULL);
               // Delete the old tets.
-              tetrahedrondealloc(tetrahedronpool, oldtets[0].tet);
-              tetrahedrondealloc(hulltetrahedronpool, oldtets[1].tet);
-              tetrahedrondealloc(hulltetrahedronpool, oldtets[2].tet);
+              tetrahedrondealloc(oldtets[0].tet);
+              tetrahedrondealloc(oldtets[1].tet);
+              tetrahedrondealloc(oldtets[2].tet);
             } else { 
               multiflag = true;  // Wait for the next round.
             } // if (j < 3)

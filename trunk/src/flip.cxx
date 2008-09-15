@@ -278,7 +278,7 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
   // Now i is the shift distance to the first one.
   for (; i > 0; i--) {
     baktet = oldtets[0];
-    for (j = 0; j > n - 1; j++) {
+    for (j = 0; j < n - 1; j++) {
       oldtets[j] = oldtets[j + 1];
     }
     oldtets[n - 1] = baktet;
@@ -289,20 +289,23 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
   success = false;
 
   for (i = 0; i < n; i++) {
-    // Get the points configuration.
     pc = apex(oldtets[i]);
+    // Decide if the face abc is flipable.
     if (pc != dummypoint) {
-      // Check if abc is flipable.
       pd = apex(oldtets[(i + 1) % n]);
       pe = apex(oldtets[(i - 1) % n]);
-      ori = orient3d(pa, pb, pd, pe);
-      if (ori >= 0) {  // Allow ori == 0, support 4-to-4 flip.
-        ori = orient3d(pb, pc, pd, pe);
-        if (ori > 0) {
-          ori = orient3d(pc, pa, pd, pe);
+      if ((pd != dummypoint) && (pc != dummypoint)) {
+        ori = orient3d(pa, pb, pd, pe);
+        if (ori >= 0) {  // Allow ori == 0, support 4-to-4 flip.
+          ori = orient3d(pb, pc, pd, pe);
+          if (ori > 0) {
+            ori = orient3d(pc, pa, pd, pe);
+          }
         }
+        doflip = ori > 0;
+      } else {
+        doflip = false;
       }
-      doflip = ori > 0;
     } else {
       doflip = true; // Support 2-to-2 flip.
     }
@@ -322,12 +325,12 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
       recuroldtets = new triface[n - 1];
       // Set the remaining n-2 tets around ab.
       for (j = 0; j < n - 2 ; j++) {
-        recuroldtets[0] = oldtets[(i + 2 + j) % n];
+        recuroldtets[j] = oldtets[(i + 1 + j) % n];
       }
-      // Put the last tet having ab.
+      // Put the last tet having ab. Leave a copy in baktet.
       recuroldtets[j] = baktet = newtets[2];
       // Adjust recuroldtets[j] to abp[0]p[1] (see Fig.).
-      enext2fnextself(recuroldtets[j]);
+      enext2fnextself(recuroldtets[j]);  // j == n - 2;
       enext2self(recuroldtets[j]);
       esymself(recuroldtets[j]);
       // Check the size of the link of ab.
@@ -339,8 +342,6 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
         flip32(recuroldtets, &(newtets[2]), flipque);
         success = true;
       }
-      // The old tets are still in 'oldtets'.
-      delete [] recuroldtets;
       // Are we success?
       if (!success) {
         // No! Reverse the flip23() operation.
@@ -355,7 +356,17 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
         // set the tets back.
         oldtets[i] = tmpoldtets[0];
         oldtets[(i - 1) % n] = tmpoldtets[1];
+        // Delete the three new tets.
+        tetrahedrondealloc(newtets[0].tet);
+        tetrahedrondealloc(newtets[1].tet);
+        tetrahedrondealloc(newtets[2].tet);
+      } else {
+        // Delete the last tet in 'recuroldtets'. This tet is neither in
+        //   'oldtets' nor in 'newtets'.
+        tetrahedrondealloc(recuroldtets[j].tet);  // j == n - 2
       }
+      // The other tets in 'recuroldtets' are still in 'oldtets'.
+      delete [] recuroldtets;
       break;
     } // if (doflip)
   } // for (i = 0; i < n; i++)

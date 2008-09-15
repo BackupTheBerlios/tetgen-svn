@@ -1248,7 +1248,7 @@ long insphere_count, insphere_sos_count;  // Count the symbolic tests.
 ///////////////////////////////////////////////////////////////////////////////
 
 void initializepools();
-void tetrahedrondealloc(memorypool*, tetrahedron*);
+void tetrahedrondealloc(tetrahedron*);
 tetrahedron *tetrahedrontraverse(memorypool*);
 void shellfacedealloc(memorypool*, shellface*);
 shellface *shellfacetraverse(memorypool*);
