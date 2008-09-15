@@ -235,7 +235,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 // This routine attemps to remove an edge, denoted as ab, by transforming a  //
 // set K of n tetrahedra containing ab into a set K' of m tetrahedra, where  //
 // K and K' have the same outer boundary, and ab is not in K', where n >= 3, //
-// m = (n - 2) * 2. It can be viwed as a n-to-m flip.                        //
+// m = 2 * n - 4. It can be viwed as a n-to-m flip.                          //
 //                                                                           //
 // 'oldtets' contains n tets sharing at ab. Imaging that ab perpendicularly  //
 // crosses your screen, b lies in front of a. Let the projections of the n   //
@@ -259,6 +259,10 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 // NOTE: In above, the flip23() can be applied even if the edge de crosses   //
 // ab, i.e., a, b, e, and d are coplanar. Although this will creare a degen- //
 // erate tet edab (has zero volume), it will be removed after ab is removed. //
+//                                                                           //
+// The number m can be counted as follows: there are n - 3 '2-to-3' flips, 1 //
+// '3-to-2' flip. Each '2-to-3' flip produces two new tets, and the '3-to-2' //
+// flip produces two new tets, hence m = (n - 3) * 2 + 2 = 2 * n - 4.        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
