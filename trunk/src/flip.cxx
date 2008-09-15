@@ -242,7 +242,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 // apexes, denoted as p[0], p[1], ..., p[n-1], onto screen in counterclock-  //
 // wise order (right-hand rule). The n tets are: abp[0]p[1], abp[1]p[2],..., //
 // abp[n-1]p[0], respectively.  If one of p[i] is dummypoint, we reconfigure //
-// it such that p[n-1] is dummypoint. a or b should not be dummypoint.       //
+// it such that p[0] is dummypoint. a or b should not be dummypoint.         //
 //                                                                           //
 // The principle of the transformation is to recursively reduce the link of  //
 // ab by perform 2-to-3 flips until the link size of ab is 3, hence a 3-to-2 //
@@ -267,100 +267,97 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
 {
   triface *recuroldtets, tmpoldtets[2], baktet;
   point pa, pb, pc, pd, pe;
-  bool success;
+  bool success, doflip;
   REAL ori;
-  int i, j;
+  int *iptr, i, j;
 
   // Check if any apex of ab is dummypoint.
   for (i = 0; i < n; i++) {
-    if (apex(*oldtets[i]) == dummypoint) break;
+    if (apex(oldtets[i]) == dummypoint) break;
   }
-  // Calculate the shift distance to the last one.
-  i = (n - 1) - i;
-  // Now do the shift.
+  // Now i is the shift distance to the first one.
   for (; i > 0; i--) {
-    baktet = oldtets[n - 1];
-    for (j = n - 1; j > 0; j--) {
-      oldtets[j] = oldtets[j - 1];
+    baktet = oldtets[0];
+    for (j = 0; j > n - 1; j++) {
+      oldtets[j] = oldtets[j + 1];
     }
-    oldtets[0] = baktet;
+    oldtets[n - 1] = baktet;
   }
 
   pa = org(oldtets[0]);
   pb = dest(oldtets[0]);
   success = false;
 
-  // Check each faces abp[i], find one for a flip23() flip.
   for (i = 0; i < n; i++) {
     // Get the points configuration.
-    pe = dummypoint;
     pc = apex(oldtets[i]);
     if (pc != dummypoint) {
-      pd = apex(oldtets[(i + 1) % n]);
-      if (pd != dummypoint) {
-        pe = apex(oldtets[(i - 1) % n]);
-      }
-    }
-    if (pe != dummypoint) {
       // Check if abc is flipable.
+      pd = apex(oldtets[(i + 1) % n]);
+      pe = apex(oldtets[(i - 1) % n]);
       ori = orient3d(pa, pb, pd, pe);
-      // Here we allow ori == 0, e.g., flip44.
-      if (ori >= 0) {
+      if (ori >= 0) {  // Allow ori == 0, support 4-to-4 flip.
         ori = orient3d(pb, pc, pd, pe);
         if (ori > 0) {
           ori = orient3d(pc, pa, pd, pe);
         }
       }
-      if (ori > 0) {
-        // Get the two old tets.
-        tmpoldtets[0] = oldtets[i];
-        tmpoldtets[1] = oldtets[(i - 1) % n];
-        // Adjust tmpoldtets[1] (abec) -> bace.
+      doflip = ori > 0;
+    } else {
+      doflip = true; // Support 2-to-2 flip.
+    }
+    if (doflip) {
+      // Get the two old tets.
+      tmpoldtets[0] = oldtets[i];
+      tmpoldtets[1] = oldtets[(i - 1) % n];
+      // Adjust tmpoldtets[1] (abec) -> bace.
+      enext0fnextself(tmpoldtets[1]);
+      esymself(tmpoldtets[1]);
+      // Adjust the tets so that newtets[2] will be edab (see Fig.).
+      enextself(tmpoldtets[0]);
+      enext2self(tmpoldtets[1]);
+      // Do flip23() on abp[i] (abc).
+      flip23(tmpoldtets, newtets, flipque);
+      // Form the new star of ab which has n-1 tets.
+      recuroldtets = new triface[n - 1];
+      // Set the remaining n-2 tets around ab.
+      for (j = 0; j < n - 2 ; j++) {
+        recuroldtets[0] = oldtets[(i + 2 + j) % n];
+      }
+      // Put the last tet having ab.
+      recuroldtets[j] = baktet = newtets[2];
+      // Adjust recuroldtets[j] to abp[0]p[1] (see Fig.).
+      enext2fnextself(recuroldtets[j]);
+      enext2self(recuroldtets[j]);
+      esymself(recuroldtets[j]);
+      // Check the size of the link of ab.
+      if (n > 4) {  // Actually, if (n - 1 > 3)
+        // Recursively do flipnm().
+        success = flipnm(n - 1, recuroldtets, &(newtets[2]), flipque);
+      } else {
+        // Remove ab by a flip32().
+        flip32(recuroldtets, &(newtets[2]), flipque);
+        success = true;
+      }
+      // The old tets are still in 'oldtets'.
+      delete [] recuroldtets;
+      // Are we success?
+      if (!success) {
+        // No! Reverse the flip23() operation.
+        newtets[2] = baktet; // Do we really need this?
+        flip32(newtets, tmpoldtets, flipque);
+        // Adjust the tets back to original position (see Fig.).
+        enext2self(tmpoldtets[0]);
+        enextself(tmpoldtets[1]);
+        // Adjust back to abp[(i-1) % n].
         enext0fnextself(tmpoldtets[1]);
         esymself(tmpoldtets[1]);
-        // Adjust the tets so that newtets[2] will be edab (see Fig.).
-        enextself(tmpoldtets[0]);
-        enext2self(tmpoldtets[1]);
-        // Do flip23() on abp[i] (abc).
-        flip23(tmpoldtets, tmpnewtets, flipque);
-        // Form the new star of ab which has n-1 tets.
-        recuroldtets = new triface[n - 1];
-        // Set the remaining n-2 tets around ab.
-        for (j = 0; j < n - 2 ; j++) {
-          recuroldtets[0] = oldtets[(i + 2 + j) % n];
-        }
-        // Put the last tet having ab.
-        recuroldtets[j] = baktet = newtets[2];
-        // Adjust recuroldtets[j] to abp[0]p[1] (see Fig.).
-        enext2fnextself(recuroldtets[j]);
-        enext2self(recuroldtets[j]);
-        esymself(recuroldtets[j]);
-        // Check the size of the link of ab.
-        if (n > 4) {  // Actually, if (n - 1 > 3)
-          // Recursively do flipnm().
-          success = flipnm(n - 1, recuroldtets, &(newtets[2]), flipque);
-        } else {
-          // Remove ab by a flip32().
-          flip32(recuroldtets, &(newtets[2]), flipque);
-          success = true;
-        }
-        // The old tets are still in 'oldtets'.
-        delete [] recuroldtets;
-        // Are we success?
-        if (!success) {
-          // No! Reverse the flip23() operation.
-          newtets[2] = baktet; // Do we really need this?
-          flip32(newtets, tmpoldtets, flipque);
-          // Adjust the tets back to original position (see Fig.).
-          enext2self(tmpoldtets[0]);
-          enextself(tmpoldtets[1]);
-          // set the tets back.
-          oldtets[i] = tmpoldtets[0];
-          oldtets[(i - 1) % n] = tmpoldtets[1];
-        }
-        break;
+        // set the tets back.
+        oldtets[i] = tmpoldtets[0];
+        oldtets[(i - 1) % n] = tmpoldtets[1];
       }
-    } // if (pe != dummypoint)
+      break;
+    } // if (doflip)
   } // for (i = 0; i < n; i++)
   
   return success;
