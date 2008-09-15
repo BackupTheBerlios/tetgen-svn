@@ -5,116 +5,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// flip32()    Perform a 3-to-2 tetrahedra transformation.                   //
-//                                                                           //
-// The three old tetrahedra, denoted edab, edbc, and edca, share at the edge //
-// de, are given in 'oldtets'.  The flip32() operation replace them into two //
-// new tetrahedra, abcd and bace, in 'newtets'.  At a result, the edge de is //
-// replaced by the face abc within the convex hull of the points.            //
-//                                                                           //
-// In case there are hull tets involved in this flip.  There are two cases:  //
-//   (1) If d is 'dummypoint', then abcd is hull tet, and bace is normal.    //
-//       If e is 'dummypoint', we reconfigure e to d, i.e., turnover it.     //
-//   (2) If c is 'dummypoint' then both abcd and bace are hull tets.         //
-//       If a or b is 'dummypoint', we reconfigure it to c, i.e., rotate the //
-//       three old tets counterclockwisely (right-hand rule) until a or b    //
-//       is in c's position (see Fig.).                                      //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
-{
-  tetrahedron ptr;
-  triface newface, casface;
-  point pa, pb, pc, pd, pe;
-  int *iptr, i, j;
-
-  // Check if e is 'dummypoint'.
-  if (org(oldtets[0]) == dummypoint) {  // pe
-    // Reconfigure the old tets such that d is 'dummypoint'.
-    for (i = 0; i < 3; i++) {
-      // edab->deba, edbc->decb, edca->deac.
-      enext0fnextself(oldtets[i]);
-      esymself(oldtets[i]);
-    }
-    // Swap the last two tets.
-    newface = oldtets[1];
-    oldtets[1] = oldtets[2];
-    oldtets[2] = newface;
-  } else {
-    // Check if a or b is the 'dummypoint'.
-    j = 0; // No shift.
-    if (apex(oldtets[0]) == dummypoint) { 
-      j = 2;  // Shift pa->pb->pc.
-    } else if (apex(oldtets[1]) == dummypoint) {
-      j = 1;  // Shift pb->pc.
-    }
-    for (; j > 0; j--) {
-      newface = oldtets[2];
-      for (i = 2; i > 0; i--) {
-        oldtets[i] = oldtets[i - 1];
-      }
-      oldtets[0] = newface;
-    }
-  }
-
-  pa = apex(oldtets[0]);
-  pb = apex(oldtets[1]);
-  pc = apex(oldtets[2]);
-  pd = dest(oldtets[0]);
-  pe = org(oldtets[0]);
-
-  // Check if c is a dummypointc.
-  if (pc != dummypoint) {
-    // Create abcd. Check if d is a dummypoint.
-    if (pd != dummypoint) {
-      maketetrahedron(tetrahedronpool, &(newtets[0]));
-    } else {
-      maketetrahedron(hulltetrahedronpool, &(newtets[0])); // a hull tet.
-    }
-    setvertices(newtets[0], pa, pb, pc, pd);
-    // Create bace.
-    maketetrahedron(tetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], pb, pa, pc, pe);
-  } else {
-    // c is dummypoint. The two new tets are hull tets.
-    // Create badc.
-    maketetrahedron(hulltetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], pb, pa, pd, pc);
-    // Create abec
-    maketetrahedron(hulltetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], pa, pb, pe, pc);
-    // Adjust badc -> abcd.
-    enext0fnextself(newtets[0]);
-    esymself(newtets[0]);
-    // Adjust abec -> bace.
-    enext0fnextself(newtets[1]);
-    esymself(newtets[1]);
-  }
-  
-  // Bond abcd <==> bace.
-  bond(newtets[0], newtets[1]);  
-  // Bond other faces of abcd to mesh.
-  for (i = 0; i < 3; i++) {
-    enext0fnext(newtets[0], newface);
-    enextfnext(oldtets[i], casface);
-    symself(casface);
-    bond(newface, casface);
-    enextself(newtets[0]);
-  }
-  // Bond other faces of bace to mesh.
-  for (i = 0; i < 3; i++) {
-    enext0fnext(newtets[1], newface);
-    enext2fnext(oldtets[i], casface);
-    symself(casface);
-    bond(newface, casface);
-    enext2self(newtets[1]);
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// flip23()    Perform a 2-to-3 tetrahedra transformation.                   //
+// flip23()    Remove a face by tranforming 2-to-3 tetrahedra.               //
 //                                                                           //
 // This is the reverse operation of flip23(). 'oldtets' are two origin tets, //
 // abcd and bace, 'newtets' returns three new tets, edab, edbc, and edca.    //
@@ -134,7 +25,7 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
   tetrahedron ptr;
   triface newface, casface;
   point pa, pb, pc, pd, pe;
-  int *iptr, i, j;
+  int *iptr, i;
 
   // Check if e is dummypoint.
   if (oppo(oldtets[1]) == dummypoint) {
@@ -144,13 +35,14 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     oldtets[1] = newface;
   } else {
     // Check if a or b is dummypoint.
-    j = 0;
     if (org(oldtets[0]) == dummypoint) {
-      j = 2;
+      i = 2;
     } else if (dest(oldtets[0]) == dummypoint) {
-      j = 1;
+      i = 1;
+    } else {
+      i = 0;
     }
-    for (; j > 0; j--) {
+    for (; i > 0; i--) {
       enextself(oldtets[0]);
       enext2self(oldtets[1]);
     }
@@ -225,6 +117,253 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     bond(newface, casface);
     enext2self(oldtets[1]);
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// flip32()    Remove an edge by transforming 3-to-2 tetrahedra.             //
+//                                                                           //
+// The three old tetrahedra, denoted edab, edbc, and edca, share at the edge //
+// de, are given in 'oldtets'.  The flip32() operation replace them into two //
+// new tetrahedra, abcd and bace, in 'newtets'.  At a result, the edge de is //
+// replaced by the face abc within the convex hull of the points.            //
+//                                                                           //
+// In case there are hull tets involved in this flip.  There are two cases:  //
+//   (1) If d is 'dummypoint', then abcd is hull tet, and bace is normal.    //
+//       If e is 'dummypoint', we reconfigure e to d, i.e., turnover it.     //
+//   (2) If c is 'dummypoint' then both abcd and bace are hull tets.         //
+//       If a or b is 'dummypoint', we reconfigure it to c, i.e., rotate the //
+//       three old tets counterclockwisely (right-hand rule) until a or b    //
+//       is in c's position (see Fig.).                                      //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
+{
+  tetrahedron ptr;
+  triface newface, casface;
+  point pa, pb, pc, pd, pe;
+  int *iptr, i;
+
+  // Check if e is 'dummypoint'.
+  if (org(oldtets[0]) == dummypoint) {  // pe
+    // Reconfigure the old tets such that d is 'dummypoint'.
+    for (i = 0; i < 3; i++) {
+      // edab->deba, edbc->decb, edca->deac.
+      enext0fnextself(oldtets[i]);
+      esymself(oldtets[i]);
+    }
+    // Swap the last two tets.
+    newface = oldtets[1];
+    oldtets[1] = oldtets[2];
+    oldtets[2] = newface;
+  } else {
+    // Check if a or b is the 'dummypoint'.
+    if (apex(oldtets[0]) == dummypoint) { 
+      i = 2;  // Shift pa->pb->pc.
+    } else if (apex(oldtets[1]) == dummypoint) {
+      i = 1;  // Shift pb->pc.
+    } else {
+      i = 0;  // No shift.
+    }
+    for (; i > 0; i--) {
+      newface = oldtets[2];
+      oldtets[2] = oldtets[1];
+      oldtets[1] = oldtets[0];
+      oldtets[0] = newface;
+    }
+  }
+
+  pa = apex(oldtets[0]);
+  pb = apex(oldtets[1]);
+  pc = apex(oldtets[2]);
+  pd = dest(oldtets[0]);
+  pe = org(oldtets[0]);
+
+  // Check if c is a dummypointc.
+  if (pc != dummypoint) {
+    // Create abcd. Check if d is a dummypoint.
+    if (pd != dummypoint) {
+      maketetrahedron(tetrahedronpool, &(newtets[0]));
+    } else {
+      maketetrahedron(hulltetrahedronpool, &(newtets[0])); // a hull tet.
+    }
+    setvertices(newtets[0], pa, pb, pc, pd);
+    // Create bace.
+    maketetrahedron(tetrahedronpool, &(newtets[1]));
+    setvertices(newtets[1], pb, pa, pc, pe);
+  } else {
+    // c is dummypoint. The two new tets are hull tets.
+    // Create badc.
+    maketetrahedron(hulltetrahedronpool, &(newtets[0]));
+    setvertices(newtets[0], pb, pa, pd, pc);
+    // Create abec
+    maketetrahedron(hulltetrahedronpool, &(newtets[1]));
+    setvertices(newtets[1], pa, pb, pe, pc);
+    // Adjust badc -> abcd.
+    enext0fnextself(newtets[0]);
+    esymself(newtets[0]);
+    // Adjust abec -> bace.
+    enext0fnextself(newtets[1]);
+    esymself(newtets[1]);
+  }
+  
+  // Bond abcd <==> bace.
+  bond(newtets[0], newtets[1]);  
+  // Bond other faces of abcd to mesh.
+  for (i = 0; i < 3; i++) {
+    enext0fnext(newtets[0], newface);
+    enextfnext(oldtets[i], casface);
+    symself(casface);
+    bond(newface, casface);
+    enextself(newtets[0]);
+  }
+  // Bond other faces of bace to mesh.
+  for (i = 0; i < 3; i++) {
+    enext0fnext(newtets[1], newface);
+    enext2fnext(oldtets[i], casface);
+    symself(casface);
+    bond(newface, casface);
+    enext2self(newtets[1]);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// flipnm()    Remove an edge by transforming n-to-m tetrahedra.             //
+//                                                                           //
+// This routine attemps to remove an edge, denoted as ab, by transforming a  //
+// set K of n tetrahedra containing ab into a set K' of m tetrahedra, where  //
+// K and K' have the same outer boundary, and ab is not in K', where n >= 3, //
+// m = (n - 2) * 2. It can be viwed as a n-to-m flip.                        //
+//                                                                           //
+// 'oldtets' contains n tets sharing at ab. Imaging that ab perpendicularly  //
+// crosses your screen, b lies in front of a. Let the projections of the n   //
+// apexes, denoted as p[0], p[1], ..., p[n-1], onto screen in counterclock-  //
+// wise order (right-hand rule). The n tets are: abp[0]p[1], abp[1]p[2],..., //
+// abp[n-1]p[0], respectively.  If one of p[i] is dummypoint, we reconfigure //
+// it such that p[n-1] is dummypoint. a or b should not be dummypoint.       //
+//                                                                           //
+// The principle of the transformation is to recursively reduce the link of  //
+// ab by perform 2-to-3 flips until the link size of ab is 3, hence a 3-to-2 //
+// flip can be applied to remove the edge.                                   //
+//                                                                           //
+// Consider a face abp[i] (i in [0, n-1]), a flip23() can be applied if the  //
+// edge p[(i-1) % n]p[(i+1) % n] crosses it in its interior. Relabel p[i] to //
+// c, p[(i-1) % n] to e, and p[(i+1) % n] to d. This transforms the two tets,//
+// abcd and bace, to three tets, edab, edbc, and edca. The tet edab remains  //
+// in the star of ab, while edbc, and edca do not. As a result, p[i] (c) is  //
+// not on the link of ab anymore. The link size is reduced by 1. A recursion //
+// can be applied if n - 1 > 3.                                              //
+//                                                                           //
+// NOTE: In above, the flip23() can be applied even if the edge de crosses   //
+// ab, i.e., a, b, e, and d are coplanar. Although this will creare a degen- //
+// erate tet edab (has zero volume), it will be removed after ab is removed. //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
+  queue* flipque)
+{
+  triface *recuroldtets, tmpoldtets[2], baktet;
+  point pa, pb, pc, pd, pe;
+  bool success;
+  REAL ori;
+  int i, j;
+
+  // Check if any apex of ab is dummypoint.
+  for (i = 0; i < n; i++) {
+    if (apex(*oldtets[i]) == dummypoint) break;
+  }
+  // Calculate the shift distance to the last one.
+  i = (n - 1) - i;
+  // Now do the shift.
+  for (; i > 0; i--) {
+    baktet = oldtets[n - 1];
+    for (j = n - 1; j > 0; j--) {
+      oldtets[j] = oldtets[j - 1];
+    }
+    oldtets[0] = baktet;
+  }
+
+  pa = org(oldtets[0]);
+  pb = dest(oldtets[0]);
+  success = false;
+
+  // Check each faces abp[i], find one for a flip23() flip.
+  for (i = 0; i < n; i++) {
+    // Get the points configuration.
+    pe = dummypoint;
+    pc = apex(oldtets[i]);
+    if (pc != dummypoint) {
+      pd = apex(oldtets[(i + 1) % n]);
+      if (pd != dummypoint) {
+        pe = apex(oldtets[(i - 1) % n]);
+      }
+    }
+    if (pe != dummypoint) {
+      // Check if abc is flipable.
+      ori = orient3d(pa, pb, pd, pe);
+      // Here we allow ori == 0, e.g., flip44.
+      if (ori >= 0) {
+        ori = orient3d(pb, pc, pd, pe);
+        if (ori > 0) {
+          ori = orient3d(pc, pa, pd, pe);
+        }
+      }
+      if (ori > 0) {
+        // Get the two old tets.
+        tmpoldtets[0] = oldtets[i];
+        tmpoldtets[1] = oldtets[(i - 1) % n];
+        // Adjust tmpoldtets[1] (abec) -> bace.
+        enext0fnextself(tmpoldtets[1]);
+        esymself(tmpoldtets[1]);
+        // Adjust the tets so that newtets[2] will be edab (see Fig.).
+        enextself(tmpoldtets[0]);
+        enext2self(tmpoldtets[1]);
+        // Do flip23() on abp[i] (abc).
+        flip23(tmpoldtets, tmpnewtets, flipque);
+        // Form the new star of ab which has n-1 tets.
+        recuroldtets = new triface[n - 1];
+        // Set the remaining n-2 tets around ab.
+        for (j = 0; j < n - 2 ; j++) {
+          recuroldtets[0] = oldtets[(i + 2 + j) % n];
+        }
+        // Put the last tet having ab.
+        recuroldtets[j] = baktet = newtets[2];
+        // Adjust recuroldtets[j] to abp[0]p[1] (see Fig.).
+        enext2fnextself(recuroldtets[j]);
+        enext2self(recuroldtets[j]);
+        esymself(recuroldtets[j]);
+        // Check the size of the link of ab.
+        if (n > 4) {  // Actually, if (n - 1 > 3)
+          // Recursively do flipnm().
+          success = flipnm(n - 1, recuroldtets, &(newtets[2]), flipque);
+        } else {
+          // Remove ab by a flip32().
+          flip32(recuroldtets, &(newtets[2]), flipque);
+          success = true;
+        }
+        // The old tets are still in 'oldtets'.
+        delete [] recuroldtets;
+        // Are we success?
+        if (!success) {
+          // No! Reverse the flip23() operation.
+          newtets[2] = baktet; // Do we really need this?
+          flip32(newtets, tmpoldtets, flipque);
+          // Adjust the tets back to original position (see Fig.).
+          enext2self(tmpoldtets[0]);
+          enextself(tmpoldtets[1]);
+          // set the tets back.
+          oldtets[i] = tmpoldtets[0];
+          oldtets[(i - 1) % n] = tmpoldtets[1];
+        }
+        break;
+      }
+    } // if (pe != dummypoint)
+  } // for (i = 0; i < n; i++)
+  
+  return success;
 }
 
 #endif // #ifndef flipCXX
