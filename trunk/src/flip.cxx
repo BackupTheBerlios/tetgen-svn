@@ -107,6 +107,12 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     enext0fnext(oldtets[0], casface);
     symself(casface);
     bond(newface, casface);
+    if (flipque != NULL) {
+      if (!facemarked(casface)) {
+        markface(newface);
+        flipque->push(&newface);
+      }
+    }
     enextself(oldtets[0]);
   }
   // Bond bottom boundary faces (at bace) to mesh.
@@ -115,6 +121,12 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     enext0fnext(oldtets[1], casface);
     symself(casface);
     bond(newface, casface);
+    if (flipque != NULL) {
+      if (!facemarked(casface)) {
+        markface(newface);
+        flipque->push(&newface);
+      }
+    }
     enext2self(oldtets[1]);
   }
 }
@@ -216,6 +228,12 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     enextfnext(oldtets[i], casface);
     symself(casface);
     bond(newface, casface);
+    if (flipque != NULL) {
+      if (!facemarked(casface)) {
+        markface(newface);
+        flipque->push(&newface);
+      }
+    }
     enextself(newtets[0]);
   }
   // Bond other faces of bace to mesh.
@@ -224,6 +242,12 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     enext2fnext(oldtets[i], casface);
     symself(casface);
     bond(newface, casface);
+    if (flipque != NULL) {
+      if (!facemarked(casface)) {
+        markface(newface);
+        flipque->push(&newface);
+      }
+    }
     enext2self(newtets[1]);
   }
 }

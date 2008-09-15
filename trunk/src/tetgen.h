@@ -682,11 +682,6 @@ static int edge2locver[6][2];
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-#define Mod2  & 01
-#define Div2  >> 1
-#define Orient(V)   ((V) Div2)
-#define EdgeRing(V) ((V) Mod2)
-
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Primitives for tetrahedron                                                //
@@ -917,7 +912,7 @@ void bond(triface& t1, triface& t2) {
 
 #define uninfect(t) elemmarker((t).tet) &= ~1
 
-#define infected(t) (elemmarker((t).tet) & 1) != 0
+#define infected(t) ((elemmarker((t).tet) & 1) != 0)
 
 // marktest(), marktested(), unmarktest() -- primitives to flag or unflag a
 //   tetrahedron.  The last second bit of the element marker is marked (1)
@@ -929,7 +924,7 @@ void bond(triface& t1, triface& t2) {
 
 #define unmarktest(t) elemmarker((t).tet) &= ~2
     
-#define marktested(t) (elemmarker((t).tet) & 2) != 0
+#define marktested(t) ((elemmarker((t).tet) & 2) != 0)
 
 // markface(), unmarkface(), facemarked() -- primitives to flag or unflag a
 //   face of a tetrahedron.  From the last third to sixth bits are used for
@@ -941,7 +936,7 @@ void bond(triface& t1, triface& t2) {
 
 #define unmarkface(t) elemmarker((t).tet) &= ~(4<<(t).loc)
 
-#define facemarked(t) (elemmarker((t).tet) & (4<<(t).loc)) != 0
+#define facemarked(t) ((elemmarker((t).tet) & (4<<(t).loc)) != 0)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1333,6 +1328,8 @@ enum locateresult preciselocate(point searchpt, triface* searchtet);
 
 void initialDT(point pa, point pb, point pc, point pd);
 void insertvertex(point insertpt, triface* searchtet, bool, bool);
+void bowyerwatsonpostproc(list *cavebdrylist);
+void lawsonflip(list *cavebdrylist);
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////

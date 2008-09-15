@@ -758,60 +758,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   
   if (bowyerwatson && (copcount > 0)) {
     // There may exist zero volume tetrahedra. Check and remove them.
-    triface oldtets[4], newtets[2];
-    bool multiflag; 
-    do {
-      // We do known if there is multiple degenerate case yet.
-      multiflag = false;
-      for (i = 0; i < cavebdrylist->len(); i++) {
-        cavetet = (triface *) cavebdrylist->get(i);
-        pts = (point *) cavetet->tet;
-        if ((pts[4] != NULL) && (pts[7] != dummypoint)) {
-          // Check if the new tet is degenerate.
-          ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
-          if (ori == 0) {
-            if (b->verbose > 1) {
-              printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
-                pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
-            }
-            // Find the hull edge in cavetet.
-            cavetet->ver = 0;
-            for (j = 0; j < 3; j++) {
-              enext0fnext(*cavetet, neightet);
-              symself(neightet);
-              if ((point) neightet.tet[7] == dummypoint) break;
-              enextself(*cavetet);
-            }
-            // Because of existing multiple degenerate cases. It is possible
-            //   that the other hull face is not pop yet.
-            if (j < 3) {
-              // Collect tets for flipping the edge.
-              oldtets[0] = *cavetet;
-              for (j = 0; j < 3; j++) {
-                fnext(oldtets[j], oldtets[j + 1]);
-              }
-              if (oldtets[3].tet != cavetet->tet) {
-                printf("Internal error insertvertex(): Unknown flip case.\n");
-                terminatetetgen(1);
-              }
-              // Do a 3-to-2 flip to remove the degenerate tet.
-              flip32(oldtets, newtets, NULL);
-              // Delete the old tets.
-              tetrahedrondealloc(oldtets[0].tet);
-              tetrahedrondealloc(oldtets[1].tet);
-              tetrahedrondealloc(oldtets[2].tet);
-            } else { 
-              multiflag = true;  // Wait for the next round.
-            } // if (j < 3)
-          } // if (ori == 0)
-        } // if (pts[7] != dummypoint)
-      } // for (i = 0;
-    } while (multiflag);
+    bowyerwatsonpostproc(cavebdrylist);
   }
 
   // If the flip option is used.
   if (!bowyerwatson && increflip) {
-    // flip(cavebdrylist);
+    lawsonflip(cavebdrylist);
   }
 
   // Set the point type.
@@ -831,6 +783,163 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   
   delete cavetetlist;
   delete cavebdrylist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// bowyerwatsonpostproc()    Remove degenerate tets from the cavity.         //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
+{
+  tetrahedron ptr;
+  triface oldtets[4], newtets[2];
+  triface *cavetet, neightet;
+  point *pts;
+  REAL ori;
+  bool multiflag; 
+  int *iptr, i, j;
+  
+  do {
+    // We do known if there is multiple degenerate case yet.
+    multiflag = false;
+    for (i = 0; i < cavebdrylist->len(); i++) {
+      cavetet = (triface *) cavebdrylist->get(i);
+      pts = (point *) cavetet->tet;
+      if ((pts[4] != NULL) && (pts[7] != dummypoint)) {
+        // Check if the new tet is degenerate.
+        ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
+        if (ori == 0) {
+          if (b->verbose > 1) {
+            printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+              pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
+          }
+          // Find the hull edge in cavetet.
+          cavetet->ver = 0;
+          for (j = 0; j < 3; j++) {
+            enext0fnext(*cavetet, neightet);
+            symself(neightet);
+            if ((point) neightet.tet[7] == dummypoint) break;
+            enextself(*cavetet);
+          }
+          // Because of existing multiple degenerate cases. It is possible
+          //   that the other hull face is not pop yet.
+          if (j < 3) {
+            // Collect tets for flipping the edge.
+            oldtets[0] = *cavetet;
+            for (j = 0; j < 3; j++) {
+              fnext(oldtets[j], oldtets[j + 1]);
+            }
+            if (oldtets[3].tet != cavetet->tet) {
+              printf("Internal error in insertvertex(): Unknown flip case.\n");
+              terminatetetgen(1);
+            }
+            // Do a 3-to-2 flip to remove the degenerate tet.
+            flip32(oldtets, newtets, NULL);
+            // Delete the old tets.
+            tetrahedrondealloc(oldtets[0].tet);
+            tetrahedrondealloc(oldtets[1].tet);
+            tetrahedrondealloc(oldtets[2].tet);
+          } else { 
+            multiflag = true;  // Wait for the next round.
+          } // if (j < 3)
+        } // if (ori == 0)
+      } // if (pts[7] != dummypoint)
+    } // for (i = 0;
+  } while (multiflag);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// lawsonflip()    Flip non-locally Delaunay faces by primitive flips.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::lawsonflip(list *cavebdrylist)
+{
+  queue *flipque;
+  triface oldtets[128], newtets[128];
+  triface *fliptet, neightet;
+  point *pts, pd, pe;
+  REAL sign, ori;
+  bool success;
+  int n, i, j;
+
+  flipque = new queue(sizeof(triface));
+  // Add all boundary faces in queue.
+  for (i = 0; i < cavebdrylist->len(); i++) {
+    fliptet = (triface *) cavebdrylist->get(i);
+    markface(*fliptet);
+    flipque->push(fliptet);
+  }
+
+  if (b->verbose > 1) {
+    printf("    Delaunay flip %ld faces.\n", flipque->items);
+  }
+
+  // Loop until the queue is empty.
+  while (!flipque->empty()) {
+    fliptet = (triface *) flipque->pop();
+    if (fliptet->tet[4] == NULL) continue; // A dead tet.
+    assert(facemarked(*fliptet)); // SELF_CHECK
+    unmarkface(*fliptet);
+    if (apex(*fliptet) == dummypoint) continue; // A hull face.
+    pts = (point *) fliptet->tet;
+    if (pts[7] == dummypoint) continue; // A hull tet.
+    sym(*fliptet, neightet);
+    pe = oppo(neightet); 
+    if (pe == dummypoint) continue; // A hull tet.
+    // Delaunay test.
+    sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
+    if (sign < 0.0) {
+      // Try to flip the face.
+      pd = oppo(*fliptet);
+      fliptet->ver = 0;
+      for (i = 0; i < 3; i++) {
+        ori = orient3d(org(*fliptet), dest(*fliptet), pd, pe);
+        if (ori >= 0) break;
+        enextself(*fliptet);
+      }
+      if (i == 3) {
+        // A 2-to-3 flip is found.
+        neightet.ver = 0;
+        for (j = 0; j < 3; j++) { // Find the same edge.
+          if (org(neightet) == dest(*fliptet)) break;
+        }
+        assert(j < 3); // SELF_CHECK
+        oldtets[0] = *fliptet;
+        oldtets[1] = neightet;
+        flip23(oldtets, newtets, flipque);
+        tetrahedrondealloc(oldtets[0].tet);
+        tetrahedrondealloc(oldtets[1].tet);
+      } else {
+        // Try to flip the edge org->dest of 'fliptet'.
+        n = 0;
+        oldtets[n] = *fliptet;
+        do {
+          fnext(oldtets[n], oldtets[n + 1]);
+          n++;
+        } while (oldtets[n].tet != fliptet->tet);
+        n += 1; // The total number of tets
+        if (n == 3) {
+          flip32(oldtets, newtets, flipque);
+          success = true;
+        } else {
+          success = flipnm(n, oldtets, newtets, flipque);
+        }
+        if (success) {
+          for (j = 0; j < n; j++) {
+            tetrahedrondealloc(oldtets[j].tet);
+          }
+        } else {
+          flipque->push(&(oldtets[0]));
+        }
+      }
+    } // if (sign < 0.0)
+  } // while
+  
+  delete flipque;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

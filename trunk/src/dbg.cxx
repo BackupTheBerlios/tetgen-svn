@@ -47,6 +47,9 @@ void tetgenmesh::ptet(triface* t)
       if (marktested(prtface)) {
         printf(" (marktested)");
       }
+      if (facemarked(prtface)) {
+        printf(" (facemarked)");
+      }
       printf("\n");
     }
     facecount++;
