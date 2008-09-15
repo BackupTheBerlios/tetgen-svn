@@ -897,6 +897,14 @@ void bond(triface& t1, triface& t2) {
   t1.ver = t1ver; t2.ver = t2ver;
 }
 
+// elemattribute() -- to check or set element attributes.
+
+#define elemattribute(ptr, num) (((REAL *) (ptr))[elemattribindex + num])
+
+// volumebound() -- to check or set element's maximum volume bound.
+
+#define volumebound(ptr) (((REAL *) (ptr))[volumeboundindex])
+
 // elemmarker() -- to read or set element's marker.
 
 #define elemmarker(ptr) ((int *) (ptr))[elemmarkerindex]
@@ -912,10 +920,10 @@ void bond(triface& t1, triface& t2) {
 #define infected(t) (elemmarker((t).tet) & 1) != 0
 
 // marktest(), marktested(), unmarktest() -- primitives to flag or unflag a
-//   tetrahedron. One needs them in forming Bowyer-Watson cavity, to mark a
-//   tetrahedron if it has been checked (for Delaunay case) so later check
-//   can be avoided.  The last second bit of the element marker is marked (1)
+//   tetrahedron.  The last second bit of the element marker is marked (1)
 //   or unmarked (0).
+// One needs them in forming Bowyer-Watson cavity, to mark a tetrahedron if
+//   it has been checked (for Delaunay case) so later check can be avoided.
 
 #define marktest(t) elemmarker((t).tet) |= 2
 
@@ -923,13 +931,17 @@ void bond(triface& t1, triface& t2) {
     
 #define marktested(t) (elemmarker((t).tet) & 2) != 0
 
-// elemattribute() -- to check or set element attributes.
+// markface(), unmarkface(), facemarked() -- primitives to flag or unflag a
+//   face of a tetrahedron.  From the last third to sixth bits are used for
+//   face markers, e.g., the last third bit corresponds to loc = 0. 
+// One use of the face marker is in flip algorithm. Each queued face (check
+//   for locally Delaunay) is marked.
 
-#define elemattribute(ptr, num) (((REAL *) (ptr))[elemattribindex + num])
+#define markface(t) elemmarker((t).tet) |= (4<<(t).loc)
 
-// volumebound() -- to check or set element's maximum volume bound.
+#define unmarkface(t) elemmarker((t).tet) &= ~(4<<(t).loc)
 
-#define volumebound(ptr) (((REAL *) (ptr))[volumeboundindex])
+#define facemarked(t) (elemmarker((t).tet) & (4<<(t).loc)) != 0
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

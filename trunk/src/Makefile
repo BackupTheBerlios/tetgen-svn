@@ -56,8 +56,8 @@ RM = /bin/rm
 io.o:	io.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c io.cxx
 
-behavior.o:	behavior.cxx
-	$(CXX) -I./ $(CXXFLAGS) -c behavior.cxx
+dbg.o:	dbg.cxx
+	$(CXX) -I./ $(CXXFLAGS) -c dbg.cxx
 
 memorypool.o:	memorypool.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c memorypool.cxx
@@ -77,8 +77,8 @@ meshstat.o:	meshstat.cxx
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o behavior.o memorypool.o flip.o delaunay.o meshio.o meshstat.o predicates.o
-	ar r libtet.a io.o behavior.o flip.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
+tetlib:	io.o dbg.o memorypool.o flip.o delaunay.o meshio.o meshstat.o predicates.o
+	ar r libtet.a io.o dbg.o flip.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
 
 tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet
