@@ -1104,6 +1104,7 @@ class memorypool {
   int  unallocateditems;
   int  pathitemsleft;
 
+  void poolinit(int, int, enum wordtype, int);
   void restart();
   void *alloc();
   void dealloc(void*);

@@ -320,7 +320,7 @@ void* tetgenmesh::memorypool::traverse()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-tetgenmesh::memorypool::memorypool(int bytecount, int itemcount,
+void tetgenmesh::memorypool::poolinit(int bytecount, int itemcount,
   enum wordtype wtype, int alignment)
 {
   int wordsize;
@@ -360,6 +360,12 @@ tetgenmesh::memorypool::memorypool(int bytecount, int itemcount,
   restart();
 }
 
+tetgenmesh::memorypool::memorypool(int bytecount, int itemcount,
+  enum wordtype wtype, int alignment)
+{
+  poolinit(bytecount, itemcount, wtype, alignment);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // ~memorypool()   Free to the operating system all memory taken by a pool.  //
@@ -392,7 +398,7 @@ tetgenmesh::link::link(int bytecount, int itemcount)
   //   like: itembytes, itemwords, items, ... Each node has size
   //   bytecount + 2 * sizeof(void **), and total 'itemcount + 2' (because
   //   link has additional two nodes 'head' and 'tail').
-  memorypool(bytecount + 2 * sizeof(void **), itemcount + 2, POINTER, 0);
+  poolinit(bytecount + 2 * sizeof(void **), itemcount + 2, POINTER, 0);
   
   // Initial state of this link.
   head = (void **) alloc();
