@@ -25,6 +25,7 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
   tetrahedron ptr;
   triface newface, casface;
   point pa, pb, pc, pd, pe;
+  int dummyflag;  // range = {-1, 0, 1, 2}.
   int *iptr, i;
 
   // Check if e is dummypoint.
@@ -33,15 +34,18 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     newface = oldtets[0];
     oldtets[0] = oldtets[1];
     oldtets[1] = newface;
+    dummyflag = -1;  // e is dummypoint.
   } else {
     // Check if a or b is dummypoint.
     if (org(oldtets[0]) == dummypoint) {
-      i = 2;
+      dummyflag = 1;  // a is dummypoint.
     } else if (dest(oldtets[0]) == dummypoint) {
-      i = 1;
+      dummyflag = 2;  // b is dummypoint.
     } else {
-      i = 0;
+      dummyflag = 0;  // either c or d is dummypoint.
     }
+    i = dummyflag;
+    // Rotate i times.
     for (; i > 0; i--) {
       enextself(oldtets[0]);
       enext2self(oldtets[1]);
@@ -135,6 +139,41 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     }
     enext2self(oldtets[1]);
   }
+  
+  if (dummyflag != 0) {
+    // Restore the original position of the points (for flipnm()).
+    if (dummyflag == -1) { 
+      // d and e were swapped.
+      newface = oldtets[0];
+      oldtets[0] = oldtets[1];
+      oldtets[1] = newface;
+      // Reverse the edge.
+      for (i = 0; i < 3; i++) {
+        enext0fnextself(newtets[i]);
+        esymself(newtets[i]);
+      }
+      // Swap the last two new tets.
+      newface = newtets[1];
+      newtets[1] = newtets[2];
+      newtets[2] = newface;
+    } else {
+      // either a or b were swapped.
+      i = dummyflag;
+      // Rotate i times.
+      for (; i > 0; i--) {
+        enext2self(oldtets[0]);
+        enextself(oldtets[1]);
+      }
+      i = dummyflag;
+      // Down-shift new tets i times.
+      for (; i > 0; i--) {
+        newface = newtets[0];
+        newtets[0] = newtets[2];
+        newtets[2] = newtets[1];
+        newtets[1] = newface;
+      }
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,13 +200,13 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
   tetrahedron ptr;
   triface newface, casface;
   point pa, pb, pc, pd, pe;
+  int dummyflag;  // Rangle = {-1, 0, 1, 2}
   int *iptr, i;
 
   // Check if e is 'dummypoint'.
-  if (org(oldtets[0]) == dummypoint) {  // pe
-    // Reconfigure the old tets such that d is 'dummypoint'.
+  if (org(oldtets[0]) == dummypoint) {
+    // Reverse the edge.
     for (i = 0; i < 3; i++) {
-      // edab->deba, edbc->decb, edca->deac.
       enext0fnextself(oldtets[i]);
       esymself(oldtets[i]);
     }
@@ -175,15 +214,18 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     newface = oldtets[1];
     oldtets[1] = oldtets[2];
     oldtets[2] = newface;
+    dummyflag = -1; // e is dummypoint.
   } else {
     // Check if a or b is the 'dummypoint'.
     if (apex(oldtets[0]) == dummypoint) { 
-      i = 2;  // Shift pa->pb->pc.
+      dummyflag = 1;  // a is dummypoint.
     } else if (apex(oldtets[1]) == dummypoint) {
-      i = 1;  // Shift pb->pc.
+      dummyflag = 2;  // b is dummypoint.
     } else {
-      i = 0;  // No shift.
+      dummyflag = 0;  // either c or d is dummypoint.
     }
+    i = dummyflag;
+    // Down-shift i times.
     for (; i > 0; i--) {
       newface = oldtets[2];
       oldtets[2] = oldtets[1];
@@ -261,6 +303,41 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
       }
     }
     enext2self(newtets[1]);
+  }
+
+  if (dummyflag != 0) {
+    // Restore the original position of the points (for flipnm()).
+    if (dummyflag == -1) {
+      // e were dummypoint.
+      for (i = 0; i < 3; i++) {
+        enext0fnextself(oldtets[i]);
+        esymself(oldtets[i]);
+      }
+      // Swap the last two tets.
+      newface = oldtets[1];
+      oldtets[1] = oldtets[2];
+      oldtets[2] = newface;
+      // Swap the two new tets.
+      newface = newtets[0];
+      newtets[0] = newtets[1];
+      newtets[1] = newface;
+    } else {
+      // a or b was dummypoint.
+      i = dummyflag;
+      // Up-shift i times.
+      for (; i > 0; i--) {
+        newface = oldtets[0];
+        oldtets[0] = oldtets[1];
+        oldtets[1] = oldtets[2];
+        oldtets[2] = newface;
+      }
+      i = dummyflag;
+      // Rotate toward left i times.
+      for (; i > 0; i--) {
+        enext2self(newtets[0]);
+        enextself(newtets[1]);
+      }
+    }
   }
 }
 
