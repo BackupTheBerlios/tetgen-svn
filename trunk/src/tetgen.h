@@ -419,6 +419,7 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
   int metric;                                                        // -m
   int varvolume;                                    // -a without a number
   int fixedvolume;                                     // -a with a number
+  int bowyerwatson;                                                  // -b
   int insertaddpoints;                                               // -i
   int regionattrib;                                                  // -A
   int conformdel;                                                    // -D
@@ -1247,6 +1248,7 @@ long meshedges;
 long ptloc_trav_tets_count;  // Count the number of visited tets (temp).
 long ptloc_max_tets_count;  // Count the maximal number of visited tets.
 long insphere_count, insphere_sos_count;  // Count the symbolic tests.
+long flip23count, flip32count, flipnmcount;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1389,6 +1391,7 @@ tetgenmesh() {
   meshedges = 0l;
   ptloc_max_tets_count = 0l;
   insphere_count = insphere_sos_count = 0l;
+  flip23count = flip32count = flipnmcount = 0l;
 }
 
 ~tetgenmesh() {

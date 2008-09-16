@@ -259,7 +259,15 @@ void tetgenmesh::statistics()
     printf("  Maximal point location distance (# tets): %ld\n", 
            ptloc_max_tets_count);
     printf("  Number of insphere tests: %ld\n", insphere_count);
-    printf("  Number of symbolic insphere tests: %ld\n\n", insphere_sos_count);
+    printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
+    if (b->bowyerwatson == 0) {
+      printf("  Number of 2-to-3 flips: %ld\n", flip23count);
+      printf("  Number of 3-to-2 flips: %ld\n", flip32count);
+      printf("  Number of n-to-m flips: %ld\n", flipnmcount);
+      printf("  Number of total primitive flips: %ld\n",
+             flip23count + flip32count);
+    }
+    printf("\n");
   }
 }
 

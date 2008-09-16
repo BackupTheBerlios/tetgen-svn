@@ -54,6 +54,12 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
   pd = oppo(oldtets[0]);
   pe = oppo(oldtets[1]);
 
+  if (b->verbose > 1) {
+    printf("    flip 2-to-3: (%d, %d, %d, %d, %d)\n", pointmark(pa),
+      pointmark(pb), pointmark(pc), pointmark(pd), pointmark(pe));
+  }
+  flip23count++;
+
   // Check if d is dummytet.
   if (pd != dummypoint) {
     // Create edab.
@@ -192,6 +198,12 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
   pd = dest(oldtets[0]);
   pe = org(oldtets[0]);
 
+  if (b->verbose > 1) {
+    printf("    flip 3-to-2: (%d, %d, %d, %d, %d)\n", pointmark(pa),
+      pointmark(pb), pointmark(pc), pointmark(pd), pointmark(pe));
+  }
+  flip32count++;
+
   // Check if c is a dummypointc.
   if (pc != dummypoint) {
     // Create abcd. Check if d is a dummypoint.
@@ -314,6 +326,13 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
 
   pa = org(oldtets[0]);
   pb = dest(oldtets[0]);
+
+  if (b->verbose > 1) {
+    printf("    flip %d-to-%d: (%d, %d)\n", n, 2 * n - 4, pointmark(pa),
+           pointmark(pb));
+  }
+  flipnmcount++;
+
   success = false;
 
   for (i = 0; i < n; i++) {
@@ -365,34 +384,32 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
       if (n > 4) {  // Actually, if (n - 1 > 3)
         // Recursively do flipnm().
         success = flipnm(n - 1, recuroldtets, &(newtets[2]), flipque);
+        // Are we success?
+        if (!success) {
+          // No! Reverse the flip23() operation.
+          newtets[2] = baktet; // Do we really need this?
+          flip32(newtets, tmpoldtets, flipque);
+          // Adjust the tets back to original position (see Fig.).
+          enext2self(tmpoldtets[0]);
+          enextself(tmpoldtets[1]);
+          // Adjust back to abp[(i-1) % n].
+          enext0fnextself(tmpoldtets[1]);
+          esymself(tmpoldtets[1]);
+          // Set the tets back to their original positions.
+          oldtets[i] = tmpoldtets[0];
+          oldtets[(i - 1) % n] = tmpoldtets[1];
+          // Delete the two new tets.
+          tetrahedrondealloc(newtets[0].tet);
+          tetrahedrondealloc(newtets[1].tet);
+        }
       } else {
         // Remove ab by a flip32().
         flip32(recuroldtets, &(newtets[2]), flipque);
         success = true;
       }
-      // Are we success?
-      if (!success) {
-        // No! Reverse the flip23() operation.
-        newtets[2] = baktet; // Do we really need this?
-        flip32(newtets, tmpoldtets, flipque);
-        // Adjust the tets back to original position (see Fig.).
-        enext2self(tmpoldtets[0]);
-        enextself(tmpoldtets[1]);
-        // Adjust back to abp[(i-1) % n].
-        enext0fnextself(tmpoldtets[1]);
-        esymself(tmpoldtets[1]);
-        // set the tets back.
-        oldtets[i] = tmpoldtets[0];
-        oldtets[(i - 1) % n] = tmpoldtets[1];
-        // Delete the three new tets.
-        tetrahedrondealloc(newtets[0].tet);
-        tetrahedrondealloc(newtets[1].tet);
-        tetrahedrondealloc(newtets[2].tet);
-      } else {
-        // Delete the last tet in 'recuroldtets'. This tet is neither in
-        //   'oldtets' nor in 'newtets'.
-        tetrahedrondealloc(recuroldtets[j].tet);  // j == n - 2
-      }
+      // Delete the last tet in 'recuroldtets'. This tet is neither in
+      //   'oldtets' nor in 'newtets'.
+      tetrahedrondealloc(recuroldtets[j].tet);  // j == n - 2
       // The other tets in 'recuroldtets' are still in 'oldtets'.
       delete [] recuroldtets;
       break;
