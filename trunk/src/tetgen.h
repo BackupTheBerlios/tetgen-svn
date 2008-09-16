@@ -1317,8 +1317,8 @@ bool flipnm(int n, triface* oldtets, triface* newtets, queue* flipque);
 ///////////////////////////////////////////////////////////////////////////////
 
 unsigned long randomnation(unsigned long choices);
+void randomsample(point searchpt, triface* searchtet);
 enum locateresult locate(point searchpt, triface* searchtet);
-enum locateresult preciselocate(point searchpt, triface* searchtet);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

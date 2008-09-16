@@ -77,8 +77,8 @@ meshstat.o:	meshstat.cxx
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o dbg.o memorypool.o flip.o delaunay.o meshio.o meshstat.o predicates.o
-	ar r libtet.a io.o dbg.o flip.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
+tetlib:	io.o memorypool.o flip.o delaunay.o meshio.o meshstat.o predicates.o
+	ar r libtet.a io.o flip.o memorypool.o delaunay.o meshio.o meshstat.o predicates.o
 
 tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet

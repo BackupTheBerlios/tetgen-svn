@@ -312,7 +312,7 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
   int *iptr, i, j;
 
   // Check if any apex of ab is dummypoint.
-  for (i = 0; i < n; i++) {
+  for (i = n - 1; i > 0; i--) {
     if (apex(oldtets[i]) == dummypoint) break;
   }
   // Now i is the shift distance to the first one.
@@ -340,7 +340,7 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
     // Decide if the face abc is flipable.
     if (pc != dummypoint) {
       pd = apex(oldtets[(i + 1) % n]);
-      pe = apex(oldtets[(i - 1) % n]);
+      pe = apex(oldtets[(i != 0) ? i - 1 : n - 1]);
       if ((pd != dummypoint) && (pc != dummypoint)) {
         ori = orient3d(pa, pb, pd, pe);
         if (ori >= 0) {  // Allow ori == 0, support 4-to-4 flip.
@@ -359,7 +359,7 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
     if (doflip) {
       // Get the two old tets.
       tmpoldtets[0] = oldtets[i];
-      tmpoldtets[1] = oldtets[(i - 1) % n];
+      tmpoldtets[1] = oldtets[(i != 0) ? i - 1 : n - 1];
       // Adjust tmpoldtets[1] (abec) -> bace.
       enext0fnextself(tmpoldtets[1]);
       esymself(tmpoldtets[1]);

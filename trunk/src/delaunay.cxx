@@ -100,7 +100,7 @@ unsigned long tetgenmesh::randomnation(unsigned long choices)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// locate()    Find a simplex containing a given point.                      //
+// randomsample()    Randomly sample the tetrahedra for point loation.       //
 //                                                                           //
 // This routine implements Muecke's Jump-and-walk point location algorithm.  //
 // It improves the simple walk-through by "jumping" to a good starting point //
@@ -110,16 +110,9 @@ unsigned long tetgenmesh::randomnation(unsigned long choices)
 // 's origin is closest to the point we are searcing for.  Having chosen the //
 // starting tetrahedron, the simple Walk-through algorithm is executed.      //
 //                                                                           //
-// The return value indicates the location of the 'searchpt'. 'searchtet' is //
-// adjusted to a tetrahedron corresponding to that value.                    //
-//                                                                           //
-// WARNING: This routine is designed for convex triangulations, and will not //
-// generally work after the holes and concavities have been carved.          //
-//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt, 
-  triface *searchtet)
+void tetgenmesh::randomsample(point searchpt, triface *searchtet)
 {
   tetrahedron *firsttet, *tetptr;
   point torg;
@@ -129,7 +122,7 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
   REAL searchdist, dist;
   int tetblocks, i, j;
 
-  if (searchtet->tet != NULL) {
+  if ((searchtet->tet != NULL) && (searchtet->tet[4] != NULL)) {
     // Get the distance from the suggested starting tet to the search point.
     if ((point) searchtet->tet[7] != dummypoint) {
       torg = org(*searchtet);
@@ -144,7 +137,7 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
 
   // If a recently encountered tetrahedron has been recorded and has not
   //   been deallocated, test it as a good starting point.
-  if ((recenttet.tet != NULL) && (recenttet.tet != searchtet->tet)) {
+  if ((recenttet.tet != NULL) && (recenttet.tet[4] != NULL)) {
     if ((point) recenttet.tet[7] != dummypoint) {
       torg = org(recenttet);
     } else {
@@ -199,14 +192,11 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
     }
     sampleblock = (void **) *sampleblock;
   }
-  
-  // Call simple walk-through to locate the point.
-  return preciselocate(searchpt, searchtet); 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// preciselocate()    Find a simplex containing a given point.               //
+// locate()    Find a simplex containing a given point.                      //
 //                                                                           //
 // This routine implements the simple Walk-through point location algorithm. //
 // Begins its search from 'searchtet', assume there is a line segment L from //
@@ -227,7 +217,7 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::locateresult tetgenmesh::preciselocate(point searchpt,
+enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
   triface* searchtet)
 {
   tetrahedron ptr;
@@ -603,10 +593,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   // Locate the point p.
   if (searchtet->tet == NULL) {
-    loc = locate(insertpt, searchtet);
-  } else {
-    loc = preciselocate(insertpt, searchtet);
+    randomsample(insertpt, searchtet);
   }
+  loc = locate(insertpt, searchtet);
 
   // Update algorithmic counts.
   if (ptloc_max_tets_count < ptloc_trav_tets_count) {
@@ -874,11 +863,13 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
   triface *fliptet, neightet, *tmptet;
   point *pts, pd, pe;
   REAL sign, ori;
+  long flipcount;
   bool success;
   int n, i, j;
 
   flipque = new queue(sizeof(triface));
   tmpque = new queue(sizeof(triface)); // For flipnm().
+  flipcount = flip23count + flip32count;
 
   // Add all boundary faces in queue.
   for (i = 0; i < cavebdrylist->len(); i++) {
@@ -886,6 +877,8 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
     markface(*fliptet);
     flipque->push(fliptet);
   }
+  // Save a tet for point location.
+  recenttet = *fliptet;
 
   if (b->verbose > 1) {
     printf("    Lawson flip %ld faces.\n", flipque->len());
@@ -915,7 +908,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
       pd = oppo(*fliptet);
       for (i = 0; i < 3; i++) {
         ori = orient3d(org(*fliptet), dest(*fliptet), pd, pe);
-        if (ori >= 0) break;
+        if (ori <= 0) break;
         enextself(*fliptet);
       }
       if (i == 3) {
@@ -923,6 +916,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
         neightet.ver = 0;
         for (j = 0; j < 3; j++) { // Find the same edge.
           if (org(neightet) == dest(*fliptet)) break;
+          enextself(neightet);
         }
         assert(j < 3); // SELF_CHECK
         oldtets[0] = *fliptet;
@@ -930,6 +924,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
         flip23(oldtets, newtets, flipque);
         tetrahedrondealloc(oldtets[0].tet);
         tetrahedrondealloc(oldtets[1].tet);
+        recenttet = newtets[0]; // for point location.
       } else {
         // Try to flip the edge org->dest of 'fliptet'.
         n = 0;
@@ -957,6 +952,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
             for (j = 0; j < n; j++) {
               tetrahedrondealloc(oldtets[j].tet);
             }
+            recenttet = newtets[0]; // for point location.
           } else {
             // Clear all faces queued in tmpque.
             while (!tmpque->empty()) {
@@ -967,13 +963,18 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
             }
             markface(oldtets[0]);
             flipque->push(&(oldtets[0]));
+            recenttet = oldtets[0]; // for point location.
           }
           tmpque->clear();
         } // if (n == 3)
       } // if (i == 3)
     } // if (sign < 0.0)
   } // while
-  
+
+  if (b->verbose > 1) {
+    printf("    %ld flips.\n", flip23count + flip32count - flipcount);
+  }
+
   delete flipque;
   delete tmpque;
 }
@@ -997,7 +998,6 @@ void tetgenmesh::incrementaldelaunay()
   permutarray = new point[in->numberofpoints];
   pointpool->traversalinit();
   if (b->nojettison) { // '-J' option (only for debug)
-    // Skip the permutation.
     for (i = 0; i < in->numberofpoints; i++) {
       permutarray[i] = (point) pointpool->traverse();
     }
@@ -1095,7 +1095,7 @@ void tetgenmesh::incrementaldelaunay()
   }
 
   for (i = 4; i < in->numberofpoints; i++) {
-    searchtet.tet = NULL;
+    searchtet.tet = NULL;  // Randomly sample tetrahedra.
     insertvertex(permutarray[i], &searchtet, (b->bowyerwatson > 0), true);
   }
 
