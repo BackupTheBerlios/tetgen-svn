@@ -610,6 +610,28 @@ int tetgenmesh::pmark(point p)
   return pointmark(p);
 }
 
+// Print the trifaces of the queue (do not pop up items). 
+
+void tetgenmesh::pqueue(queue *q)
+{
+  triface *t;
+  int i;
+
+  q->rewind();
+  for (i = 0; i < q->len(); i++) {
+    t = (triface *) q->getitem();
+    if (t->tet[4] != NULL) {
+      printf("%2d x%lx (%d, %d, %d, %d)", i+1, (unsigned long) t->tet,
+        pointmark(org(*t)), pointmark(dest(*t)), pointmark(apex(*t)),
+        pointmark(oppo(*t)));
+      if (!facemarked(*t)) {
+        printf(" !! Unmarked");
+      }
+      printf("\n");
+    }
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // terminatetetgen()    Terminate TetGen with a given exit code.             //

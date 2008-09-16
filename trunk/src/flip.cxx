@@ -324,18 +324,18 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     } else {
       // a or b was dummypoint.
       i = dummyflag;
-      // Up-shift i times.
+      // Down-shift i times.
       for (; i > 0; i--) {
         newface = oldtets[0];
-        oldtets[0] = oldtets[1];
-        oldtets[1] = oldtets[2];
-        oldtets[2] = newface;
+        oldtets[0] = oldtets[2];
+        oldtets[2] = oldtets[1];
+        oldtets[1] = newface;
       }
       i = dummyflag;
       // Rotate toward left i times.
       for (; i > 0; i--) {
-        enext2self(newtets[0]);
-        enextself(newtets[1]);
+        enextself(newtets[0]);
+        enext2self(newtets[1]);
       }
     }
   }
@@ -440,7 +440,7 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
       // Adjust tmpoldtets[1] (abec) -> bace.
       enext0fnextself(tmpoldtets[1]);
       esymself(tmpoldtets[1]);
-      // Adjust the tets so that newtets[2] will be edab (see Fig.).
+      // Adjust the tets so that newtets[2] will be edca (see Fig.).
       enextself(tmpoldtets[0]);
       enext2self(tmpoldtets[1]);
       // Do flip23() on abp[i] (abc).
@@ -472,9 +472,12 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
           // Adjust back to abp[(i-1) % n].
           enext0fnextself(tmpoldtets[1]);
           esymself(tmpoldtets[1]);
+          // Delete the two original old tets first.
+          tetrahedrondealloc(oldtets[i].tet);
+          tetrahedrondealloc(oldtets[(i != 0) ? i - 1 : n - 1].tet);
           // Set the tets back to their original positions.
           oldtets[i] = tmpoldtets[0];
-          oldtets[(i - 1) % n] = tmpoldtets[1];
+          oldtets[(i != 0) ? i - 1 : n - 1] = tmpoldtets[1];
           // Delete the two new tets.
           tetrahedrondealloc(newtets[0].tet);
           tetrahedrondealloc(newtets[1].tet);

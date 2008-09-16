@@ -858,7 +858,7 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 
 void tetgenmesh::lawsonflip(list *cavebdrylist)
 {
-  queue *flipque, *tmpque;
+  queue *flipque;
   triface oldtets[128], newtets[128];
   triface *fliptet, neightet, *tmptet;
   point *pts, pd, pe;
@@ -868,7 +868,6 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
   int n, i, j;
 
   flipque = new queue(sizeof(triface));
-  tmpque = new queue(sizeof(triface)); // For flipnm().
   flipcount = flip23count + flip32count;
 
   // Add all boundary faces in queue.
@@ -940,32 +939,19 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
           tetrahedrondealloc(oldtets[1].tet);
           tetrahedrondealloc(oldtets[2].tet);
         } else {
-          success = flipnm(n, oldtets, newtets, tmpque);
+          success = flipnm(n, oldtets, newtets, flipque);
           if (success) {
-            // Put all faces in tmpque into flipque.
-            while (!tmpque->empty()) {
-              tmptet = (triface *) tmpque->pop();
-              if (tmptet->tet[4] != NULL) {
-                flipque->push(tmptet);
-              }
-            }
+            // Delete old tets.
             for (j = 0; j < n; j++) {
               tetrahedrondealloc(oldtets[j].tet);
             }
             recenttet = newtets[0]; // for point location.
           } else {
-            // Clear all faces queued in tmpque.
-            while (!tmpque->empty()) {
-              tmptet = (triface *) tmpque->pop();
-              if (tmptet->tet[4] != NULL) {
-                unmarkface(*tmptet);
-              }
-            }
+            // Put this face back into queue.
             markface(oldtets[0]);
             flipque->push(&(oldtets[0]));
             recenttet = oldtets[0]; // for point location.
           }
-          tmpque->clear();
         } // if (n == 3)
       } // if (i == 3)
     } // if (sign < 0.0)
@@ -976,7 +962,6 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
   }
 
   delete flipque;
-  delete tmpque;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

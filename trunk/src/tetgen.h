@@ -1418,6 +1418,7 @@ tetgenmesh() {
 
 void ptet(triface* t);
 int pmark(point p);
+void pqueue(queue* q);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;
