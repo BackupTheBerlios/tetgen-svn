@@ -525,10 +525,14 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////
+// Print the detail informations of a tetrahedron.
+
 void tetgenmesh::ptet(triface* t)
 {
   triface tmpface, prtface;
-  point tmppt;
+  point *pts, tmppt;
+  REAL ori;
   int facecount;
 
   printf("Tetra x%lx with loc(%i) and ver(%i):",
@@ -537,7 +541,11 @@ void tetgenmesh::ptet(triface* t)
     printf("  !! NOT A VALID HANDLE\n");
     return;
   }
-  if ((point) t->tet[7] == dummypoint) {
+  pts = (point *) t->tet;
+  if (pts[7] != dummypoint) {
+    ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
+    printf("  ori = %g.\n", ori);
+  } else {
     printf("  (hull tet)");
   }
   if (infected(*t)) {
@@ -609,14 +617,162 @@ void tetgenmesh::ptet(triface* t)
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Find and print the tetrahedron (or face or edge) with the given indices.
+// Do not handle 'dummypoint' (-1).
+
+void tetgenmesh::ptet(int i, int j, int k, int l)
+{
+  triface t;
+  point *pts;
+  int *marklist;
+  int ii;
+
+  marklist = new int[pointpool->items + 1];
+  for (ii = 0; ii < pointpool->items + 1; ii++) marklist[ii] = 0;
+  // Marke the given indices. 
+  marklist[i] = marklist[j] = marklist[k] = marklist[l] = 1;
+
+  t.loc = t.ver = 0;
+  tetrahedronpool->traversalinit();
+  t.tet = tetrahedrontraverse(tetrahedronpool);
+  while (t.tet != NULL) {
+    pts = (point *) t.tet;
+    if (pts[7] != dummypoint) {
+      if ((marklist[pointmark(pts[4])] + marklist[pointmark(pts[5])] +
+           marklist[pointmark(pts[6])] + marklist[pointmark(pts[7])]) == 4) {
+        ptet(&t);  // Find!
+        break;
+      }
+    }
+    t.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+  
+  if (t.tet == NULL) {
+    printf("  !! Not exist.\n");
+  }
+  delete [] marklist;
+}
+
+void tetgenmesh::pface(int i, int j, int k)
+{
+  triface t, t1;
+  point *pts;
+  REAL sign;
+  int *marklist;
+  int ii;
+
+  marklist = new int[pointpool->items + 1];
+  for (ii = 0; ii < pointpool->items + 1; ii++) marklist[ii] = 0;
+  // Marke the given indices. 
+  marklist[i] = marklist[j] = marklist[k] = 1;
+
+  t.ver = t1.ver = 0;
+  tetrahedronpool->traversalinit();
+  t.tet = tetrahedrontraverse(tetrahedronpool);
+  while (t.tet != NULL) {
+    pts = (point *) t.tet;
+    if (pts[7] != dummypoint) {
+      if ((marklist[pointmark(pts[4])] + marklist[pointmark(pts[5])] +
+           marklist[pointmark(pts[6])] + marklist[pointmark(pts[7])]) == 3) {
+        // Find a tet containing the search face.
+        for (t.loc = 0; t.loc < 4; t.loc++) {
+          sym(t, t1);
+          pts = (point *) t1.tet;
+          if ((marklist[pointmark(pts[4])] + marklist[pointmark(pts[5])] +
+              marklist[pointmark(pts[6])] + 
+              (pts[7] != dummypoint ? marklist[pointmark(pts[7])] : 0)) == 3)
+            break;
+        }
+        assert(t.loc < 4);
+        // Now t and t1 share the face.
+        printf("  tet x%lx (%d, %d, %d, %d) %d\n", (unsigned long) t.tet,
+          pointmark(org(t)), pointmark(dest(t)), pointmark(apex(t)), 
+          pointmark(oppo(t)), t.loc);
+        printf("  tet x%lx (%d, %d, %d, %d) %d\n", (unsigned long) t1.tet,
+          pointmark(org(t1)), pointmark(dest(t1)), pointmark(apex(t1)),
+          pointmark(oppo(t1)), t1.loc);
+        if ((point) t1.tet[7] != dummypoint) {
+          pts = (point *) t.tet;
+          sign = insphere(pts[4], pts[5], pts[6], pts[7], oppo(t1));
+          printf("  %s (sign = %.g).\n", sign > 0 ? "Delaunay" :
+            (sign < 0 ? "Non-Delaunay" : "Cosphere"), sign);
+          if (sign == 0) {
+            sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], oppo(t1));
+            printf("  %s (symbolic).\n", sign > 0 ? "Delaunay":"Non-Delaunay");
+          }
+        }
+        break;
+      }
+    }
+    t.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+  
+  if (t.tet == NULL) {
+    printf("  !! Not exist.\n");
+  }
+  delete [] marklist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Print the index of the point.
+
 int tetgenmesh::pmark(point p)
 {
   return pointmark(p);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Geometrical tests.
+
+REAL tetgenmesh::test_orient3d(int i, int j, int k, int l)
+{
+  point *idx2ptmap;
+  REAL ori;
+  int idx;
+
+  idx = (int) pointpool->items;
+  if ((i > idx) || (j > idx) || (k > idx) || (l > idx)) {
+    printf("Input indices are invalid.\n");
+    return 0;
+  }
+
+  makeindex2pointmap(&idx2ptmap);
+  ori = orient3d(idx2ptmap[i], idx2ptmap[j], idx2ptmap[k], idx2ptmap[l]);
+  delete [] idx2ptmap;
+  
+  return ori;
+}
+
+REAL tetgenmesh::test_insphere(int i, int j, int k, int l, int m)
+{
+  point *idx2ptmap;
+  REAL sign;
+  int idx;
+
+  idx = (int) pointpool->items;
+  if ((i > idx) || (j > idx) || (k > idx) || (l > idx) || (m > idx)) {
+    printf("Input indices are invalid.\n");
+    return 0;
+  }
+
+  makeindex2pointmap(&idx2ptmap);
+  sign = insphere(idx2ptmap[i], idx2ptmap[j], idx2ptmap[k], idx2ptmap[l],
+                  idx2ptmap[m]);
+  if (sign == 0) {
+    printf("  sign == 0.0! (symbolic perturbed) \n");
+    sign = insphere_sos(idx2ptmap[i], idx2ptmap[j], idx2ptmap[k], idx2ptmap[l],
+                        idx2ptmap[m]);
+  }
+  delete [] idx2ptmap;
+  
+  return sign;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Print the trifaces of the queue (do not pop up items). 
 
-void tetgenmesh::pqueue(queue *q)
+void tetgenmesh::print_queue(queue *q)
 {
   triface *t;
   int i;
@@ -633,6 +789,20 @@ void tetgenmesh::pqueue(queue *q)
       }
       printf("\n");
     }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Print an array of tetrahedra (in draw command)
+
+void tetgenmesh::print_tetarray(int n, triface *tetarray)
+{
+  int i;
+
+  for (i = 0; i < n; i++) {
+    printf("p:draw_tet(%d, %d, %d, %d) -- %d\n", 
+      pointmark(org(tetarray[i])), pointmark(dest(tetarray[i])),
+      pointmark(apex(tetarray[i])), pointmark(oppo(tetarray[i])), i + 1);
   }
 }
 

@@ -1268,6 +1268,7 @@ void pointdealloc(point);
 point pointtraverse();
 void maketetrahedron(memorypool*, triface*);
 void makepoint(point*);
+void makeindex2pointmap(point** idx2ptmap);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1305,7 +1306,7 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 
 void flip23(triface* oldtets, triface* newtets, queue* flipque);
 void flip32(triface* oldtets, triface* newtets, queue* flipque);
-bool flipnm(int n, triface* oldtets, triface* newtets, queue* flipque);
+bool flipnm(int n, triface* oldtets, triface* newtets, bool, queue*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1417,8 +1418,14 @@ tetgenmesh() {
 ///////////////////////////////////////////////////////////////////////////////
 
 void ptet(triface* t);
+void ptet(int i, int j, int k, int l);
+void pface(int i, int j, int k);
+void pedge(int i, int j);
 int pmark(point p);
-void pqueue(queue* q);
+REAL test_orient3d(int i, int j, int k, int l);
+REAL test_insphere(int i, int j, int k, int l, int m);
+void print_queue(queue* q);
+void print_tetarray(int n, triface *tetarray);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;

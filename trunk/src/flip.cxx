@@ -380,12 +380,12 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 ///////////////////////////////////////////////////////////////////////////////
 
 bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
-  queue* flipque)
+  bool delaunay, queue* flipque)
 {
   triface *recuroldtets, tmpoldtets[2], baktet;
-  point pa, pb, pc, pd, pe;
+  point pa, pb, pc, pd, pe, pf;
   bool success, doflip;
-  REAL ori;
+  REAL sign, ori;
   int *iptr, i, j;
 
   // Check if any apex of ab is dummypoint.
@@ -414,10 +414,10 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
 
   for (i = 0; i < n; i++) {
     pc = apex(oldtets[i]);
+    pd = apex(oldtets[(i + 1) % n]);
+    pe = apex(oldtets[(i != 0) ? i - 1 : n - 1]);
     // Decide if the face abc is flipable.
     if (pc != dummypoint) {
-      pd = apex(oldtets[(i + 1) % n]);
-      pe = apex(oldtets[(i != 0) ? i - 1 : n - 1]);
       if ((pd != dummypoint) && (pc != dummypoint)) {
         ori = orient3d(pa, pb, pd, pe);
         if (ori >= 0) {  // Allow ori == 0, support 4-to-4 flip.
@@ -427,11 +427,23 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
           }
         }
         doflip = ori > 0;
+        if (doflip && delaunay) {
+          // Only do flip if abc is not a locally Delaunay face.
+          sign = insphere_sos(pa, pb, pc, pd, pe);
+          doflip = (sign < 0);
+        }
       } else {
         doflip = false;
       }
     } else {
-      doflip = true; // Support 2-to-2 flip.
+      // Two faces abd and abe are on the hull.
+      doflip = true; // 2-to-2 flip is possible.
+      if (delaunay) {
+        // Only do flip if ab is not a locally Delaunay edge.
+        pf = apex(oldtets[(i + 2) % n]);
+        sign = insphere_sos(pa, pb, pd, pf, pe);
+        doflip = (sign < 0);
+      }
     }
     if (doflip) {
       // Get the two old tets.
@@ -460,36 +472,50 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
       // Check the size of the link of ab.
       if (n > 4) {  // Actually, if (n - 1 > 3)
         // Recursively do flipnm().
-        success = flipnm(n - 1, recuroldtets, &(newtets[2]), flipque);
+        success = flipnm(n-1, recuroldtets, &(newtets[2]), delaunay, flipque);
         // Are we success?
         if (!success) {
-          // No! Reverse the flip23() operation.
-          newtets[2] = baktet; // Do we really need this?
-          flip32(newtets, tmpoldtets, flipque);
-          // Adjust the tets back to original position (see Fig.).
-          enext2self(tmpoldtets[0]);
-          enextself(tmpoldtets[1]);
-          // Adjust back to abp[(i-1) % n].
-          enext0fnextself(tmpoldtets[1]);
-          esymself(tmpoldtets[1]);
-          // Delete the two original old tets first.
-          tetrahedrondealloc(oldtets[i].tet);
-          tetrahedrondealloc(oldtets[(i != 0) ? i - 1 : n - 1].tet);
-          // Set the tets back to their original positions.
-          oldtets[i] = tmpoldtets[0];
-          oldtets[(i != 0) ? i - 1 : n - 1] = tmpoldtets[1];
-          // Delete the two new tets.
-          tetrahedrondealloc(newtets[0].tet);
-          tetrahedrondealloc(newtets[1].tet);
-        }
+          if (!delaunay) {
+            // No! Reverse the flip23() operation.
+            newtets[2] = baktet; // Do we really need this?
+            flip32(newtets, tmpoldtets, flipque);
+            // Adjust the tets back to original position (see Fig.).
+            enext2self(tmpoldtets[0]);
+            enextself(tmpoldtets[1]);
+            // Adjust back to abp[(i-1) % n].
+            enext0fnextself(tmpoldtets[1]);
+            esymself(tmpoldtets[1]);
+            // Delete the two original old tets first.
+            tetrahedrondealloc(oldtets[i].tet);
+            tetrahedrondealloc(oldtets[(i != 0) ? i - 1 : n - 1].tet);
+            // Set the tets back to their original positions.
+            oldtets[i] = tmpoldtets[0];
+            oldtets[(i != 0) ? i - 1 : n - 1] = tmpoldtets[1];
+            // Delete the three new tets.
+            tetrahedrondealloc(newtets[0].tet);
+            tetrahedrondealloc(newtets[1].tet);
+            tetrahedrondealloc(newtets[2].tet); // = recuroldtets[j].tet
+          } else {
+            // Only delete the first two old tets. Their common face is
+            //   not locally Delaunay and has been flipped.
+            tetrahedrondealloc(oldtets[i].tet);
+            tetrahedrondealloc(oldtets[(i != 0) ? i - 1 : n - 1].tet);
+            // Here the tet recuroldtets[j] does not get deleted. It is
+            //   a part of current mesh.
+          }
+        } else {
+          // Delete the last tet in 'recuroldtets'. This tet is neither in
+          //   'oldtets' nor in 'newtets'.
+          tetrahedrondealloc(recuroldtets[j].tet);  // j == n - 2
+        } 
       } else {
         // Remove ab by a flip32().
         flip32(recuroldtets, &(newtets[2]), flipque);
+        // Delete the last tet in 'recuroldtets'. This one is just created
+        //   by the flip 2-to-3 operation within this routine.
+        tetrahedrondealloc(recuroldtets[j].tet);  // j == n - 2
         success = true;
-      }
-      // Delete the last tet in 'recuroldtets'. This tet is neither in
-      //   'oldtets' nor in 'newtets'.
-      tetrahedrondealloc(recuroldtets[j].tet);  // j == n - 2
+      }      
       // The other tets in 'recuroldtets' are still in 'oldtets'.
       delete [] recuroldtets;
       break;

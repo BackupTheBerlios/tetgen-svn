@@ -942,7 +942,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
           tetrahedrondealloc(oldtets[2].tet);
           recenttet = newtets[0]; // for point location.
         } else {
-          success = flipnm(n, oldtets, newtets, flipque);
+          success = flipnm(n, oldtets, newtets, true, flipque);
           if (success) {
             // Delete old tets.
             for (j = 0; j < n; j++) {

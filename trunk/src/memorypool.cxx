@@ -921,4 +921,29 @@ void tetgenmesh::makepoint(point* pnewpoint)
   pointtype(*pnewpoint) = UNUSEDVERTEX;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// makeindex2pointmap()    Make a map from indices to points.                //
+//                                                                           //
+// The first index of the point is 'in->firstnumber' (0 or 1). '*pidx2ptmap' //
+// return this map. NOTE: it is allocated but not deleted in this function.  //
+// The caller has to deleted it.                                             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::makeindex2pointmap(point** pidx2ptmap)
+{
+  point pt;
+  int idx;
+
+  *pidx2ptmap = new point[pointpool->items + 1];
+  pointpool->traversalinit();
+  idx = in->firstnumber;
+  pt = pointtraverse();
+  while (pt != NULL) {
+    (*pidx2ptmap)[idx++] = pt;
+    pt = pointtraverse();
+  }
+}
+
 #endif // #ifndef memorypoolCXX
