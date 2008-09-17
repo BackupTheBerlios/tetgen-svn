@@ -188,6 +188,8 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
 	  searchtet->ver = 0;
           searchdist = dist;
         }
+      } else {
+        j--; // This sample is dead.
       }
     }
     sampleblock = (void **) *sampleblock;
@@ -889,7 +891,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
     fliptet = (triface *) flipque->pop();
     
     if (fliptet->tet[4] == NULL) continue; // A dead tet.
-    assert(facemarked(*fliptet)); // SELF_CHECK
+    if (!facemarked(*fliptet)) continue; // A new tet which was a dead tet.
     unmarkface(*fliptet);
     fliptet->ver = 4;
     if (apex(*fliptet) == dummypoint) continue; // A hull face.
@@ -938,6 +940,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
           tetrahedrondealloc(oldtets[0].tet);
           tetrahedrondealloc(oldtets[1].tet);
           tetrahedrondealloc(oldtets[2].tet);
+          recenttet = newtets[0]; // for point location.
         } else {
           success = flipnm(n, oldtets, newtets, flipque);
           if (success) {

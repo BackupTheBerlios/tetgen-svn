@@ -533,6 +533,10 @@ void tetgenmesh::ptet(triface* t)
 
   printf("Tetra x%lx with loc(%i) and ver(%i):",
          (unsigned long)(t->tet), t->loc, t->ver);
+  if (t->tet == NULL) {
+    printf("  !! NOT A VALID HANDLE\n");
+    return;
+  }
   if ((point) t->tet[7] == dummypoint) {
     printf("  (hull tet)");
   }
