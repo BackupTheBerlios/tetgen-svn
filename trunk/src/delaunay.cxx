@@ -839,7 +839,7 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
         terminatetetgen(1);
       }
       // Do a 3-to-2 flip to remove the degenerate tet.
-      flip32(oldtets, newtets, NULL);
+      flip32(oldtets, newtets, 0);
       // Delete the old tets.
       tetrahedrondealloc(oldtets[0].tet);
       tetrahedrondealloc(oldtets[1].tet);
@@ -858,6 +858,99 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+void tetgenmesh::lawsonflip(list *cavebdrylist)
+{ 
+  triface oldtets[4], newtets[4];
+  triface fliptet, neightet;
+  point *pts, pd, pe;
+  REAL sign, ori;
+  long flipcount;
+  int *iptr, n, i;
+
+  // Put all boundary faces (except hull faces) into a stack. 
+  futureflip = (badface *) NULL;
+  for (i = 0; i < cavebdrylist->len(); i++) {
+    fliptet = * (triface *) cavebdrylist->get(i);
+    sym(fliptet, neightet);
+    if ((point) neightet.tet[7] != dummypoint) {
+      futureflip = flippush(futureflip, &neightet, oppo(fliptet));
+    }
+  }
+
+  if (b->verbose > 1) {
+    printf("    Lawson flip %ld faces.\n", flippool->items);
+    flipcount = flip23count + flip32count;
+  }
+
+  while (futureflip != (badface *) NULL) {
+
+    // Pop a face from the stack.
+    fliptet = futureflip->tt;  // bace
+    pd = futureflip->foppo;  // The new vertex.
+    futureflip = futureflip->nextitem;
+
+    pts = (point *) fliptet.tet;
+    // Skip it if it is a dead or a hull tet.
+    if ((pts[4] == NULL) || (pts[7] == dummypoint)) continue;
+    sym(fliptet, neightet);
+    // Skip it if it is not the same tet as we saved.
+    if (oppo(neightet) != pd) continue; 
+
+    sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pd);
+
+    // Flip it if it is not locally Delaunay.
+    if (sign < 0) {
+      // Check the convexity of its three edges.
+      pe = oppo(fliptet);
+      fliptet.ver = 0;
+      for (i = 0; i < 3; i++) {
+        ori = orient3d(org(fliptet), dest(fliptet), pe, pd);
+        if (ori <= 0) break;
+        enextself(fliptet);
+      }
+      esym(fliptet, oldtets[0]);
+      fnextself(oldtets[0]);
+      esymself(oldtets[0]);
+      if (i == 3) {
+        // A 2-to-3 flip is found.
+        enext0fnextself(oldtets[0]); 
+        esymself(oldtets[0]); // tet abcd, d is the new vertex.
+        oldtets[1] = fliptet;  // tet bace;
+        flip23(oldtets, newtets, 1);
+        tetrahedrondealloc(oldtets[0].tet);
+        tetrahedrondealloc(oldtets[1].tet);
+        recenttet = newtets[0]; // for point location.
+      } else {
+        // A 3-to-2 or 4-to-4 may possible.
+        n = 0;
+        do {
+          fnext(oldtets[n], oldtets[n + 1]);
+          n++;
+        } while ((oldtets[n].tet != fliptet.tet) && (n < 4));
+        if (n == 3) {
+          // Found a 3-to-2 flip.
+          flip32(oldtets, newtets, 1);
+          tetrahedrondealloc(oldtets[0].tet);
+          tetrahedrondealloc(oldtets[1].tet);
+          tetrahedrondealloc(oldtets[2].tet);
+          recenttet = newtets[0]; // for point location.
+        } else if ((n == 4) && (ori == 0)) {
+          // Find a 4-to-4 flip. First do a 2-to-3 flip.
+          
+        } else {
+          // An unflipable face. Ignore it. Will be flipped later.
+        }
+      } // if (i == 3)
+    } // if (sign < 0)
+  }
+
+  if (b->verbose > 1) {
+    printf("    %ld flips.\n", flip23count + flip32count - flipcount);
+  }
+  flippool->restart();
+}
+
+/*
 void tetgenmesh::lawsonflip(list *cavebdrylist)
 {
   queue *flipque;
@@ -878,8 +971,6 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
     markface(*fliptet);
     flipque->push(fliptet);
   }
-  // Save a tet for point location.
-  recenttet = *fliptet;
 
   if (b->verbose > 1) {
     printf("    Lawson flip %ld faces.\n", flipque->len());
@@ -933,7 +1024,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
         do {
           fnext(oldtets[n], oldtets[n + 1]);
           n++;
-        } while (oldtets[n].tet != fliptet->tet);
+        } while ((oldtets[n].tet != fliptet->tet) && (n < 5));
         // n is the total number of tets.
         if (n == 3) {
           flip32(oldtets, newtets, flipque);
@@ -941,8 +1032,10 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
           tetrahedrondealloc(oldtets[1].tet);
           tetrahedrondealloc(oldtets[2].tet);
           recenttet = newtets[0]; // for point location.
-        } else {
-          success = flipnm(n, oldtets, newtets, true, flipque);
+        } else if ((n == 4) && (ori == 0)) {
+          // Flip 4-to-4 is possible.
+          success = flipnm(n, oldtets, newtets, false, flipque);
+          // success = flipnm(n, oldtets, newtets, true, flipque);
           if (success) {
             // Delete old tets.
             for (j = 0; j < n; j++) {
@@ -955,6 +1048,10 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
             flipque->push(&(oldtets[0]));
             recenttet = oldtets[0]; // for point location.
           }
+        } else {  // n > 4
+          // Put this face back into queue.
+          markface(oldtets[0]);
+          flipque->push(&(oldtets[0]));
         } // if (n == 3)
       } // if (i == 3)
     } // if (sign < 0.0)
@@ -966,6 +1063,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
 
   delete flipque;
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

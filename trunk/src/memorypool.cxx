@@ -739,6 +739,9 @@ void tetgenmesh::initializepools()
   // Having determined the memory size of an element, initialize the pools.
   tetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
   hulltetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
+
+  // Initialize the pool for flips.
+  flippool = new memorypool(sizeof(badface), 1024, POINTER, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

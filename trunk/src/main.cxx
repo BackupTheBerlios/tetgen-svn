@@ -807,6 +807,22 @@ void tetgenmesh::print_tetarray(int n, triface *tetarray)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Print a list of faces (in draw command)
+
+void tetgenmesh::print_tetfacelist(list *tetfacelist)
+{
+  triface *f;
+  int i;
+
+  for (i = 0; i < tetfacelist->len(); i++) {
+    f = (triface *) tetfacelist->get(i);
+    printf("p:draw_subface(%d, %d, %d) -- op (%d), x%lx\n", pointmark(org(*f)),
+      pointmark(dest(*f)), pointmark(apex(*f)), pointmark(oppo(*f)),
+      (unsigned long) f->tet);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // terminatetetgen()    Terminate TetGen with a given exit code.             //
 //                                                                           //

@@ -5,6 +5,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// flippush()    Push a face (possibly will be flipped) into stack.          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack, 
+  triface* flipface, point pushpt)
+{
+  badface *newflipface;
+
+  newflipface = (badface *) flippool->alloc();
+  newflipface->tt = *flipface;
+  newflipface->foppo = pushpt;
+  newflipface->nextitem = flipstack;
+
+  return newflipface;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // flip23()    Remove a face by tranforming 2-to-3 tetrahedra.               //
 //                                                                           //
 // This is the reverse operation of flip23(). 'oldtets' are two origin tets, //
@@ -18,9 +37,14 @@
 //       three old tets counterclockwisely (right-hand rule) until a or b    //
 //       is in c's position (see Fig.).                                      //
 //                                                                           //
+// If 'flipflag != 0', the convex hull faces will be checked and flipped if  //
+// they are locally non-Delaunay. If 'flipflag == 1', we assume that d is a  //
+// newly inserted vertex, so only the lower part of the convex hull will be  //
+// cehcked (this avoids unnecessary insphere() testes).                      //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
+void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
 {
   tetrahedron ptr;
   triface newface, casface;
@@ -117,12 +141,6 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     enext0fnext(oldtets[0], casface);
     symself(casface);
     bond(newface, casface);
-    if (flipque != NULL) {
-      if (!facemarked(casface)) {
-        markface(newface);
-        flipque->push(&newface);
-      }
-    }
     enextself(oldtets[0]);
   }
   // Bond bottom boundary faces (at bace) to mesh.
@@ -131,12 +149,6 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
     enext0fnext(oldtets[1], casface);
     symself(casface);
     bond(newface, casface);
-    if (flipque != NULL) {
-      if (!facemarked(casface)) {
-        markface(newface);
-        flipque->push(&newface);
-      }
-    }
     enext2self(oldtets[1]);
   }
   
@@ -174,6 +186,28 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
       }
     }
   }
+
+  if (flipflag > 0) {
+    // Queue faces which may be locally non-Delaunay.  
+    pd = dest(newtets[0]);
+    for (i = 0; i < 3; i++) {
+      enext2fnext(newtets[i], newface);
+      sym(newface, casface);
+      if ((point) casface.tet[7] != dummypoint) {
+        futureflip = flippush(futureflip, &casface, pd);
+      }
+    }
+    if (flipflag > 1) {
+      pe = org(newtets[0]);
+      for (i = 0; i < 3; i++) {
+        enextfnext(newtets[i], newface);
+        sym(newface, casface);
+        if ((point) casface.tet[7] != dummypoint) {
+          futureflip = flippush(futureflip, &casface, pe);
+        }
+      }
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -193,9 +227,14 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, queue* flipque)
 //       three old tets counterclockwisely (right-hand rule) until a or b    //
 //       is in c's position (see Fig.).                                      //
 //                                                                           //
+// If 'flipflag != 0', the convex hull faces will be checked and flipped if  //
+// they are locally non-Delaunay. If 'flipflag == 1', we assume that a is a  //
+// newly inserted vertex, so only the two opposite faces of the convex hull  //
+// will be cehcked (this avoids unnecessary insphere() testes).              //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
+void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
 {
   tetrahedron ptr;
   triface newface, casface;
@@ -282,12 +321,6 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     enextfnext(oldtets[i], casface);
     symself(casface);
     bond(newface, casface);
-    if (flipque != NULL) {
-      if (!facemarked(casface)) {
-        markface(newface);
-        flipque->push(&newface);
-      }
-    }
     enextself(newtets[0]);
   }
   // Bond other faces of bace to mesh.
@@ -296,12 +329,6 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
     enext2fnext(oldtets[i], casface);
     symself(casface);
     bond(newface, casface);
-    if (flipque != NULL) {
-      if (!facemarked(casface)) {
-        markface(newface);
-        flipque->push(&newface);
-      }
-    }
     enext2self(newtets[1]);
   }
 
@@ -336,6 +363,45 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
       for (; i > 0; i--) {
         enextself(newtets[0]);
         enext2self(newtets[1]);
+      }
+    }
+  }
+  
+  if (flipflag > 0) {
+    // Queue faces which may be locally non-Delaunay.  
+    pa = org(newtets[0]);
+    enextfnext(newtets[0], newface);
+    sym(newface, casface);
+    if ((point) casface.tet[7] != dummypoint) {
+      futureflip = flippush(futureflip, &casface, pa);
+    }
+    enext2fnext(newtets[1], newface);
+    sym(newface, casface);
+    if ((point) casface.tet[7] != dummypoint) {
+      futureflip = flippush(futureflip, &casface, pa);
+    }
+    if (flipflag > 1) {
+      pb = dest(newtets[0]);
+      enext2fnext(newtets[0], newface);
+      sym(newface, casface);
+      if ((point) casface.tet[7] != dummypoint) {
+        futureflip = flippush(futureflip, &casface, pb);
+      }
+      enextfnext(newtets[1], newface);
+      sym(newface, casface);
+      if ((point) casface.tet[7] != dummypoint) {
+        futureflip = flippush(futureflip, &casface, pb);
+      }
+      pc = apex(newtets[0]);
+      enext0fnext(newtets[0], newface);
+      sym(newface, casface);
+      if ((point) casface.tet[7] != dummypoint) {
+        futureflip = flippush(futureflip, &casface, pc);
+      }
+      enext0fnext(newtets[1], newface);
+      sym(newface, casface);
+      if ((point) casface.tet[7] != dummypoint) {
+        futureflip = flippush(futureflip, &casface, pc);
       }
     }
   }
@@ -379,6 +445,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, queue* flipque)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+/*
 bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
   bool delaunay, queue* flipque)
 {
@@ -524,5 +591,6 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
   
   return success;
 }
+*/
 
 #endif // #ifndef flipCXX

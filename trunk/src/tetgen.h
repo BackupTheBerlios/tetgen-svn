@@ -1177,7 +1177,7 @@ class link : public memorypool {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Queue                                                                     //
+// Queue and Stack                                                           //
 //                                                                           //
 // A 'queue' is basically a link.  Following is an image of a queue.         //
 //              ___________     ___________     ___________                  //
@@ -1191,7 +1191,7 @@ class link : public memorypool {
 class queue : public link {
 
   public:
-
+  
   bool empty() { return linkitems == 0; }
   void *push(void* newitem) {return link::add(newitem);} 
   void *pop() {return link::deletenode((void **) *head);}
@@ -1214,20 +1214,21 @@ tetgenbehavior *b;
 // Pools of tetrahedra, hull tetrahedra, points, etc.
 memorypool *tetrahedronpool, *hulltetrahedronpool;
 memorypool *pointpool;
+memorypool *flippool;
 
 // A dummy point at infinity (see [Guibas & Stolfi 85]).  All the hull
 //   tetrahedra having this point as a vertex.
 point dummypoint;
 
+// A flip statck (use flippool).
+badface *futureflip;
+
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
 int elemattribindex, volumeboundindex, elemmarkerindex, highorderindex;
 
-// Current random number seed.
-unsigned long randomseed;
-
-// Number of random samples for point location.
-long samples;
+// Current random number seed, number of random samples (for point location).
+unsigned long randomseed, samples;
 
 // Pointer to a recently visited tetrahedron. Improves point location if
 //   points are inserted sequentially.
@@ -1304,9 +1305,10 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void flip23(triface* oldtets, triface* newtets, queue* flipque);
-void flip32(triface* oldtets, triface* newtets, queue* flipque);
-bool flipnm(int n, triface* oldtets, triface* newtets, bool, queue*);
+badface* flippush(badface* flipstack, triface* flipface, point pushpt);
+void flip23(triface* oldtets, triface* newtets, int flipflag);
+void flip32(triface* oldtets, triface* newtets, int flipflag);
+//bool flipnm(int n, triface* oldtets, triface* newtets, bool, queue*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1381,7 +1383,9 @@ tetgenmesh() {
   b = (tetgenbehavior *) NULL;
   tetrahedronpool = hulltetrahedronpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
+  flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;
+  futureflip = (badface *) NULL;
   point2tetindex = pointmarkindex = 0;
   elemattribindex = volumeboundindex = elemmarkerindex = highorderindex = 0;
   randomseed = samples = 1l;
@@ -1406,9 +1410,13 @@ tetgenmesh() {
   if (pointpool != (memorypool *) NULL) {
     delete pointpool;
   }
+  if (flippool != (memorypool *) NULL) {
+    delete flippool;
+  }
   if (dummypoint != (point) NULL) {
     delete [] dummypoint;
   }
+  futureflip = (badface *) NULL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1426,6 +1434,7 @@ REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
 void print_queue(queue* q);
 void print_tetarray(int n, triface *tetarray);
+void print_tetfacelist(list *tetfacelist);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;
