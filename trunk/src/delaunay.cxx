@@ -873,7 +873,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
     fliptet = * (triface *) cavebdrylist->get(i);
     sym(fliptet, neightet);
     if ((point) neightet.tet[7] != dummypoint) {
-      futureflip = flippush(futureflip, &neightet, oppo(fliptet));
+      futureflip = flippush(futureflip, &fliptet, oppo(fliptet));
     }
   }
 
@@ -892,22 +892,27 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
     pts = (point *) fliptet.tet;
     // Skip it if it is a dead or a hull tet.
     if ((pts[4] == NULL) || (pts[7] == dummypoint)) continue;
-    sym(fliptet, neightet);
     // Skip it if it is not the same tet as we saved.
-    if (oppo(neightet) != pd) continue; 
+    if (oppo(fliptet) != pd) continue;
+    // Skip it if the opposite tet does not exist.
+    sym(fliptet, neightet);
+    pe = oppo(neightet)
+    if (pe == dummypoint) continue;
 
-    sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pd);
+    sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
 
     // Flip it if it is not locally Delaunay.
     if (sign < 0) {
       // Check the convexity of its three edges.
-      pe = oppo(fliptet);
       fliptet.ver = 0;
       for (i = 0; i < 3; i++) {
-        ori = orient3d(org(fliptet), dest(fliptet), pe, pd);
+        ori = orient3d(org(fliptet), dest(fliptet), pd, pe);
         if (ori <= 0) break;
         enextself(fliptet);
       }
+      
+      // To be continued ... 
+      
       esym(fliptet, oldtets[0]);
       fnextself(oldtets[0]);
       esymself(oldtets[0]);

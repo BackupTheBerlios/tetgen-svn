@@ -194,7 +194,7 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
       enext2fnext(newtets[i], newface);
       sym(newface, casface);
       if ((point) casface.tet[7] != dummypoint) {
-        futureflip = flippush(futureflip, &casface, pd);
+        futureflip = flippush(futureflip, &newface, pd);
       }
     }
     if (flipflag > 1) {
@@ -203,7 +203,7 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
         enextfnext(newtets[i], newface);
         sym(newface, casface);
         if ((point) casface.tet[7] != dummypoint) {
-          futureflip = flippush(futureflip, &casface, pe);
+          futureflip = flippush(futureflip, &newface, pe);
         }
       }
     }
@@ -373,35 +373,35 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
     enextfnext(newtets[0], newface);
     sym(newface, casface);
     if ((point) casface.tet[7] != dummypoint) {
-      futureflip = flippush(futureflip, &casface, pa);
+      futureflip = flippush(futureflip, &newface, pa);
     }
     enext2fnext(newtets[1], newface);
     sym(newface, casface);
     if ((point) casface.tet[7] != dummypoint) {
-      futureflip = flippush(futureflip, &casface, pa);
+      futureflip = flippush(futureflip, &newface, pa);
     }
     if (flipflag > 1) {
       pb = dest(newtets[0]);
       enext2fnext(newtets[0], newface);
       sym(newface, casface);
       if ((point) casface.tet[7] != dummypoint) {
-        futureflip = flippush(futureflip, &casface, pb);
+        futureflip = flippush(futureflip, &newface, pb);
       }
       enextfnext(newtets[1], newface);
       sym(newface, casface);
       if ((point) casface.tet[7] != dummypoint) {
-        futureflip = flippush(futureflip, &casface, pb);
+        futureflip = flippush(futureflip, &newface, pb);
       }
       pc = apex(newtets[0]);
       enext0fnext(newtets[0], newface);
       sym(newface, casface);
       if ((point) casface.tet[7] != dummypoint) {
-        futureflip = flippush(futureflip, &casface, pc);
+        futureflip = flippush(futureflip, &newface, pc);
       }
       enext0fnext(newtets[1], newface);
       sym(newface, casface);
       if ((point) casface.tet[7] != dummypoint) {
-        futureflip = flippush(futureflip, &casface, pc);
+        futureflip = flippush(futureflip, &newface, pc);
       }
     }
   }
