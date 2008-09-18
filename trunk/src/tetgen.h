@@ -866,6 +866,29 @@ void fnextself(triface& t) {
   }
 }
 
+// symedge() -- given triface 't1', get a triface 't2', where 't1' and 't2'
+//   are the same face and the same edge in two adjacent tetrahedra.
+
+void symedge(triface& t1, triface& t2) {
+  int i;
+  decode(t1.tet[t1.loc], t2);
+  // Adjust the edge (see Fig. fnext-base).
+  for (i = (t1.ver >> 1); i > 0; i--) { 
+    enext2self(t2);
+  }
+}
+
+void symedgeself(triface& t) {
+  tetrahedron ptr;
+  int tver, i;
+  ptr = t.tet[t.loc];
+  tver = t.ver;
+  decode(ptr, t);
+  for (i = (tver >> 1); i > 0; i--) { 
+    enext2self(t);
+  }
+}
+
 // bond() -- to setup the connections between 't1.loc' <==> 't2.loc'.
 //   From t1 <-- t2, we bond the edge in 't2' corresponding to the 0-th
 //   edge in 't1', and vice versa for t1 --> t2.  

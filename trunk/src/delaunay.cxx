@@ -860,7 +860,7 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 
 void tetgenmesh::lawsonflip(list *cavebdrylist)
 { 
-  triface oldtets[4], newtets[4];
+  triface oldtets[4], newtets[3];
   triface fliptet, neightet;
   point *pts, pd, pe;
   REAL sign, ori;
@@ -896,7 +896,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
     if (oppo(fliptet) != pd) continue;
     // Skip it if the opposite tet does not exist.
     sym(fliptet, neightet);
-    pe = oppo(neightet)
+    pe = oppo(neightet);
     if (pe == dummypoint) continue;
 
     sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
@@ -910,23 +910,18 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
         if (ori <= 0) break;
         enextself(fliptet);
       }
-      
-      // To be continued ... 
-      
-      esym(fliptet, oldtets[0]);
-      fnextself(oldtets[0]);
-      esymself(oldtets[0]);
       if (i == 3) {
         // A 2-to-3 flip is found.
-        enext0fnextself(oldtets[0]); 
-        esymself(oldtets[0]); // tet abcd, d is the new vertex.
-        oldtets[1] = fliptet;  // tet bace;
+        oldtets[0] = fliptet; // tet abcd, d is the new vertex.
+        symedge(oldtets[0], oldtets[1]); // tet bace.
         flip23(oldtets, newtets, 1);
         tetrahedrondealloc(oldtets[0].tet);
         tetrahedrondealloc(oldtets[1].tet);
         recenttet = newtets[0]; // for point location.
       } else {
         // A 3-to-2 or 4-to-4 may possible.
+        enext0fnext(fliptet, oldtets[0]);
+        esymself(oldtets[0]); // tet badc, d is the new vertex.
         n = 0;
         do {
           fnext(oldtets[n], oldtets[n + 1]);
@@ -940,8 +935,24 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
           tetrahedrondealloc(oldtets[2].tet);
           recenttet = newtets[0]; // for point location.
         } else if ((n == 4) && (ori == 0)) {
-          // Find a 4-to-4 flip. First do a 2-to-3 flip.
-          
+          // Find a 4-to-4 flip.
+          flipnmcount++;
+          // First do a 2-to-3 flip.
+          oldtets[0] = fliptet; // tet abcd, d is the new vertex.
+          flip23(oldtets, newtets, 1);
+          tetrahedrondealloc(oldtets[0].tet);
+          tetrahedrondealloc(oldtets[1].tet);
+          // Then do a 3-to-2 flip. 
+          enextfnext(newtets[0], oldtets[0]);  // newtets[0] is edab.
+          enextself(oldtets[0]);
+          esymself(oldtets[0]);  // tet badc, d is the new vertex.
+          oldtets[1] = oldtets[2];
+          oldtets[2] = oldtets[3];
+          flip32(oldtets, newtets, 1);
+          tetrahedrondealloc(oldtets[0].tet);
+          tetrahedrondealloc(oldtets[1].tet);
+          tetrahedrondealloc(oldtets[2].tet);
+          recenttet = newtets[0]; // for point location.
         } else {
           // An unflipable face. Ignore it. Will be flipped later.
         }
@@ -952,123 +963,9 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
   if (b->verbose > 1) {
     printf("    %ld flips.\n", flip23count + flip32count - flipcount);
   }
+
   flippool->restart();
 }
-
-/*
-void tetgenmesh::lawsonflip(list *cavebdrylist)
-{
-  queue *flipque;
-  triface oldtets[128], newtets[128];
-  triface *fliptet, neightet, *tmptet;
-  point *pts, pd, pe;
-  REAL sign, ori;
-  long flipcount;
-  bool success;
-  int n, i, j;
-
-  flipque = new queue(sizeof(triface));
-  flipcount = flip23count + flip32count;
-
-  // Add all boundary faces in queue.
-  for (i = 0; i < cavebdrylist->len(); i++) {
-    fliptet = (triface *) cavebdrylist->get(i);
-    markface(*fliptet);
-    flipque->push(fliptet);
-  }
-
-  if (b->verbose > 1) {
-    printf("    Lawson flip %ld faces.\n", flipque->len());
-  }
-
-  // Loop until the queue is empty.
-  while (!flipque->empty()) {
-  
-    fliptet = (triface *) flipque->pop();
-    
-    if (fliptet->tet[4] == NULL) continue; // A dead tet.
-    if (!facemarked(*fliptet)) continue; // A new tet which was a dead tet.
-    unmarkface(*fliptet);
-    fliptet->ver = 4;
-    if (apex(*fliptet) == dummypoint) continue; // A hull face.
-    pts = (point *) fliptet->tet;
-    if (pts[7] == dummypoint) continue; // A hull tet.
-    sym(*fliptet, neightet);
-    pe = oppo(neightet); 
-    if (pe == dummypoint) continue; // A hull tet.
-    
-    // Delaunay test.
-    sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
-    
-    if (sign < 0.0) {
-      // Try to flip the face.
-      pd = oppo(*fliptet);
-      for (i = 0; i < 3; i++) {
-        ori = orient3d(org(*fliptet), dest(*fliptet), pd, pe);
-        if (ori <= 0) break;
-        enextself(*fliptet);
-      }
-      if (i == 3) {
-        // A 2-to-3 flip is found.
-        neightet.ver = 0;
-        for (j = 0; j < 3; j++) { // Find the same edge.
-          if (org(neightet) == dest(*fliptet)) break;
-          enextself(neightet);
-        }
-        assert(j < 3); // SELF_CHECK
-        oldtets[0] = *fliptet;
-        oldtets[1] = neightet;
-        flip23(oldtets, newtets, flipque);
-        tetrahedrondealloc(oldtets[0].tet);
-        tetrahedrondealloc(oldtets[1].tet);
-        recenttet = newtets[0]; // for point location.
-      } else {
-        // Try to flip the edge org->dest of 'fliptet'.
-        n = 0;
-        oldtets[n] = *fliptet;
-        do {
-          fnext(oldtets[n], oldtets[n + 1]);
-          n++;
-        } while ((oldtets[n].tet != fliptet->tet) && (n < 5));
-        // n is the total number of tets.
-        if (n == 3) {
-          flip32(oldtets, newtets, flipque);
-          tetrahedrondealloc(oldtets[0].tet);
-          tetrahedrondealloc(oldtets[1].tet);
-          tetrahedrondealloc(oldtets[2].tet);
-          recenttet = newtets[0]; // for point location.
-        } else if ((n == 4) && (ori == 0)) {
-          // Flip 4-to-4 is possible.
-          success = flipnm(n, oldtets, newtets, false, flipque);
-          // success = flipnm(n, oldtets, newtets, true, flipque);
-          if (success) {
-            // Delete old tets.
-            for (j = 0; j < n; j++) {
-              tetrahedrondealloc(oldtets[j].tet);
-            }
-            recenttet = newtets[0]; // for point location.
-          } else {
-            // Put this face back into queue.
-            markface(oldtets[0]);
-            flipque->push(&(oldtets[0]));
-            recenttet = oldtets[0]; // for point location.
-          }
-        } else {  // n > 4
-          // Put this face back into queue.
-          markface(oldtets[0]);
-          flipque->push(&(oldtets[0]));
-        } // if (n == 3)
-      } // if (i == 3)
-    } // if (sign < 0.0)
-  } // while
-
-  if (b->verbose > 1) {
-    printf("    %ld flips.\n", flip23count + flip32count - flipcount);
-  }
-
-  delete flipque;
-}
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
