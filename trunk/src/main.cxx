@@ -770,29 +770,6 @@ REAL tetgenmesh::test_insphere(int i, int j, int k, int l, int m)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Print the trifaces of the queue (do not pop up items). 
-
-void tetgenmesh::print_queue(queue *q)
-{
-  triface *t;
-  int i;
-
-  q->rewind();
-  for (i = 0; i < q->len(); i++) {
-    t = (triface *) q->getitem();
-    if (t->tet[4] != NULL) {
-      printf("%2d x%lx (%d, %d, %d, %d)", i+1, (unsigned long) t->tet,
-        pointmark(org(*t)), pointmark(dest(*t)), pointmark(apex(*t)),
-        pointmark(oppo(*t)));
-      if (!facemarked(*t)) {
-        printf(" !! Unmarked");
-      }
-      printf("\n");
-    }
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Print an array of tetrahedra (in draw command)
 
 void tetgenmesh::print_tetarray(int n, triface *tetarray)
@@ -819,6 +796,27 @@ void tetgenmesh::print_tetfacelist(list *tetfacelist)
     printf("p:draw_subface(%d, %d, %d) -- op (%d), x%lx\n", pointmark(org(*f)),
       pointmark(dest(*f)), pointmark(apex(*f)), pointmark(oppo(*f)),
       (unsigned long) f->tet);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Print current faces in flipstack (in draw command)
+
+void tetgenmesh::print_flipstack()
+{
+  badface *traveface;
+  int i;
+
+  traveface = futureflip; 
+  i = 0;
+  while (traveface != NULL) {
+    if (traveface->tt.tet[4] != NULL) {
+      printf("%2d  (%d, %d, %d, %d) - %d\n",i+1,pointmark(org(traveface->tt)),
+        pointmark(dest(traveface->tt)), pointmark(apex(traveface->tt)),
+        pointmark(oppo(traveface->tt)), pointmark(traveface->foppo));
+    }
+    traveface = traveface->nextitem;
+    i++;
   }
 }
 

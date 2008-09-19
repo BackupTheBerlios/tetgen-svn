@@ -1272,7 +1272,9 @@ long meshedges;
 // Algorithm statistical counters.
 long ptloc_trav_tets_count;  // Count the number of visited tets (temp).
 long ptloc_max_tets_count;  // Count the maximal number of visited tets.
-long insphere_count, insphere_sos_count;  // Count the symbolic tests.
+long orient3dcount;
+long inspherecount;
+long insphere_sos_count;  // Count the symbolic tests.
 long flip23count, flip32count, flipnmcount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1419,7 +1421,8 @@ tetgenmesh() {
   insegments = 0l;
   meshedges = 0l;
   ptloc_max_tets_count = 0l;
-  insphere_count = insphere_sos_count = 0l;
+  orient3dcount = 0l;
+  inspherecount = insphere_sos_count = 0l;
   flip23count = flip32count = flipnmcount = 0l;
 }
 
@@ -1455,9 +1458,9 @@ void pedge(int i, int j);
 int pmark(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
-void print_queue(queue* q);
 void print_tetarray(int n, triface *tetarray);
 void print_tetfacelist(list *tetfacelist);
+void print_flipstack();
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;

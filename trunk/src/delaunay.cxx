@@ -21,7 +21,7 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 {
   REAL sign;
 
-  insphere_count++;
+  inspherecount++;
 
   sign = insphere(pa, pb, pc, pd, pe);
   if (sign != 0.0) {
@@ -243,7 +243,7 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
     torg = org(*searchtet);
     tdest = dest(*searchtet);
     tapex = apex(*searchtet);
-    ori = orient3d(torg, tdest, tapex, searchpt);
+    ori = orient3d(torg, tdest, tapex, searchpt); orient3dcount++;
     if (ori < 0) {
       // searchpt lies above searchtet's face.
       break;
@@ -284,6 +284,7 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
     oriorg = orient3d(tdest, tapex, toppo, searchpt); 
     oridest = orient3d(tapex, torg, toppo, searchpt);
     oriapex = orient3d(torg, tdest, toppo, searchpt);
+    orient3dcount+=3;
 
     // Now decide which face to move. It is possible there are more than one
     //   faces are viable moves. Use the opposite points of thier neighbors
@@ -665,7 +666,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         } else {
           // It is a hull tet. Check if its base face is visible by p. 
           //   This happens when p lies lies outside the hull face.
-          ori = orient3d(pts[4], pts[5], pts[6], insertpt);
+          ori = orient3d(pts[4], pts[5], pts[6], insertpt); orient3dcount++;
           enqflag = (ori < 0.0);
           // Check if this face is coplanar with p. This case may create
           //   a degenerate tet (zero volume). 
@@ -800,7 +801,7 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
     pts = (point *) cavetet->tet;
     if (pts[7] != dummypoint) {
       // Check if the new tet is degenerate.
-      ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
+      ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
       if (ori == 0) {
         removeque->push(cavetet);
       }
@@ -901,12 +902,18 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
 
     sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
 
+    if (b->verbose > 1) {
+      printf("  Insphere: (%d, %d, %d) %d, %d\n", pointmark(org(fliptet)),
+        pointmark(dest(fliptet)), pointmark(apex(fliptet)),
+        pointmark(oppo(fliptet)), pointmark(pe));
+    }
+
     // Flip it if it is not locally Delaunay.
     if (sign < 0) {
       // Check the convexity of its three edges.
       fliptet.ver = 0;
       for (i = 0; i < 3; i++) {
-        ori = orient3d(org(fliptet), dest(fliptet), pd, pe);
+        ori = orient3d(org(fliptet), dest(fliptet), pd, pe); orient3dcount++;
         if (ori <= 0) break;
         enextself(fliptet);
       }
