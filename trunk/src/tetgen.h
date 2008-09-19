@@ -679,7 +679,7 @@ static int locver2apex[4][6];
 // For oppo() primitives, uses 'loc' as the key.
 static int loc2oppo[4];
 
-// For fnext() primitives, uses ('loc' * 6 + 'ver') as the key. Returns
+// For fnext() primitives, uses ('loc' * 8 + 'ver') as the key. Returns
 //   an array containing a new ('loc', 'ver'). 
 // Note: Only valid for 'ver' equals one of {0, 2, 4}.
 static int locver2nextf[24];
@@ -756,23 +756,6 @@ static int edge2locver[6][2];
   tver = (t).ver;\
   decode(ptr, (t));\
   (t).ver = zero2ver[tver][(t).ver];
-
-/*
-void symedge(triface& t1, triface& t2) {
-  decode(t1.tet[t1.loc], t2);
-  // Adjust the edge (see Fig. fnext-base).
-  t2.ver = zero2ver[t1.ver][t2.ver];
-}
-
-void symedgeself(triface& t) {
-  tetrahedron ptr;
-  int tver;
-  ptr = t.tet[t.loc];
-  tver = t.ver;
-  decode(ptr, t);
-  t.ver = zero2ver[tver][t.ver];
-}
-*/
 
 // org(), dest(), apex(), oppo() -- return the origin, destination, apex,
 //   and opposite vertices of the triface.
@@ -914,14 +897,6 @@ void bond(triface& t1, triface& t2) {
   int t1ver = t1.ver, t2ver = t2.ver;
   // Find t2's edge corresponds to the t1's 0th edge.
   t2.ver = verver2zero[t1.ver][t2.ver];
-  // t1.ver = 0;
-  // // Make sure that t2's edge is in the 0th edge ring.
-  // t2.ver &= ~1; // if (t2.ver &= 01) esymself(t2);
-  // for (i = 0; i < 3; i++) {
-  //   if (org(t2) == dest(t1)) break;
-  //   enextself(t2);
-  // }
-  // assert(i < 3); // SELF_CHECK the edge must match.
   // t1 <-- t2
   t1.tet[t1.loc] = encode(t2);
   // Find t1's edge corresponds to t2's 0th edge.

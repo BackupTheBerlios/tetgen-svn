@@ -535,7 +535,7 @@ void tetgenmesh::ptet(triface* t)
   REAL ori;
   int facecount;
 
-  printf("Tetra x%lx with loc(%i) and ver(%i):",
+  printf("Tetra x%lx with loc(%i) ver(%i):",
          (unsigned long)(t->tet), t->loc, t->ver);
   if (t->tet == NULL) {
     printf("  !! NOT A VALID HANDLE\n");
@@ -564,8 +564,8 @@ void tetgenmesh::ptet(triface* t)
     if (prtface.tet == NULL) {
       printf("      [%i] Open !!\n", facecount);
     } else {
-      printf("      [%i] x%lx  loc(%i)", facecount,
-             (unsigned long)(prtface.tet), prtface.loc);
+      printf("      [%i] x%lx  loc(%i) ver(%i)", facecount,
+             (unsigned long)(prtface.tet), prtface.loc, prtface.ver);
       if ((point) prtface.tet[7] == dummypoint) {
         printf("  (hull tet)");
       }
@@ -574,9 +574,6 @@ void tetgenmesh::ptet(triface* t)
       }
       if (marktested(prtface)) {
         printf(" (marktested)");
-      }
-      if (facemarked(prtface)) {
-        printf(" (facemarked)");
       }
       printf("\n");
     }
