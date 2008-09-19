@@ -790,9 +790,13 @@ void tetgenmesh::print_tetfacelist(list *tetfacelist)
 
   for (i = 0; i < tetfacelist->len(); i++) {
     f = (triface *) tetfacelist->get(i);
-    printf("p:draw_subface(%d, %d, %d) -- op (%d), x%lx\n", pointmark(org(*f)),
-      pointmark(dest(*f)), pointmark(apex(*f)), pointmark(oppo(*f)),
-      (unsigned long) f->tet);
+    if (f->tet[4] != NULL) {
+      printf("p:draw_subface(%d, %d, %d) -- op (%d), x%lx (%d)\n", 
+        pointmark(org(*f)), pointmark(dest(*f)), pointmark(apex(*f)), 
+        pointmark(oppo(*f)), (unsigned long) f->tet, i+1);
+    } else {
+      printf("!! dead face x%lx (i)\n", (unsigned long) f->tet, i+1);
+    }
   }
 }
 

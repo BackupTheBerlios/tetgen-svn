@@ -653,8 +653,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     cavetet = (triface *) cavetetlist->get(i);
     for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
       sym(*cavetet, neightet);
-      // Do check if it is not included in 'cavetetlist' yet.
-      if (!infected(neightet)) {
+      // Do check if it is not deleted and not infected.
+      if ((neightet.tet[4] != NULL) && !infected(neightet)) {
         enqflag = false;
         pts = (point *) neightet.tet;
         if (pts[7] != dummypoint) {
@@ -669,7 +669,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           }
         } else {
           // It is a hull tet. Check if its base face is visible by p. 
-          //   This happens when p lies lies outside the hull face.
+          //   This happens when p lies outside the hull face.
           ori = orient3d(pts[4], pts[5], pts[6], insertpt); orient3dcount++;
           enqflag = (ori < 0.0);
           // Check if this face is coplanar with p. This case may create
@@ -682,15 +682,17 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           infect(neightet);
           cavetetlist->append(&neightet);
         } else {
-          // Found a boubdary face of the cavity. It may be a face of a hull
+          // Found a boundary face of the cavity. It may be a face of a hull
           //   tet which contains 'dummypoint'. Choose the edge in the face 
           //   such that its endpoints are not 'dummypoint', while its apex
           //   may be 'dummypoint' (see Fig. 1.4).
-          cavetet->ver = 4;
-          cavebdrylist->append(cavetet);
+          neightet.ver = 4;
+          cavebdrylist->append(&neightet);
         }
-      } // if (!infected(neightet)
+      } // if (neightet.tet[4] != NULL)
     } // for (cavetet->loc = 0;
+    // Delete the tet in the cavity.
+    tetrahedrondealloc(cavetet->tet);
   } // for (i = 0;
 
   if (b->verbose > 1) {
@@ -702,11 +704,10 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   //   tetrahedra at outside of the cavity.
   for (i = 0; i < cavebdrylist->len(); i++) {
     cavetet = (triface *) cavebdrylist->get(i);
-    symedge(*cavetet, neightet); // neightet may be a hull tet.
-    if (apex(*cavetet) != dummypoint) {
+    neightet = *cavetet;
+    if (apex(neightet) != dummypoint) {
       // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
       unmarktest(neightet); // Unmark it.
-      // assert(neightet.ver & 01 == 0); // It's in the 0th edge ring.
       maketetrahedron(tetrahedronpool, &newtet);
       setorg(newtet, dest(neightet));
       setdest(newtet, org(neightet));
@@ -715,9 +716,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     } else {
       // Create a new hull tet (see Fig. bowyerwatson 2).
       maketetrahedron(hulltetrahedronpool, &newtet);
-      assert(cavetet->ver == 4); // SELF_CHECK (see Fig. 1.4).
-      setorg(newtet, dest(*cavetet));
-      setdest(newtet, org(*cavetet));
+      setorg(newtet, org(neightet));
+      setdest(newtet, dest(neightet));
       setapex(newtet, insertpt);
       setoppo(newtet, dummypoint);
       // Note: the cavity boundary face is at the enext0fnext place.
@@ -749,12 +749,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       }
       enextself(*cavetet);
     }
-  }
-
-  // Delete the old tetrahedra of the cavity.
-  for (i = 0; i < cavetetlist->len(); i++) {
-    cavetet = (triface *) cavetetlist->get(i);
-    tetrahedrondealloc(cavetet->tet);
   }
 
   // Set a handle for the point location.
