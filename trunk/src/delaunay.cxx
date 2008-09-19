@@ -861,7 +861,7 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 
 void tetgenmesh::lawsonflip(list *cavebdrylist)
 { 
-  triface oldtets[4], newtets[3];
+  triface oldtets[5], newtets[3];
   triface fliptet, neightet;
   point *pts, pd, pe;
   REAL sign, ori;
@@ -933,7 +933,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
         do {
           fnext(oldtets[n], oldtets[n + 1]);
           n++;
-        } while ((oldtets[n].tet != fliptet.tet) && (n < 4));
+        } while ((oldtets[n].tet != fliptet.tet) && (n < 5));
         if (n == 3) {
           // Found a 3-to-2 flip.
           flip32(oldtets, newtets, 1);
