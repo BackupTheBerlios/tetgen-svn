@@ -656,15 +656,19 @@ class face {
 // For enext() primitive, uses 'ver' as the key.
 static int ve[6];
 
-// For bond(), takes a key as an edge version of a face (abc) which corres-
-//   ponds to the 0th edge of its symmetric face (bac). It returns the 0th
-//   edge in bac corresponds to this edge in abc.
-static int ver2zero[6]; 
+// For bond(), t1 and t2 are two symmetric faces sharing the same edges, it
+//   takes t1's and t2's edge versions as the first and second keys, returns
+//   t2's edge corresponds to t1's 0th edge.
+// Note: the returned edge version is in {0, 2, 4}. The same follows.
+static int verver2zero[6][6];
 
-// For fnext(), symedge(), takes the first key as the edge version of face
-//   abc (range from 0 to 5), the second key as an edge version of the 0th
-//   edge of its symmetric face bac, it returns the edge of bac corresponds
-//   to the current edge version of abc. (Only 0, 2, 4)
+// For bond(), t1's edge corresponds to t2's 0th edge, it takes t1's edge
+//   version as the key, returns t2's edge corresponds to t1's 0th edge.
+static int ver2zero[6];
+
+// For fnext(), symedge(), t1 and t2 share the same face, and t2's edge
+//   corresponds to t1's 0th edge, it takes t1's and t2's edge versions as
+//   the first and second keys, return t2's edge corresponds to t1's edge. 
 static int zero2ver[6][6];
 
 // For org(), dest() and apex() primitives, use ('loc', 'ver') as the key.
@@ -737,7 +741,38 @@ static int edge2locver[6][2];
     
 #define symself(t) \
   ptr = (t).tet[(t).loc];\
-  decode(ptr, t)
+  decode(ptr, (t))
+  
+// symedge() -- given triface 't1', get a triface 't2', where 't1' and 't2'
+//   are the same face and the same edge in two adjacent tetrahedra.
+// Require "tetrahedron ptr;" and "int tver".
+
+#define symedge(t1, t2) \
+  decode((t1).tet[(t1).loc], (t2));\
+  (t2).ver = zero2ver[(t1).ver][(t2).ver]
+
+#define symedgeself(t) \
+  ptr = (t).tet[(t).loc];\
+  tver = (t).ver;\
+  decode(ptr, (t));\
+  (t).ver = zero2ver[tver][(t).ver];
+
+/*
+void symedge(triface& t1, triface& t2) {
+  decode(t1.tet[t1.loc], t2);
+  // Adjust the edge (see Fig. fnext-base).
+  t2.ver = zero2ver[t1.ver][t2.ver];
+}
+
+void symedgeself(triface& t) {
+  tetrahedron ptr;
+  int tver;
+  ptr = t.tet[t.loc];
+  tver = t.ver;
+  decode(ptr, t);
+  t.ver = zero2ver[tver][t.ver];
+}
+*/
 
 // org(), dest(), apex(), oppo() -- return the origin, destination, apex,
 //   and opposite vertices of the triface.
@@ -869,42 +904,27 @@ void fnextself(triface& t) {
   }
 }
 
-// symedge() -- given triface 't1', get a triface 't2', where 't1' and 't2'
-//   are the same face and the same edge in two adjacent tetrahedra.
-
-void symedge(triface& t1, triface& t2) {
-  decode(t1.tet[t1.loc], t2);
-  // Adjust the edge (see Fig. fnext-base).
-  t2.ver = zero2ver[t1.ver][t2.ver];
-}
-
-void symedgeself(triface& t) {
-  tetrahedron ptr;
-  int tver;
-  ptr = t.tet[t.loc];
-  tver = t.ver;
-  decode(ptr, t);
-  t.ver = zero2ver[tver][t.ver];
-}
-
 // bond() -- to setup the connections between 't1.loc' <==> 't2.loc'.
 //   From t1 <-- t2, we bond the edge in 't2' corresponding to the 0-th
-//   edge in 't1', and vice versa for t1 --> t2.  
+//   edge in 't1', and vice versa for t1 --> t2.
+// NOTE: We assume that t1 and t2 refer to the same edge on input.  
 
 void bond(triface& t1, triface& t2) {
   // We will modify edge vers, backup them.
-  int t1ver = t1.ver, t2ver = t2.ver, i;
-  t1.ver = 0;
-  // Make sure that t2's edge is in the 0th edge ring.
-  t2.ver &= ~1; // if (t2.ver &= 01) esymself(t2);
-  for (i = 0; i < 3; i++) {
-    if (org(t2) == dest(t1)) break;
-    enextself(t2);
-  }
-  assert(i < 3); // SELF_CHECK the edge must match.
+  int t1ver = t1.ver, t2ver = t2.ver;
+  // Find t2's edge corresponds to the t1's 0th edge.
+  t2.ver = verver2zero[t1.ver][t2.ver];
+  // t1.ver = 0;
+  // // Make sure that t2's edge is in the 0th edge ring.
+  // t2.ver &= ~1; // if (t2.ver &= 01) esymself(t2);
+  // for (i = 0; i < 3; i++) {
+  //   if (org(t2) == dest(t1)) break;
+  //   enextself(t2);
+  // }
+  // assert(i < 3); // SELF_CHECK the edge must match.
   // t1 <-- t2
   t1.tet[t1.loc] = encode(t2);
-  // Adjust t1's edge to the 0th edge of t2.
+  // Find t1's edge corresponds to t2's 0th edge.
   t1.ver = ver2zero[t2.ver];
   // t1 --> t2
   t2.tet[t2.loc] = encode(t1);

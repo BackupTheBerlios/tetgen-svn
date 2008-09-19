@@ -50,7 +50,7 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // range = {-1, 0, 1, 2}.
-  int *iptr, i;
+  int *iptr, tver, i;
 
   // Check if e is dummypoint.
   if (oppo(oldtets[1]) == dummypoint) {
@@ -138,16 +138,18 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
   // Bond top boundary faces (at abcd) to mesh.
   for (i = 0; i < 3; i++) {
     enextfnext(newtets[i], newface);
+    enextself(newface);
     enext0fnext(oldtets[0], casface);
-    symself(casface);
+    symedgeself(casface);
     bond(newface, casface);
     enextself(oldtets[0]);
   }
   // Bond bottom boundary faces (at bace) to mesh.
   for (i = 0; i < 3; i++) {
     enext2fnext(newtets[i], newface);
+    enext2self(newface);
     enext0fnext(oldtets[1], casface);
-    symself(casface);
+    symedgeself(casface);
     bond(newface, casface);
     enext2self(oldtets[1]);
   }
@@ -240,7 +242,7 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
-  int *iptr, i;
+  int *iptr, tver, i;
 
   // Check if e is 'dummypoint'.
   if (org(oldtets[0]) == dummypoint) {
@@ -319,7 +321,8 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
   for (i = 0; i < 3; i++) {
     enext0fnext(newtets[0], newface);
     enextfnext(oldtets[i], casface);
-    symself(casface);
+    enextself(casface);
+    symedgeself(casface);
     bond(newface, casface);
     enextself(newtets[0]);
   }
@@ -327,7 +330,8 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
   for (i = 0; i < 3; i++) {
     enext0fnext(newtets[1], newface);
     enext2fnext(oldtets[i], casface);
-    symself(casface);
+    enext2self(casface);
+    symedgeself(casface);
     bond(newface, casface);
     enext2self(newtets[1]);
   }

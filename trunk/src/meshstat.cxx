@@ -11,6 +11,15 @@
 
 int tetgenmesh::ve[6] = { 2, 5, 4, 1, 0, 3 };
 
+int tetgenmesh::verver2zero[6][6] = {
+  {0, 0, 2, 2, 4, 4},
+  {0, 0, 2, 2, 4, 4},
+  {2, 2, 4, 4, 0, 0},
+  {2, 2, 4, 4, 0, 0},
+  {4, 4, 0, 0, 2, 2},
+  {4, 4, 0, 0, 2, 2}
+};
+
 int tetgenmesh::ver2zero[6] = {0, 0, 2, 2, 4, 4};
 
 int tetgenmesh::zero2ver[6][6] = {

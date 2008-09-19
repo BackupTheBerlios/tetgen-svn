@@ -515,33 +515,33 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
   setvertices(tetopd, pb, pa, pc, dummypoint);
 
   // Connect hull tetrahedra to firsttet (at four faces of firsttet).
-  bond(firsttet, tetopd);
+  bond(firsttet, tetopd); // ab
   enext0fnext(firsttet, worktet);
-  bond(worktet, tetopc);
+  bond(worktet, tetopc); // ab
   enextfnext(firsttet, worktet);
-  bond(worktet, tetopa);
+  bond(worktet, tetopa); // bc 
   enext2fnext(firsttet, worktet);
-  bond(worktet, tetopb);
+  bond(worktet, tetopb); // ca
 
   // Connect hull tetrahedra together (at six edges of firsttet).
-  enext0fnext(tetopc, worktet); // edge ab
+  enext0fnext(tetopc, worktet); 
   enext0fnext(tetopd, worktet1);
-  bond(worktet, worktet1);
-  enext0fnext(tetopa, worktet); // edge bc
+  bond(worktet, worktet1); // ab
+  enext0fnext(tetopa, worktet);
   enext2fnext(tetopd, worktet1);
-  bond(worktet, worktet1);
-  enext0fnext(tetopb, worktet); // edge ca
+  bond(worktet, worktet1); // bc
+  enext0fnext(tetopb, worktet);
   enextfnext(tetopd, worktet1);
-  bond(worktet, worktet1);
-  enext2fnext(tetopc, worktet); // edge da
+  bond(worktet, worktet1); // ca
+  enext2fnext(tetopc, worktet);
   enextfnext(tetopb, worktet1);
-  bond(worktet, worktet1);
-  enext2fnext(tetopa, worktet); // edge db
+  bond(worktet, worktet1); // da
+  enext2fnext(tetopa, worktet);
   enextfnext(tetopc, worktet1);
-  bond(worktet, worktet1);
-  enext2fnext(tetopb, worktet); // edge dc
+  bond(worktet, worktet1); // db
+  enext2fnext(tetopb, worktet);
   enextfnext(tetopa, worktet1);
-  bond(worktet, worktet1);
+  bond(worktet, worktet1); // dc
 
   // Set the vertex type.
   if (pointtype(pa) == UNUSEDVERTEX) {
@@ -599,6 +599,10 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     randomsample(insertpt, searchtet);
   }
   loc = locate(insertpt, searchtet);
+
+  if (b->verbose > 1) {
+    printf("    Walk distance (# tets): %ld\n", ptloc_trav_tets_count);
+  }
 
   // Update algorithmic counts.
   if (ptloc_max_tets_count < ptloc_trav_tets_count) {
@@ -711,7 +715,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       setdest(newtet, org(*cavetet));
       setapex(newtet, insertpt);
       setoppo(newtet, dummypoint);
-      // Note: the acvity boundary face is at the enext0fnext place.
+      // Note: the cavity boundary face is at the enext0fnext place.
       enext0fnextself(newtet);
     }
     // Connect newtet <==> neightet, this also disconnect the old bond at
@@ -747,9 +751,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     cavetet = (triface *) cavetetlist->get(i);
     tetrahedrondealloc(cavetet->tet);
   }
+
+  // Set a handle for the point location.
+  recenttet = * (triface *) cavebdrylist->get(0);
   
   if (bowyerwatson && (copcount > 0)) {
-    // There may exist zero volume tetrahedra. Check and remove them.
+    // There may exist degenerate tetrahedra. Check and remove them.
     bowyerwatsonpostproc(cavebdrylist);
   }
 
@@ -761,16 +768,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // Set the point type.
   if (pointtype(insertpt) == UNUSEDVERTEX) {
     pointtype(insertpt) = VOLVERTEX;
-  }
-
-  // Set a handle for the point location.
-  if (bowyerwatson) {
-    // Soome new tets may be dead, find a live one.
-    for (i = 0; i < cavebdrylist->len(); i++) {
-      cavetet = (triface *) cavebdrylist->get(i);
-      if (cavetet->tet[4] != NULL) break;
-    }
-    recenttet = * cavetet;
   }
   
   delete cavetetlist;
@@ -845,6 +842,8 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
       tetrahedrondealloc(oldtets[0].tet);
       tetrahedrondealloc(oldtets[1].tet);
       tetrahedrondealloc(oldtets[2].tet);
+      // Rememebr the new tet.
+      recenttet = newtets[0];
     } else { 
       removeque->push(cavetet);  // Wait for the next round.
     } // if (j < 3)
@@ -902,7 +901,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
 
     sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
 
-    if (b->verbose > 1) {
+    if (b->verbose > 2) {
       printf("  Insphere: (%d, %d, %d) %d, %d\n", pointmark(org(fliptet)),
         pointmark(dest(fliptet)), pointmark(apex(fliptet)),
         pointmark(oppo(fliptet)), pointmark(pe));
