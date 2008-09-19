@@ -656,6 +656,17 @@ class face {
 // For enext() primitive, uses 'ver' as the key.
 static int ve[6];
 
+// For bond(), takes a key as an edge version of a face (abc) which corres-
+//   ponds to the 0th edge of its symmetric face (bac). It returns the 0th
+//   edge in bac corresponds to this edge in abc.
+static int ver2zero[6]; 
+
+// For fnext(), symedge(), takes the first key as the edge version of face
+//   abc (range from 0 to 5), the second key as an edge version of the 0th
+//   edge of its symmetric face bac, it returns the edge of bac corresponds
+//   to the current edge version of abc. (Only 0, 2, 4)
+static int zero2ver[6][6];
+
 // For org(), dest() and apex() primitives, use ('loc', 'ver') as the key.
 static int locver2org[4][6];
 static int locver2dest[4][6];
@@ -819,14 +830,12 @@ static int edge2locver[6][2];
 //   where (i, j, k1) and (i, j, k2) belong to two tetrahedra.
     
 void fnext(triface& t1, triface& t2) {
-  int *iptr, i;
+  int *iptr;
   if (t1.ver & 01) {
     // Get the adjacent tet.
     decode(t1.tet[t1.loc], t2);
     // Adjust the edge (see Fig. fnext-base).
-    for (i = (t1.ver >> 1); i > 0; i--) {
-      enext2self(t2);
-    }
+    t2.ver = zero2ver[t1.ver][t2.ver];
     // Go to the next face in t2.
     iptr = &(locver2nextf[t2.loc * 6 + t2.ver]);
     t2.loc = iptr[0];
@@ -837,22 +846,18 @@ void fnext(triface& t1, triface& t2) {
     // Get the adjacent tet.
     decode(t1.tet[iptr[0]], t2);
     // Adjust the edge (see Fig. fnext-base).
-    for (i = (iptr[1] >> 1); i > 0; i--) {
-      enext2self(t2);
-    }
+    t2.ver = zero2ver[iptr[1]][t2.ver];
   }
 }
 
 void fnextself(triface& t) {
   tetrahedron ptr;
-  int *iptr, tver, i;
+  int *iptr, tver;
   if (t.ver & 01) {
     ptr = t.tet[t.loc];
     tver = t.ver;
     decode(ptr, t);
-    for (i = (tver >> 1); i > 0; i--) {
-      enext2self(t);
-    }
+    t.ver = zero2ver[tver][t.ver];
     iptr = &(locver2nextf[t.loc * 6 + t.ver]);
     t.loc = iptr[0];
     t.ver = iptr[1]; 
@@ -860,9 +865,7 @@ void fnextself(triface& t) {
     iptr = &(locver2nextf[t.loc * 6 + t.ver]);
     ptr = t.tet[iptr[0]];
     decode(ptr, t);
-    for (i = (iptr[1] >> 1); i > 0; i--) {
-      enext2self(t);
-    }
+    t.ver = zero2ver[iptr[1]][t.ver];
   }
 }
 
@@ -870,23 +873,18 @@ void fnextself(triface& t) {
 //   are the same face and the same edge in two adjacent tetrahedra.
 
 void symedge(triface& t1, triface& t2) {
-  int i;
   decode(t1.tet[t1.loc], t2);
   // Adjust the edge (see Fig. fnext-base).
-  for (i = (t1.ver >> 1); i > 0; i--) { 
-    enext2self(t2);
-  }
+  t2.ver = zero2ver[t1.ver][t2.ver];
 }
 
 void symedgeself(triface& t) {
   tetrahedron ptr;
-  int tver, i;
+  int tver;
   ptr = t.tet[t.loc];
   tver = t.ver;
   decode(ptr, t);
-  for (i = (tver >> 1); i > 0; i--) { 
-    enext2self(t);
-  }
+  t.ver = zero2ver[tver][t.ver];
 }
 
 // bond() -- to setup the connections between 't1.loc' <==> 't2.loc'.
@@ -898,7 +896,7 @@ void bond(triface& t1, triface& t2) {
   int t1ver = t1.ver, t2ver = t2.ver, i;
   t1.ver = 0;
   // Make sure that t2's edge is in the 0th edge ring.
-  if (t2.ver &= 01) esymself(t2);
+  t2.ver &= ~1; // if (t2.ver &= 01) esymself(t2);
   for (i = 0; i < 3; i++) {
     if (org(t2) == dest(t1)) break;
     enextself(t2);
@@ -907,9 +905,7 @@ void bond(triface& t1, triface& t2) {
   // t1 <-- t2
   t1.tet[t1.loc] = encode(t2);
   // Adjust t1's edge to the 0th edge of t2.
-  for (i = (t2.ver >> 1); i > 0; i--) {
-    enextself(t1);
-  }
+  t1.ver = ver2zero[t2.ver];
   // t1 --> t2
   t2.tet[t2.loc] = encode(t1);
   // Restore the original vers.
