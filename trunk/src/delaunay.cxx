@@ -692,6 +692,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       } // if (!infected(neightet)
     } // for (cavetet->loc = 0;
   } // for (i = 0;
+
+  if (b->verbose > 1) {
+    printf("    Size of the cavity: %d faces %d tets.\n", cavebdrylist->len(),
+           cavetetlist->len());
+  }
   
   // Create new tetrahedra in the Bowyer-Watson cavity. Connect them to the
   //   tetrahedra at outside of the cavity.
