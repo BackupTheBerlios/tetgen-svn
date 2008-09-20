@@ -285,13 +285,16 @@ void tetgenmesh::statistics()
       printf("  Number of n-to-m flips: %ld\n", flipnmcount);
       printf("  Number of total primitive flips: %ld\n",
              flip23count + flip32count);
-      printf("  Total flip time (millisec):  %g\n", tfliptime * 1e+3);
     }
+    printf("  Total point location distance (# tets): %ld\n", ptloc_count);
     printf("  Maximal point location distance (# tets): %ld\n", 
-           ptloc_max_tets_count);
+           ptloc_max_count);
     printf("  Total point location time (millisec):  %g\n", tloctime * 1e+3);
     printf("  Total point insertion time (millisec):  %g\n",
            tinserttime * 1e+3);
+    if (b->bowyerwatson == 0) {
+      printf("  Total flip time (millisec):  %g\n", tfliptime * 1e+3);
+    }
     printf("\n");
   }
 }

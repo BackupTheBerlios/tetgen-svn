@@ -1261,8 +1261,7 @@ long insegments;
 long meshedges;
 
 // Algorithm statistical counters.
-long ptloc_trav_tets_count;  // Count the number of visited tets (temp).
-long ptloc_max_tets_count;  // Count the maximal number of visited tets.
+long ptloc_count, ptloc_max_count;  
 long orient3dcount;
 long inspherecount;
 long insphere_sos_count;  // Count the symbolic tests.
@@ -1415,7 +1414,7 @@ tetgenmesh() {
   dupverts = 0l;
   insegments = 0l;
   meshedges = 0l;
-  ptloc_max_tets_count = 0l;
+  ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
   flip23count = flip32count = flipnmcount = 0l;

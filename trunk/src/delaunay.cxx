@@ -256,10 +256,10 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
     // searchpt is coplanar with searchtet's face. Go to the next face.
   }
 
-  ptloc_trav_tets_count = 1l;  // Algorithimic count.
-
   // Walk through tetrahedra to locate the point.
   while (true) {
+
+    ptloc_count++;  // Algorithimic count.
 
     toppo = oppo(*searchtet);
     
@@ -474,8 +474,6 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
     tdest = dest(*searchtet);
     tapex = apex(*searchtet);
 
-    ptloc_trav_tets_count++;  // Algorithimic count.
-
   } // while (true)
 }
 
@@ -582,6 +580,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   point *pts;
   enum locateresult loc;
   REAL sign, ori;
+  long tetcount;
   bool enqflag;
   int copcount;
   int *iptr, i, j;
@@ -594,7 +593,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   loc_start = clock();
 
-  // Locate the point p.
+  tetcount = ptloc_count;
+  
   if (searchtet->tet == NULL) {
     randomsample(insertpt, searchtet);
   }
@@ -604,12 +604,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   tloctime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   if (b->verbose > 1) {
-    printf("    Walk distance (# tets): %ld\n", ptloc_trav_tets_count);
+    printf("    Walk distance (# tets): %ld\n", ptloc_count - tetcount);
   }
 
-  // Update algorithmic counts.
-  if (ptloc_max_tets_count < ptloc_trav_tets_count) {
-    ptloc_max_tets_count = ptloc_trav_tets_count;
+  if (ptloc_max_count < (ptloc_count - tetcount)) {
+    ptloc_max_count = (ptloc_count - tetcount);
   }
   
   if (loc == ONVERTEX) {
