@@ -188,6 +188,8 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
           searchtet->ver = 0;
           searchdist = dist;
         }
+      } else {
+        j--;
       }
     }
     sampleblock = (void **) *sampleblock;
@@ -591,7 +593,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     printf("    Insert point %d\n", pointmark(insertpt));
   }
 
-  loc_start = clock();
+  // loc_start = clock();
 
   tetcount = ptloc_count;
   
@@ -600,8 +602,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
   loc = locate(insertpt, searchtet);
 
-  loc_end = clock();
-  tloctime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
+  // loc_end = clock();
+  // tloctime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   if (b->verbose > 1) {
     printf("    Walk distance (# tets): %ld\n", ptloc_count - tetcount);
@@ -632,7 +634,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // The number of coplanar cavity boundary face.
   copcount = 0;
 
-  loc_start = clock();
+  // loc_start = clock();
 
   // Add the searchtet into list.
   infect(*searchtet);
@@ -755,8 +757,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
   }
 
-  loc_end = clock();
-  tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
+  // loc_end = clock();
+  // tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   // Set a handle for the point location.
   recenttet = * (triface *) cavebdrylist->get(0);
@@ -766,15 +768,15 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     bowyerwatsonpostproc(cavebdrylist);
   }
 
-  loc_start = clock();
+  // loc_start = clock();
 
   // If the flip option is used.
   if (!bowyerwatson && increflip) {
     lawsonflip(cavebdrylist);
   }
   
-  loc_end = clock();
-  tfliptime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
+  // loc_end = clock();
+  // tfliptime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   // Set the point type.
   if (pointtype(insertpt) == UNUSEDVERTEX) {
