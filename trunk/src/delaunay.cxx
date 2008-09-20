@@ -568,10 +568,8 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 // the convex hull of T will be updated to include p as a vertex.            //
 //                                                                           //
 // If 'bowyerwatson' is TRUE, the Bowyer-Watson algorithm is used to recover //
-// the Delaunayness of T. If 'bowyerwatson' is FALSE and 'incrflip' is TRUE, //
-// then the incremental flip algorithm is used. If both of these two options //
-// are FALSE, only p is inserted, do nothing with regard to the Delaunayness //
-// of T (T may be non-Delaunay after this function).                         //
+// the Delaunayness of T. Otherwise, do nothing with regard to the Delaunay- //
+// ness of T (T may be non-Delaunay after this function).                    //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -632,6 +630,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   cavetetlist = new list(sizeof(triface));
   cavebdrylist = new list(sizeof(triface));
 
+  // The number of coplanar cavity boundary face.
+  copcount = 0;
+
   loc_start = clock();
 
   // Add the searchtet into list.
@@ -652,9 +653,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
   }
 
-  // There is no coplanar cavity boundary face yet.
-  copcount = 0;
-  
   // Form a star-shaped cavity with respect to the inserting point.
   for (i = 0; i < cavetetlist->len(); i++) {
     cavetet = (triface *) cavetetlist->get(i);
@@ -797,12 +795,14 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 {
   queue *removeque;
-  tetrahedron ptr;
-  triface oldtets[4], newtets[2];
+  triface fliptets[4];
   triface *cavetet, neightet;
   point *pts;
   REAL ori;
-  int *iptr, i, j;
+  int i, j;
+  
+  tetrahedron ptr;
+  int *iptr;
 
   removeque = new queue(sizeof(triface));
   
@@ -842,23 +842,19 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
     //   that the other hull face is not pop yet.
     if (j < 3) {
       // Collect tets for flipping the edge.
-      oldtets[0] = *cavetet;
+      fliptets[0] = *cavetet;
       for (j = 0; j < 3; j++) {
-        fnext(oldtets[j], oldtets[j + 1]);
+        fnext(fliptets[j], fliptets[j + 1]);
       }
-      if (oldtets[3].tet != cavetet->tet) {
+      if (fliptets[3].tet != cavetet->tet) {
         printf("Internal error in insertvertex(): Unknown flip case.\n");
         terminatetetgen(1);
       }
       // Do a 3-to-2 flip to remove the degenerate tet.
-      flip32(oldtets, newtets, 0);
-      // Delete the old tets.
-      tetrahedrondealloc(oldtets[0].tet);
-      tetrahedrondealloc(oldtets[1].tet);
-      tetrahedrondealloc(oldtets[2].tet);
+      flip32(fliptets, 0);
       // Rememebr the new tet.
-      recenttet = newtets[0];
-    } else { 
+      recenttet = fliptets[0];
+    } else {
       removeque->push(cavetet);  // Wait for the next round.
     } // if (j < 3)
   }
@@ -874,12 +870,14 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 
 void tetgenmesh::lawsonflip(list *cavebdrylist)
 { 
-  triface oldtets[5], newtets[3];
+  triface fliptets[5], baktets[2];
   triface fliptet, neightet;
   point *pts, pd, pe;
   REAL sign, ori;
   long flipcount;
-  int *iptr, n, i;
+  int n, i;
+
+  int *iptr;
 
   // Put all boundary faces (except hull faces) into a stack. 
   futureflip = (badface *) NULL;
@@ -932,47 +930,39 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
       }
       if (i == 3) {
         // A 2-to-3 flip is found.
-        oldtets[0] = fliptet; // tet abcd, d is the new vertex.
-        symedge(oldtets[0], oldtets[1]); // tet bace.
-        flip23(oldtets, newtets, 1);
-        tetrahedrondealloc(oldtets[0].tet);
-        tetrahedrondealloc(oldtets[1].tet);
-        recenttet = newtets[0]; // for point location.
+        fliptets[0] = fliptet; // tet abcd, d is the new vertex.
+        symedge(fliptets[0], fliptets[1]); // tet bace.
+        flip23(fliptets, 1);
+        recenttet = fliptets[0]; // for point location.
       } else {
         // A 3-to-2 or 4-to-4 may possible.
-        enext0fnext(fliptet, oldtets[0]);
-        esymself(oldtets[0]); // tet badc, d is the new vertex.
+        enext0fnext(fliptet, fliptets[0]);
+        esymself(fliptets[0]); // tet badc, d is the new vertex.
         n = 0;
         do {
-          fnext(oldtets[n], oldtets[n + 1]);
+          fnext(fliptets[n], fliptets[n + 1]);
           n++;
-        } while ((oldtets[n].tet != fliptet.tet) && (n < 5));
+        } while ((fliptets[n].tet != fliptet.tet) && (n < 5));
         if (n == 3) {
           // Found a 3-to-2 flip.
-          flip32(oldtets, newtets, 1);
-          tetrahedrondealloc(oldtets[0].tet);
-          tetrahedrondealloc(oldtets[1].tet);
-          tetrahedrondealloc(oldtets[2].tet);
-          recenttet = newtets[0]; // for point location.
+          flip32(fliptets, 1);
+          recenttet = fliptets[0]; // for point location.
         } else if ((n == 4) && (ori == 0)) {
           // Find a 4-to-4 flip.
           flipnmcount++;
           // First do a 2-to-3 flip.
-          oldtets[0] = fliptet; // tet abcd, d is the new vertex.
-          flip23(oldtets, newtets, 1);
-          tetrahedrondealloc(oldtets[0].tet);
-          tetrahedrondealloc(oldtets[1].tet);
+          fliptets[0] = fliptet; // tet abcd, d is the new vertex.
+          baktets[0] = fliptets[2];
+          baktets[1] = fliptets[3];
+          flip23(fliptets, 1);
           // Then do a 3-to-2 flip. 
-          enextfnext(newtets[0], oldtets[0]);  // newtets[0] is edab.
-          enextself(oldtets[0]);
-          esymself(oldtets[0]);  // tet badc, d is the new vertex.
-          oldtets[1] = oldtets[2];
-          oldtets[2] = oldtets[3];
-          flip32(oldtets, newtets, 1);
-          tetrahedrondealloc(oldtets[0].tet);
-          tetrahedrondealloc(oldtets[1].tet);
-          tetrahedrondealloc(oldtets[2].tet);
-          recenttet = newtets[0]; // for point location.
+          enextfnextself(fliptets[0]);  // fliptets[0] is edab.
+          enextself(fliptets[0]);
+          esymself(fliptets[0]);  // tet badc, d is the new vertex.
+          fliptets[1] = baktets[0];
+          fliptets[2] = baktets[1];
+          flip32(fliptets, 1);
+          recenttet = fliptets[0]; // for point location.
         } else {
           // An unflipable face. Ignore it. Will be flipped later.
         }

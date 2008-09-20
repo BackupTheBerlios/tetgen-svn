@@ -44,26 +44,29 @@ tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
+void tetgenmesh::flip23(triface* fliptets, int flipflag)
 {
-  tetrahedron ptr;
+  triface topcastets[3], botcastets[3]; // The outer boundary faces.
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // range = {-1, 0, 1, 2}.
-  int *iptr, tver, i;
+  int i;
+
+  tetrahedron ptr;
+  int *iptr;
 
   // Check if e is dummypoint.
-  if (oppo(oldtets[1]) == dummypoint) {
+  if (oppo(fliptets[1]) == dummypoint) {
     // Swap the two old tets.
-    newface = oldtets[0];
-    oldtets[0] = oldtets[1];
-    oldtets[1] = newface;
+    newface = fliptets[0];
+    fliptets[0] = fliptets[1];
+    fliptets[1] = newface;
     dummyflag = -1;  // e is dummypoint.
   } else {
     // Check if a or b is dummypoint.
-    if (org(oldtets[0]) == dummypoint) {
+    if (org(fliptets[0]) == dummypoint) {
       dummyflag = 1;  // a is dummypoint.
-    } else if (dest(oldtets[0]) == dummypoint) {
+    } else if (dest(fliptets[0]) == dummypoint) {
       dummyflag = 2;  // b is dummypoint.
     } else {
       dummyflag = 0;  // either c or d is dummypoint.
@@ -71,16 +74,16 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
     i = dummyflag;
     // Rotate i times.
     for (; i > 0; i--) {
-      enextself(oldtets[0]);
-      enext2self(oldtets[1]);
+      enextself(fliptets[0]);
+      enext2self(fliptets[1]);
     }
   }
 
-  pa = org(oldtets[0]);
-  pb = dest(oldtets[0]);
-  pc = apex(oldtets[0]);
-  pd = oppo(oldtets[0]);
-  pe = oppo(oldtets[1]);
+  pa = org(fliptets[0]);
+  pb = dest(fliptets[0]);
+  pc = apex(fliptets[0]);
+  pd = oppo(fliptets[0]);
+  pe = oppo(fliptets[1]);
 
   if (b->verbose > 1) {
     printf("    flip 2-to-3: (%d, %d, %d, %d, %d)\n", pointmark(pa),
@@ -88,123 +91,119 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
   }
   flip23count++;
 
+  // Get the outer boundary faces.
+  for (i = 0; i < 3; i++) {
+    fnext(fliptets[0], topcastets[i]);
+    enextself(fliptets[0]);
+  }
+  for (i = 0; i < 3; i++) {
+    fnext(fliptets[1], botcastets[i]);
+    enext2self(fliptets[1]);
+  }
+
+  // Delete the old tets.
+  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(fliptets[1].tet);
+
   // Check if d is dummytet.
   if (pd != dummypoint) {
     // Create edab.
-    maketetrahedron(tetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], pe, pd, pa, pb);
+    maketetrahedron(tetrahedronpool, &(fliptets[0]));
+    setvertices(fliptets[0], pe, pd, pa, pb);
     // Check if c is dummypoint.
     if (pc != dummypoint) {
       // Create edbc
-      maketetrahedron(tetrahedronpool, &(newtets[1]));
+      maketetrahedron(tetrahedronpool, &(fliptets[1]));
       // Create edca
-      maketetrahedron(tetrahedronpool, &(newtets[2]));
-      setvertices(newtets[2], pe, pd, pc, pa);
+      maketetrahedron(tetrahedronpool, &(fliptets[2]));
+      setvertices(fliptets[2], pe, pd, pc, pa);
     } else {
       // Create edbc
-      maketetrahedron(hulltetrahedronpool, &(newtets[1]));
+      maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
       // Create deac
-      maketetrahedron(hulltetrahedronpool, &(newtets[2]));
-      setvertices(newtets[2], pd, pe, pa, pc);
+      maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
+      setvertices(fliptets[2], pd, pe, pa, pc);
       // Adjust deac->edca
-      enext0fnextself(newtets[2]);
-      esymself(newtets[2]);
+      enext0fnextself(fliptets[2]);
+      esymself(fliptets[2]);
     }
-    setvertices(newtets[1], pe, pd, pb, pc);
+    setvertices(fliptets[1], pe, pd, pb, pc);
   } else {
     // d is dummypoint. Create three new hull tets.
     // Create abed
-    maketetrahedron(hulltetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], pa, pb, pe, pd);
+    maketetrahedron(hulltetrahedronpool, &(fliptets[0]));
+    setvertices(fliptets[0], pa, pb, pe, pd);
     // Create bced
-    maketetrahedron(hulltetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], pb, pc, pe, pd);
+    maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
+    setvertices(fliptets[1], pb, pc, pe, pd);
     // Create caed
-    maketetrahedron(hulltetrahedronpool, &(newtets[2]));
-    setvertices(newtets[2], pc, pa, pe, pd);
+    maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
+    setvertices(fliptets[2], pc, pa, pe, pd);
     // Adjust abed->edab, bced->edbc, caed->edca
     for (i = 0; i < 3; i++) {
-      enext2fnextself(newtets[i]);
-      enext2self(newtets[i]);
-      esymself(newtets[i]);
+      enext2fnextself(fliptets[i]);
+      enext2self(fliptets[i]);
+      esymself(fliptets[i]);
     }
   }
 
   // Bond three new tets together.
   for (i = 0; i < 3; i++) {
-    enext0fnext(newtets[i], newface);
-    bond(newface, newtets[(i + 1) % 3]);
+    enext0fnext(fliptets[i], newface);
+    bond(newface, fliptets[(i + 1) % 3]);
   }
-  // Bond top boundary faces (at abcd) to mesh.
+  // Bond to top outer boundary faces (at abcd).
   for (i = 0; i < 3; i++) {
-    enextfnext(newtets[i], newface);
+    enextfnext(fliptets[i], newface);
     enextself(newface);
-    enext0fnext(oldtets[0], casface);
-    symedgeself(casface);
-    bond(newface, casface);
-    enextself(oldtets[0]);
+    bond(newface, topcastets[i]);
   }
-  // Bond bottom boundary faces (at bace) to mesh.
+  // Bond bottom outer boundary faces (at bace).
   for (i = 0; i < 3; i++) {
-    enext2fnext(newtets[i], newface);
+    enext2fnext(fliptets[i], newface);
     enext2self(newface);
-    enext0fnext(oldtets[1], casface);
-    symedgeself(casface);
-    bond(newface, casface);
-    enext2self(oldtets[1]);
+    bond(newface, botcastets[i]);
   }
   
   if (dummyflag != 0) {
     // Restore the original position of the points (for flipnm()).
     if (dummyflag == -1) { 
-      // d and e were swapped.
-      newface = oldtets[0];
-      oldtets[0] = oldtets[1];
-      oldtets[1] = newface;
       // Reverse the edge.
       for (i = 0; i < 3; i++) {
-        enext0fnextself(newtets[i]);
-        esymself(newtets[i]);
+        enext0fnextself(fliptets[i]);
+        esymself(fliptets[i]);
       }
       // Swap the last two new tets.
-      newface = newtets[1];
-      newtets[1] = newtets[2];
-      newtets[2] = newface;
+      newface = fliptets[1];
+      fliptets[1] = fliptets[2];
+      fliptets[2] = newface;
     } else {
       // either a or b were swapped.
       i = dummyflag;
-      // Rotate i times.
-      for (; i > 0; i--) {
-        enext2self(oldtets[0]);
-        enextself(oldtets[1]);
-      }
-      i = dummyflag;
       // Down-shift new tets i times.
       for (; i > 0; i--) {
-        newface = newtets[0];
-        newtets[0] = newtets[2];
-        newtets[2] = newtets[1];
-        newtets[1] = newface;
+        newface = fliptets[0];
+        fliptets[0] = fliptets[2];
+        fliptets[2] = fliptets[1];
+        fliptets[1] = newface;
       }
     }
   }
 
   if (flipflag > 0) {
     // Queue faces which may be locally non-Delaunay.  
-    pd = dest(newtets[0]);
+    pd = dest(fliptets[0]);
     for (i = 0; i < 3; i++) {
-      enext2fnext(newtets[i], newface);
-      sym(newface, casface);
-      if ((point) casface.tet[7] != dummypoint) {
+      if ((point) botcastets[i].tet[7] != dummypoint) {
+        enext2fnext(fliptets[i], newface);
         futureflip = flippush(futureflip, &newface, pd);
       }
     }
     if (flipflag > 1) {
-      pe = org(newtets[0]);
+      pe = org(fliptets[0]);
       for (i = 0; i < 3; i++) {
-        enextfnext(newtets[i], newface);
-        sym(newface, casface);
-        if ((point) casface.tet[7] != dummypoint) {
+        if ((point) topcastets[i].tet[7] != dummypoint) {
+          enextfnext(fliptets[i], newface);
           futureflip = flippush(futureflip, &newface, pe);
         }
       }
@@ -236,31 +235,34 @@ void tetgenmesh::flip23(triface* oldtets, triface* newtets, int flipflag)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
+void tetgenmesh::flip32(triface* fliptets, int flipflag)
 {
-  tetrahedron ptr;
+  triface topcastets[3], botcastets[3]; // The outer boundary faces.
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
-  int *iptr, tver, i;
+  int i;
+
+  tetrahedron ptr;
+  int *iptr; 
 
   // Check if e is 'dummypoint'.
-  if (org(oldtets[0]) == dummypoint) {
+  if (org(fliptets[0]) == dummypoint) {
     // Reverse the edge.
     for (i = 0; i < 3; i++) {
-      enext0fnextself(oldtets[i]);
-      esymself(oldtets[i]);
+      enext0fnextself(fliptets[i]);
+      esymself(fliptets[i]);
     }
     // Swap the last two tets.
-    newface = oldtets[1];
-    oldtets[1] = oldtets[2];
-    oldtets[2] = newface;
+    newface = fliptets[1];
+    fliptets[1] = fliptets[2];
+    fliptets[2] = newface;
     dummyflag = -1; // e is dummypoint.
   } else {
     // Check if a or b is the 'dummypoint'.
-    if (apex(oldtets[0]) == dummypoint) { 
+    if (apex(fliptets[0]) == dummypoint) { 
       dummyflag = 1;  // a is dummypoint.
-    } else if (apex(oldtets[1]) == dummypoint) {
+    } else if (apex(fliptets[1]) == dummypoint) {
       dummyflag = 2;  // b is dummypoint.
     } else {
       dummyflag = 0;  // either c or d is dummypoint.
@@ -268,18 +270,18 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
     i = dummyflag;
     // Down-shift i times.
     for (; i > 0; i--) {
-      newface = oldtets[2];
-      oldtets[2] = oldtets[1];
-      oldtets[1] = oldtets[0];
-      oldtets[0] = newface;
+      newface = fliptets[2];
+      fliptets[2] = fliptets[1];
+      fliptets[1] = fliptets[0];
+      fliptets[0] = newface;
     }
   }
 
-  pa = apex(oldtets[0]);
-  pb = apex(oldtets[1]);
-  pc = apex(oldtets[2]);
-  pd = dest(oldtets[0]);
-  pe = org(oldtets[0]);
+  pa = apex(fliptets[0]);
+  pb = apex(fliptets[1]);
+  pc = apex(fliptets[2]);
+  pd = dest(fliptets[0]);
+  pe = org(fliptets[0]);
 
   if (b->verbose > 1) {
     printf("    flip 3-to-2: (%d, %d, %d, %d, %d)\n", pointmark(pa),
@@ -287,124 +289,112 @@ void tetgenmesh::flip32(triface* oldtets, triface* newtets, int flipflag)
   }
   flip32count++;
 
+  // Get the outer boundary faces.
+  for (i = 0; i < 3; i++) {
+    enextfnext(fliptets[i], casface);
+    enextself(casface);
+    symedge(casface, topcastets[i]);
+  }
+  for (i = 0; i < 3; i++) {
+    enext2fnext(fliptets[i], casface);
+    enext2self(casface);
+    symedge(casface, botcastets[i]);
+  }
+
+  // Delete the old tets.
+  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(fliptets[1].tet);
+  tetrahedrondealloc(fliptets[2].tet);
+
   // Check if c is a dummypointc.
   if (pc != dummypoint) {
     // Create abcd. Check if d is a dummypoint.
     if (pd != dummypoint) {
-      maketetrahedron(tetrahedronpool, &(newtets[0]));
+      maketetrahedron(tetrahedronpool, &(fliptets[0]));
     } else {
-      maketetrahedron(hulltetrahedronpool, &(newtets[0])); // a hull tet.
+      maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // a hull tet.
     }
-    setvertices(newtets[0], pa, pb, pc, pd);
+    setvertices(fliptets[0], pa, pb, pc, pd);
     // Create bace.
-    maketetrahedron(tetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], pb, pa, pc, pe);
+    maketetrahedron(tetrahedronpool, &(fliptets[1]));
+    setvertices(fliptets[1], pb, pa, pc, pe);
   } else {
     // c is dummypoint. The two new tets are hull tets.
     // Create badc.
-    maketetrahedron(hulltetrahedronpool, &(newtets[0]));
-    setvertices(newtets[0], pb, pa, pd, pc);
+    maketetrahedron(hulltetrahedronpool, &(fliptets[0]));
+    setvertices(fliptets[0], pb, pa, pd, pc);
     // Create abec
-    maketetrahedron(hulltetrahedronpool, &(newtets[1]));
-    setvertices(newtets[1], pa, pb, pe, pc);
+    maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
+    setvertices(fliptets[1], pa, pb, pe, pc);
     // Adjust badc -> abcd.
-    enext0fnextself(newtets[0]);
-    esymself(newtets[0]);
+    enext0fnextself(fliptets[0]);
+    esymself(fliptets[0]);
     // Adjust abec -> bace.
-    enext0fnextself(newtets[1]);
-    esymself(newtets[1]);
+    enext0fnextself(fliptets[1]);
+    esymself(fliptets[1]);
   }
   
   // Bond abcd <==> bace.
-  bond(newtets[0], newtets[1]);  
-  // Bond other faces of abcd to mesh.
+  bond(fliptets[0], fliptets[1]);
+  // Bond new faces to top outer boundary faces (at abcd).
   for (i = 0; i < 3; i++) {
-    enext0fnext(newtets[0], newface);
-    enextfnext(oldtets[i], casface);
-    enextself(casface);
-    symedgeself(casface);
-    bond(newface, casface);
-    enextself(newtets[0]);
+    enext0fnext(fliptets[0], newface);
+    bond(newface, topcastets[i]);
+    enextself(fliptets[0]);
   }
-  // Bond other faces of bace to mesh.
+  // Bond new faces to bottom outer boundary faces (at bace).
   for (i = 0; i < 3; i++) {
-    enext0fnext(newtets[1], newface);
-    enext2fnext(oldtets[i], casface);
-    enext2self(casface);
-    symedgeself(casface);
-    bond(newface, casface);
-    enext2self(newtets[1]);
+    enext0fnext(fliptets[1], newface);
+    bond(newface, botcastets[i]);
+    enext2self(fliptets[1]);
   }
 
   if (dummyflag != 0) {
     // Restore the original position of the points (for flipnm()).
     if (dummyflag == -1) {
-      // e were dummypoint.
-      for (i = 0; i < 3; i++) {
-        enext0fnextself(oldtets[i]);
-        esymself(oldtets[i]);
-      }
-      // Swap the last two tets.
-      newface = oldtets[1];
-      oldtets[1] = oldtets[2];
-      oldtets[2] = newface;
-      // Swap the two new tets.
-      newface = newtets[0];
-      newtets[0] = newtets[1];
-      newtets[1] = newface;
+      // e were dummypoint. Swap the two new tets.
+      newface = fliptets[0];
+      fliptets[0] = fliptets[1];
+      fliptets[1] = newface;
     } else {
       // a or b was dummypoint.
       i = dummyflag;
-      // Down-shift i times.
-      for (; i > 0; i--) {
-        newface = oldtets[0];
-        oldtets[0] = oldtets[2];
-        oldtets[2] = oldtets[1];
-        oldtets[1] = newface;
-      }
-      i = dummyflag;
       // Rotate toward left i times.
       for (; i > 0; i--) {
-        enextself(newtets[0]);
-        enext2self(newtets[1]);
+        enextself(fliptets[0]);
+        enext2self(fliptets[1]);
       }
     }
   }
   
   if (flipflag > 0) {
     // Queue faces which may be locally non-Delaunay.  
-    pa = org(newtets[0]);
-    enextfnext(newtets[0], newface);
-    sym(newface, casface);
-    if ((point) casface.tet[7] != dummypoint) {
+    pa = org(fliptets[0]);
+    if ((point) topcastets[1].tet[7] != dummypoint) {
+      enextfnext(fliptets[0], newface);
       futureflip = flippush(futureflip, &newface, pa);
     }
-    enext2fnext(newtets[1], newface);
-    sym(newface, casface);
-    if ((point) casface.tet[7] != dummypoint) {
+    if ((point) botcastets[1].tet[7] != dummypoint) {
+      enext2fnext(fliptets[1], newface);
       futureflip = flippush(futureflip, &newface, pa);
     }
     if (flipflag > 1) {
-      pb = dest(newtets[0]);
-      enext2fnext(newtets[0], newface);
-      sym(newface, casface);
-      if ((point) casface.tet[7] != dummypoint) {
+      pb = dest(fliptets[0]);
+      if ((point) topcastets[2].tet[7] != dummypoint) {
+        enext2fnext(fliptets[0], newface);
         futureflip = flippush(futureflip, &newface, pb);
       }
-      enextfnext(newtets[1], newface);
-      sym(newface, casface);
-      if ((point) casface.tet[7] != dummypoint) {
+      if ((point) botcastets[2].tet[7] != dummypoint) {
+        enextfnext(fliptets[1], newface);
         futureflip = flippush(futureflip, &newface, pb);
       }
-      pc = apex(newtets[0]);
-      enext0fnext(newtets[0], newface);
-      sym(newface, casface);
-      if ((point) casface.tet[7] != dummypoint) {
+      pc = apex(fliptets[0]);
+      if ((point) topcastets[0].tet[7] != dummypoint) {
+        enext0fnext(fliptets[0], newface);
         futureflip = flippush(futureflip, &newface, pc);
       }
-      enext0fnext(newtets[1], newface);
-      sym(newface, casface);
-      if ((point) casface.tet[7] != dummypoint) {
+      if ((point) botcastets[0].tet[7] != dummypoint) {
+        enext0fnext(fliptets[1], newface);
         futureflip = flippush(futureflip, &newface, pc);
       }
     }
