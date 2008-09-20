@@ -272,12 +272,10 @@ void tetgenmesh::statistics()
     //  totalmeshbytes += subsegs->maxitems * subsegs->itembytes;
     //}
     printf("  Heap memory used by the mesh (K bytes): %g\n\n",
-           (double) totalmeshbytes / 1024.0);
+           ((double) totalmeshbytes) / 1024.0);
 
     // Report algorithmic performances.
     printf("Algorithmic statistics:\n\n");
-    printf("  Maximal point location distance (# tets): %ld\n", 
-           ptloc_max_tets_count);
     printf("  Number of orient3d tests: %ld\n", orient3dcount);
     printf("  Number of insphere tests: %ld\n", inspherecount);
     printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
@@ -287,7 +285,13 @@ void tetgenmesh::statistics()
       printf("  Number of n-to-m flips: %ld\n", flipnmcount);
       printf("  Number of total primitive flips: %ld\n",
              flip23count + flip32count);
+      printf("  Total flip time (millisec):  %g\n", tfliptime * 1e+3);
     }
+    printf("  Maximal point location distance (# tets): %ld\n", 
+           ptloc_max_tets_count);
+    printf("  Total point location time (millisec):  %g\n", tloctime * 1e+3);
+    printf("  Total point insertion time (millisec):  %g\n",
+           tinserttime * 1e+3);
     printf("\n");
   }
 }

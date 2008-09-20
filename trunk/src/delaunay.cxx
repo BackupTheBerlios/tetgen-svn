@@ -185,11 +185,9 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
         if (dist < searchdist) {
           searchtet->tet = tetptr;
           searchtet->loc = 0;
-	  searchtet->ver = 0;
+          searchtet->ver = 0;
           searchdist = dist;
         }
-      } else {
-        j--; // This sample is dead.
       }
     }
     sampleblock = (void **) *sampleblock;
@@ -590,15 +588,22 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   int copcount;
   int *iptr, i, j;
 
+  clock_t loc_start, loc_end;
+
   if (b->verbose > 1) {
     printf("    Insert point %d\n", pointmark(insertpt));
   }
+
+  loc_start = clock();
 
   // Locate the point p.
   if (searchtet->tet == NULL) {
     randomsample(insertpt, searchtet);
   }
   loc = locate(insertpt, searchtet);
+
+  loc_end = clock();
+  tloctime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   if (b->verbose > 1) {
     printf("    Walk distance (# tets): %ld\n", ptloc_trav_tets_count);
@@ -626,6 +631,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // Initialize working lists.
   cavetetlist = new list(sizeof(triface));
   cavebdrylist = new list(sizeof(triface));
+
+  loc_start = clock();
 
   // Add the searchtet into list.
   infect(*searchtet);
@@ -751,6 +758,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
   }
 
+  loc_end = clock();
+  tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
+
   // Set a handle for the point location.
   recenttet = * (triface *) cavebdrylist->get(0);
   
@@ -759,10 +769,15 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     bowyerwatsonpostproc(cavebdrylist);
   }
 
+  loc_start = clock();
+
   // If the flip option is used.
   if (!bowyerwatson && increflip) {
     lawsonflip(cavebdrylist);
   }
+  
+  loc_end = clock();
+  tfliptime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   // Set the point type.
   if (pointtype(insertpt) == UNUSEDVERTEX) {

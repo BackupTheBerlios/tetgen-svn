@@ -868,7 +868,9 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
   clock_t tv[17];
 
   tv[0] = clock();
- 
+
+  printf("  CLOCKS_PER_SEC = %g\n", (REAL) CLOCKS_PER_SEC);
+
   m.b = b;
   m.in = in;
   exactinit();

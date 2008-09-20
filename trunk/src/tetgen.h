@@ -1267,6 +1267,7 @@ long orient3dcount;
 long inspherecount;
 long insphere_sos_count;  // Count the symbolic tests.
 long flip23count, flip32count, flipnmcount;
+REAL tloctime, tfliptime, tinserttime;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1415,6 +1416,7 @@ tetgenmesh() {
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
   flip23count = flip32count = flipnmcount = 0l;
+  tloctime = tfliptime = tinserttime = 0.0;
 }
 
 ~tetgenmesh() {
