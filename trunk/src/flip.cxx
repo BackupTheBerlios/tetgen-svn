@@ -26,18 +26,18 @@ tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack,
 //                                                                           //
 // flip14()    Insert a vertex by transforming 1-to-4 tetrahedra.            //
 //                                                                           //
-// 'newpt' (p) lies in the interior of 'fliptets[0]' (abcd).  This routine   //
-// removes abcd and replaces it by 4 new tets: abpd, bcpd, capd, and abcp in //
-// 'fliptets[0], ..., fliptets[3]', resepctively.                            //
+// 'newpt' (p) lies in the interior of 'splittet' (abcd).  This routine abcd //
+// abcd and replaces it by 4 new tets: abpd, bcpd, capd, and abcp, resepcti- //
+// vely.  Return abcp in 'splittet'.                                         //
 //                                                                           //
 // If abcd is a hull tet, we adjust it and let d be the dummypoint. In this  //
 // case, the three new tets: abpd, bcpd, and capd are hull tets.             //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flip14(point newpt, triface* fliptets, int flipflag)
+void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
 {
-  triface castets[4]; // The outer boundary faces.
+  triface fliptets[4], castets[4];
   triface newface, casface;
   point pa, pb, pc, pd;
   int i;
@@ -45,15 +45,15 @@ void tetgenmesh::flip14(point newpt, triface* fliptets, int flipflag)
   int *iptr;
 
   // Check if the original tet is a hull tet.
-  if ((point) fliptets[0].tet[7] == dummypoint) {
-    fliptets[0].loc = 0;
+  if ((point) splittet->tet[7] == dummypoint) {
+    splittet->loc = 0;
   }
-  fliptets[0].ver = 0;
+  splittet->ver = 0;
 
-  pa = org(fliptets[0]);
-  pb = dest(fliptets[0]);
-  pc = apex(fliptets[0]);
-  pd = oppo(fliptets[0]);
+  pa = org(*splittet);
+  pb = dest(*splittet);
+  pc = apex(*splittet);
+  pd = oppo(*splittet);
 
   if (b->verbose > 1) {
     printf("    flip 1-to-4: %d (%d, %d, %d, %d)\n", pointmark(newpt), 
@@ -63,13 +63,13 @@ void tetgenmesh::flip14(point newpt, triface* fliptets, int flipflag)
 
   // Get the outer boundary faces.
   for(i = 0; i < 3; i++) {
-    fnext(fliptets[0], castets[i]);
-    enextself(fliptets[0]);
+    fnext(*splittet, castets[i]);
+    enextself(*splittet);
   }
-  symedge(fliptets[0], castets[3]); // At face abc.
+  symedge(*splittet, castets[3]); // At face abc.
 
   // Delete the old tet.
-  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(splittet->tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
@@ -117,16 +117,18 @@ void tetgenmesh::flip14(point newpt, triface* fliptets, int flipflag)
     }
     futureflip = flippush(futureflip, &(fliptets[3]), newpt);
   }
+
+  *splittet = fliptets[0]; // Return abcp.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // flip26()    Insert a vertex by transforming 2-to-6 tetrahedra.            //
 //                                                                           //
-// The 'newpt' (p) lies exactly in the face (abc) of the tets 'fliptets[0]'  //
-// (abcd) and 'fliptets[1]' (bace).  This routine removes the two tets and   //
-// replaces them with 6 new tets: abpd, bcpd, capd (at top), bape, cbpe, and //
-// acpe (at bottom), in 'fliptets[0], ..., fliptets[5]', respectively.       //
+// The 'newpt' (p) lies in the face 'splitface' (abc).  This routine removes //
+// the two tets sharing at abc: abcd and bace, replaces them with 6 new tets //
+// : abpd, bcpd, capd (at top), bape, cbpe, and acpe (at bottom). On return, //
+// 'splitface' is abpd.                                                      //
 //                                                                           //
 // On input, a, b, or c should not be dummypoint. If d is dummypoint, the 3  //
 // top new tets are hull tets.  If e is dummypoint,  we reconfigure e to d,  //
@@ -134,14 +136,18 @@ void tetgenmesh::flip14(point newpt, triface* fliptets, int flipflag)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flip26(point newpt, triface* fliptets, int flipflag)
+void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 {
-  triface topcastets[3], botcastets[3]; // The outer boundary faces.
+  triface fliptets[6], topcastets[3], botcastets[3];
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int i;
 
   int *iptr;
+
+  fliptets[0] = *splitface;
+  fliptets[0].ver &= ~1;
+  symedge(fliptets[0], fliptets[1]);
 
   // Check if e is dummypoint.
   if (oppo(fliptets[1]) == dummypoint) {
@@ -229,6 +235,8 @@ void tetgenmesh::flip26(point newpt, triface* fliptets, int flipflag)
       futureflip = flippush(futureflip, &newface, newpt);
     }
   }
+
+  *splitface = fliptets[0]; // Return abpd.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -240,7 +248,7 @@ void tetgenmesh::flip26(point newpt, triface* fliptets, int flipflag)
 // 'fliptets[0]', ..., 'fliptets[n-1]', to store them.  This routine removes //
 // the n tets and replaces them with 2n new tets: app[0]p[1], ..., app[n-1]- //
 // p[0] (at top), pbp[0]p[1], ..., pbp[n-1]p[0] (at bottom) in 'fliptets[0]',//
-// ..., 'fliptets[2n-1]', respectively.                                      //
+// ..., 'fliptets[2n-1]', respectively.  On return, 'splitedge' is apcd.     //
 //                                                                           //
 // On input, a and b should not be dummypoint. If p[0] is dummypoint, the 2  //
 // new tets connecting to p[0] are hull tets. If p[i], i != 0 is dummypoint, //
@@ -265,12 +273,12 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
   splitedge->ver &= ~1;
   casface = *splitedge;
   do {
+    n++;
     if (apex(casface) == dummypoint) {
       // Remeber this face (it's apex is dummypoint).
       newface = casface;
-      dummyflag = 1;
+      dummyflag = n;
     }
-    n++;
     fnextself(casface);
   } while (casface.tet != splitedge->tet);
 
@@ -282,12 +290,14 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
   pt = new point[n];
 
   // Get the n old tets.
-  fliptets[0] = dummyflag == 0 ? *splitedge : newface;
+  fliptets[0] = (dummyflag == 0 ? *splitedge : newface);
   for (i = 0; i < n - 1; i++) {
-    pt[i] = apex(fliptets[i]);
     fnext(fliptets[i], fliptets[i + 1]);
   }
-  pt[i] = apex(fliptets[i]);
+  // Get the n apexes.
+  for (i = 0; i < n; i++) {
+    pt[i] = apex(fliptets[i]); 
+  }
   pa = org(fliptets[0]);
   pb = dest(fliptets[0]);
 
@@ -369,6 +379,9 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
       futureflip = flippush(futureflip, &newface, newpt);
     }
   }
+
+  // If dummyflag !=0, the original tet is shifted by (n - dummyflag).
+  *splitedge = (dummyflag == 0 ? fliptets[0] : fliptets[n - dummyflag]);
 
   delete [] fliptets;
   delete [] bfliptets;

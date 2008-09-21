@@ -1322,8 +1322,8 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 ///////////////////////////////////////////////////////////////////////////////
 
 badface* flippush(badface* flipstack, triface* flipface, point pushpt);
-void flip14(point newpt, triface* fliptets, int flipflag);
-void flip26(point newpt, triface* fliptets, int flipflag);
+void flip14(point newpt, triface* splittet, int flipflag);
+void flip26(point newpt, triface* splitface, int flipflag);
 void flipn2n(point newpt, triface* splitedge, int flipflag);
 void flip23(triface* fliptets, int flipflag);
 void flip32(triface* fliptets, int flipflag);
