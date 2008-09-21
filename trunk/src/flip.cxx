@@ -24,6 +24,215 @@ tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// flip14()    Insert a vertex by transforming 1-to-4 tetrahedra.            //
+//                                                                           //
+// 'newpt' (p) lies in the interior of 'fliptets[0]' (abcd).  This routine   //
+// removes abcd and replaces it by 4 new tets: abpd, bcpd, capd, and abcp in //
+// 'fliptets[0], ..., fliptets[3]', resepctively.                            //
+//                                                                           //
+// If abcd is a hull tet, we adjust it and let d be the dummypoint. In this  //
+// case, the three new tets: abpd, bcpd, and capd are hull tets.             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::flip14(point newpt, triface* fliptets, int flipflag)
+{
+  triface castets[4]; // The outer boundary faces.
+  triface newface, casface;
+  point pa, pb, pc, pd;
+  int i;
+
+  int *iptr;
+
+  // Check if the original tet is a hull tet.
+  if ((point) fliptets[0].tet[7] == dummypoint) {
+    fliptets[0].loc = 0;
+  }
+  fliptets[0].ver = 0;
+
+  pa = org(fliptets[0]);
+  pb = dest(fliptets[0]);
+  pc = apex(fliptets[0]);
+  pd = oppo(fliptets[0]);
+
+  if (b->verbose > 1) {
+    printf("    flip 1-to-4: %d (%d, %d, %d, %d)\n", pointmark(newpt), 
+      pointmark(pa), pointmark(pb), pointmark(pc), pointmark(pd));
+  }
+  flip14count++;
+
+  // Get the outer boundary faces.
+  for(i = 0; i < 3; i++) {
+    fnext(fliptets[0], castets[i]);
+    enextself(fliptets[0]);
+  }
+  symedge(fliptets[0], castets[3]); // At face abc.
+
+  // Delete the old tet.
+  tetrahedrondealloc(fliptets[0].tet);
+
+  // Check if d is dummytet.
+  if (pd != dummypoint) {
+    // Create three new tets for abpd, bcpd, and capd.
+    maketetrahedron(tetrahedronpool, &(fliptets[0]));
+    maketetrahedron(tetrahedronpool, &(fliptets[1]));
+    maketetrahedron(tetrahedronpool, &(fliptets[2]));
+  } else {
+    // Create three hull tets for abpd, bcpd, and capd.
+    maketetrahedron(hulltetrahedronpool, &(fliptets[0]));
+    maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
+    maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
+  }
+  // Create the new tet for abcp.
+  maketetrahedron(tetrahedronpool, &(fliptets[3]));
+  // Set the vertices.
+  setvertices(fliptets[0], pa, pb, newpt, pd);
+  setvertices(fliptets[1], pb, pc, newpt, pd);
+  setvertices(fliptets[2], pc, pa, newpt, pd);
+  setvertices(fliptets[3], pa, pb, pc, newpt);
+
+  // Bond the new tets to outer boundary tets.
+  for (i = 0; i < 3; i++) {
+    enext0fnext(fliptets[i], newface);
+    bond(newface, castets[i]);
+  }
+  bond(fliptets[3], castets[3]); // At face abc.
+  // Bond the new tets together (at six interior faces).
+  for (i = 0; i < 3; i++) {
+    enext0fnext(fliptets[3], newface);
+    bond(newface, fliptets[i]);
+    enextself(fliptets[3]);
+  }
+  for (i = 0; i < 3; i++) {
+    enextfnext(fliptets[i], newface);
+    enext2fnext(fliptets[(i + 1) % 3], casface);
+    bond(newface, casface);
+  }
+
+  if (flipflag > 0) {
+    // Queue faces which may be locally non-Delaunay.
+    for (i = 0; i < 3; i++) {
+      enext0fnext(fliptets[i], newface);
+      futureflip = flippush(futureflip, &newface, newpt);
+    }
+    futureflip = flippush(futureflip, &(fliptets[3]), newpt);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// flip26()    Insert a vertex by transforming 2-to-6 tetrahedra.            //
+//                                                                           //
+// The 'newpt' (p) lies exactly in the face (abc) of thes tet 'fliptets[0]'  //
+// (abcd) and 'fliptets[1]' (bace).  This routine removes the two tets and   //
+// replaces them with 6 new tets: abpd, bcpd, capd (at top), bape, cbpe, and //
+// acpe (at bottom), in 'fliptets[0], ..., fliptets[5]', respectively.       //
+//                                                                           //
+// On input, a, b, or c should not be dummypoint. If d is dummypoint, the 3  //
+// top new tets are hull tets.  If e is dummypoint,  we reconfigure e to d,  //
+// i.e., turn the two tets up-side down.                                     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::flip26(point newpt, triface* fliptets, int flipflag)
+{
+  triface topcastets[3], botcastets[3]; // The outer boundary faces.
+  triface newface, casface;
+  point pa, pb, pc, pd, pe;
+  int i;
+
+  int *iptr;
+
+  // Check if e is dummypoint.
+  if (oppo(fliptets[1]) == dummypoint) {
+    // Swap the two old tets.
+    newface = fliptets[0];
+    fliptets[0] = fliptets[1];
+    fliptets[1] = newface;
+  }
+
+  pa = org(fliptets[0]);
+  pb = dest(fliptets[0]);
+  pc = apex(fliptets[0]);
+  pd = oppo(fliptets[0]);
+  pe = oppo(fliptets[1]);
+
+  if (b->verbose > 1) {
+    printf("    flip 2-to-6: (%d, %d, %d, %d, %d)\n", pointmark(pa),
+      pointmark(pb), pointmark(pc), pointmark(pd), pointmark(pe));
+  }
+  flip26count++;
+
+  // Get the outer boundary faces.
+  for (i = 0; i < 3; i++) {
+    fnext(fliptets[0], topcastets[i]);
+    enextself(fliptets[0]);
+  }
+  for (i = 0; i < 3; i++) {
+    fnext(fliptets[1], botcastets[i]);
+    enext2self(fliptets[1]);
+  }
+
+  // Delete the old tets.
+  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(fliptets[1].tet);
+
+  // Check if d is dummytet.
+  if (pd != dummypoint) {
+    maketetrahedron(tetrahedronpool, &(fliptets[0])); // abpd
+    maketetrahedron(tetrahedronpool, &(fliptets[1])); // bcpd
+    maketetrahedron(tetrahedronpool, &(fliptets[2])); // capd
+  } else {
+    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // abpd
+    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // bcpd
+    maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // capd
+  }
+  maketetrahedron(tetrahedronpool, &(fliptets[3])); // bape
+  maketetrahedron(tetrahedronpool, &(fliptets[4])); // cbpe
+  maketetrahedron(tetrahedronpool, &(fliptets[5])); // acpe
+  // Set new vertices.
+  setvertices(fliptets[0], pa, pb, newpt, pd);
+  setvertices(fliptets[1], pb, pc, newpt, pd);
+  setvertices(fliptets[2], pc, pa, newpt, pd);
+  setvertices(fliptets[3], pb, pa, newpt, pe);
+  setvertices(fliptets[4], pc, pb, newpt, pe);
+  setvertices(fliptets[5], pa, pc, newpt, pe);
+
+  // Bond the new tets to outer boundary faces.
+  for (i = 0; i < 3; i++) {
+    enext0fnext(fliptets[i], newface);
+    bond(newface, topcastets[i]);
+  }
+  for (i = 0; i < 3; i++) {
+    enext0fnext(fliptets[i + 3], newface);
+    bond(newface, botcastets[i]);
+  }
+  // Bond the top and bottom new tets together.
+  bond(fliptets[0], fliptets[3]);
+  bond(fliptets[1], fliptets[4]);
+  bond(fliptets[2], fliptets[5]);
+  // Bond the new tets together.
+  for (i = 0; i < 3; i++) {
+    enextfnext(fliptets[i], newface);
+    enext2fnext(fliptets[(i + 1) % 3], casface);
+    bond(newface, casface);
+  }
+  for (i = 0; i < 3; i++) {
+    enext2fnext(fliptets[3 + i], newface);
+    enextfnext(fliptets[3 + (i + 1) % 3], casface);
+    bond(newface, casface);
+  }
+
+  if (flipflag > 0) {
+    for (i = 0; i < 6; i++) {
+      enext0fnext(fliptets[i], newface);
+      futureflip = flippush(futureflip, &newface, newpt);
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // flip23()    Remove a face by tranforming 2-to-3 tetrahedra.               //
 //                                                                           //
 // This is the reverse operation of flip23(). 'oldtets' are two origin tets, //
@@ -107,21 +316,16 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
-    // Create edab.
-    maketetrahedron(tetrahedronpool, &(fliptets[0]));
+    maketetrahedron(tetrahedronpool, &(fliptets[0])); // Create edab.
     setvertices(fliptets[0], pe, pd, pa, pb);
     // Check if c is dummypoint.
     if (pc != dummypoint) {
-      // Create edbc
-      maketetrahedron(tetrahedronpool, &(fliptets[1]));
-      // Create edca
-      maketetrahedron(tetrahedronpool, &(fliptets[2]));
+      maketetrahedron(tetrahedronpool, &(fliptets[1])); // Create edbc.
+      maketetrahedron(tetrahedronpool, &(fliptets[2])); // Create edca.
       setvertices(fliptets[2], pe, pd, pc, pa);
     } else {
-      // Create edbc
-      maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
-      // Create deac
-      maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
+      maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create edbc.
+      maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create deac.
       setvertices(fliptets[2], pd, pe, pa, pc);
       // Adjust deac->edca
       enext0fnextself(fliptets[2]);
@@ -130,14 +334,11 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
     setvertices(fliptets[1], pe, pd, pb, pc);
   } else {
     // d is dummypoint. Create three new hull tets.
-    // Create abed
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0]));
+    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // Create abed.
+    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create bced.
+    maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create caed.
     setvertices(fliptets[0], pa, pb, pe, pd);
-    // Create bced
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
     setvertices(fliptets[1], pb, pc, pe, pd);
-    // Create caed
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
     setvertices(fliptets[2], pc, pa, pe, pd);
     // Adjust abed->edab, bced->edbc, caed->edca
     for (i = 0; i < 3; i++) {

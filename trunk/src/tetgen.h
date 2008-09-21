@@ -1263,8 +1263,8 @@ long meshedges;
 // Algorithm statistical counters.
 long ptloc_count, ptloc_max_count;  
 long orient3dcount;
-long inspherecount;
-long insphere_sos_count;  // Count the symbolic tests.
+long inspherecount, insphere_sos_count;
+long flip14count, flip26count, flipn2ncount;
 long flip23count, flip32count, flipnmcount;
 REAL tloctime, tfliptime, tinserttime;
 
@@ -1322,12 +1322,12 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 ///////////////////////////////////////////////////////////////////////////////
 
 badface* flippush(badface* flipstack, triface* flipface, point pushpt);
+void flip14(point newpt, triface* fliptets, int flipflag);
+void flip26(point newpt, triface* fliptets, int flipflag);
+void flipn2n(point newpt, int n, triface* fliptets, int flipflag);
 void flip23(triface* fliptets, int flipflag);
 void flip32(triface* fliptets, int flipflag);
 //bool flipnm(int n, triface* fliptets, int flipflag);
-void flip14(point newpt, triface* fliptets, int flipflag);
-void flip26(point newpt, triface* fliptets, int flipflag);
-void splitedge(point newpt, int n, triface* fliptets, int flipflag);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1417,6 +1417,7 @@ tetgenmesh() {
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
+  flip14count = flip26count = flipn2ncount = 0l;
   flip23count = flip32count = flipnmcount = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
 }
