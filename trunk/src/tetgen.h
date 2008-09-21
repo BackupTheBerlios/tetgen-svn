@@ -1352,9 +1352,9 @@ enum locateresult locate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-void insertvertex(point insertpt, triface* searchtet, bool, bool);
-void bowyerwatsonpostproc(list *cavebdrylist);
-void lawsonflip(list *cavebdrylist);
+void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
+void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
+void lawsonflip();
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////

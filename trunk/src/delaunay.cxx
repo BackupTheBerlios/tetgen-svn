@@ -561,7 +561,7 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// insertvertex()    Insert a point (p) into current tetrahedralization (T). //
+// insertvertex()    Insert a point (p) into tetrahedralization (T).         //
 //                                                                           //
 // The point p will be first located in T. 'searchtet' is a suggested start- //
 // tetrahedron, it can be NULL. Note that p may lies outside T. In such case,//
@@ -574,10 +574,9 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
-  bool bowyerwatson, bool increflip)
+  bool bowyerwatson)
 {
   list *cavetetlist, *cavebdrylist;
-  tetrahedron ptr;
   triface *cavetet, neightet, newtet;
   point *pts;
   enum locateresult loc;
@@ -585,9 +584,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   long tetcount;
   bool enqflag;
   int copcount;
-  int *iptr, i, j;
+  int i, j;
 
-  clock_t loc_start, loc_end;
+  int *iptr;
+
+  // clock_t loc_start, loc_end;
 
   if (b->verbose > 1) {
     printf("    Insert point %d\n", pointmark(insertpt));
@@ -612,19 +613,19 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   if (ptloc_max_count < (ptloc_count - tetcount)) {
     ptloc_max_count = (ptloc_count - tetcount);
   }
-  
+
+  if (b->verbose > 1) {
+    printf("    Located (%d) tet (%d, %d, %d, %d).\n", (int) loc,
+      pointmark(org(*searchtet)), pointmark(dest(*searchtet)), 
+      pointmark(apex(*searchtet)), pointmark(oppo(*searchtet)));
+  }
+
   if (loc == ONVERTEX) {
     // The point already exists. Mark it and do nothing on it.
     point2ppt(insertpt) = (tetrahedron) org(*searchtet);
     pointtype(insertpt) = DUPLICATEDVERTEX;
     dupverts++;
     return;
-  }
-
-  if (b->verbose > 1) {
-    printf("    Located (%d) tet (%d, %d, %d, %d).\n", (int) loc,
-      pointmark(org(*searchtet)), pointmark(dest(*searchtet)), 
-      pointmark(apex(*searchtet)), pointmark(oppo(*searchtet)));
   }
 
   // Initialize working lists.
@@ -763,104 +764,143 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // Set a handle for the point location.
   recenttet = * (triface *) cavebdrylist->get(0);
   
+  // There may exist degenerate tetrahedra. Check and remove them.
   if (bowyerwatson && (copcount > 0)) {
-    // There may exist degenerate tetrahedra. Check and remove them.
-    bowyerwatsonpostproc(cavebdrylist);
-  }
+    queue *removeque;
+    triface fliptets[4];
+    tetrahedron ptr;
 
-  // loc_start = clock();
+    removeque = new queue(sizeof(triface));
 
-  // If the flip option is used.
-  if (!bowyerwatson && increflip) {
-    lawsonflip(cavebdrylist);
-  }
-  
-  // loc_end = clock();
-  // tfliptime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
+    // Queue all degenerate tets.
+    for (i = 0; i < cavebdrylist->len(); i++) {
+      cavetet = (triface *) cavebdrylist->get(i);
+      pts = (point *) cavetet->tet;
+      if (pts[7] != dummypoint) {
+        // Check if the new tet is degenerate.
+        ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
+        if (ori == 0) {
+          removeque->push(cavetet);
+        }
+      }
+    }
+
+    if (b->verbose > 1) {
+      printf("    Removing %ld degenerate tets.\n", removeque->len());
+    }
+
+    while (!removeque->empty()) {
+      cavetet = (triface *) removeque->pop();
+      if (b->verbose > 1) {
+        pts = (point *) cavetet->tet;
+        printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+          pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
+      }
+      // Find the hull edge in cavetet.
+      cavetet->ver = 0;
+      for (j = 0; j < 3; j++) {
+        enext0fnext(*cavetet, neightet);
+        symself(neightet);
+        if ((point) neightet.tet[7] == dummypoint) break;
+        enextself(*cavetet);
+      }
+      // Because of existing multiple degenerate cases. It is possible
+      //   that the other hull face is not pop yet.
+      if (j < 3) {
+        // Collect tets for flipping the edge.
+        fliptets[0] = *cavetet;
+        for (j = 0; j < 3; j++) {
+          fnext(fliptets[j], fliptets[j + 1]);
+        }
+        if (fliptets[3].tet != cavetet->tet) {
+          printf("Internal error in insertvertex(): Unknown flip case.\n");
+          terminatetetgen(1);
+        }
+        // Do a 3-to-2 flip to remove the degenerate tet.
+        flip32(fliptets, 0);
+        // Rememebr the new tet.
+        recenttet = fliptets[0];
+      } else {
+        removeque->push(cavetet);  // Wait for the next round.
+      } // if (j < 3)
+    }
+
+    delete removeque;
+  } // if (bowyerwatson && (copcount > 0))
 
   // Set the point type.
   if (pointtype(insertpt) == UNUSEDVERTEX) {
     pointtype(insertpt) = VOLVERTEX;
   }
-  
+
   delete cavetetlist;
   delete cavebdrylist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// bowyerwatsonpostproc()    Remove degenerate tets from the cavity.         //
+// flipinsertvertex()    Insert a vertex (p) into tetrahedralization (T).    //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
+void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet, 
+  int flipflag)
 {
-  queue *removeque;
-  triface fliptets[4];
-  triface *cavetet, neightet;
-  point *pts;
-  REAL ori;
-  int i, j;
-  
-  tetrahedron ptr;
-  int *iptr;
+  enum locateresult loc;
+  long tetcount;
 
-  removeque = new queue(sizeof(triface));
+  if (b->verbose > 1) {
+    printf("    Insert point %d\n", pointmark(insertpt));
+  }
+
+  tetcount = ptloc_count;
   
-  // Queue all degenerate tets.
-  for (i = 0; i < cavebdrylist->len(); i++) {
-    cavetet = (triface *) cavebdrylist->get(i);
-    pts = (point *) cavetet->tet;
-    if (pts[7] != dummypoint) {
-      // Check if the new tet is degenerate.
-      ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
-      if (ori == 0) {
-        removeque->push(cavetet);
-      }
-    }
+  if (searchtet->tet == NULL) {
+    randomsample(insertpt, searchtet);
+  }
+  loc = locate(insertpt, searchtet);
+
+  if (b->verbose > 1) {
+    printf("    Walk distance (# tets): %ld\n", ptloc_count - tetcount);
+  }
+
+  if (ptloc_max_count < (ptloc_count - tetcount)) {
+    ptloc_max_count = (ptloc_count - tetcount);
   }
 
   if (b->verbose > 1) {
-    printf("    Removing %ld degenerate tets.\n", removeque->len());
+    printf("    Located (%d) tet (%d, %d, %d, %d).\n", (int) loc,
+      pointmark(org(*searchtet)), pointmark(dest(*searchtet)), 
+      pointmark(apex(*searchtet)), pointmark(oppo(*searchtet)));
   }
   
-  while (!removeque->empty()) {
-    cavetet = (triface *) removeque->pop();
-    if (b->verbose > 1) {
-      pts = (point *) cavetet->tet;
-      printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
-        pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
-    }
-    // Find the hull edge in cavetet.
-    cavetet->ver = 0;
-    for (j = 0; j < 3; j++) {
-      enext0fnext(*cavetet, neightet);
-      symself(neightet);
-      if ((point) neightet.tet[7] == dummypoint) break;
-      enextself(*cavetet);
-    }
-    // Because of existing multiple degenerate cases. It is possible
-    //   that the other hull face is not pop yet.
-    if (j < 3) {
-      // Collect tets for flipping the edge.
-      fliptets[0] = *cavetet;
-      for (j = 0; j < 3; j++) {
-        fnext(fliptets[j], fliptets[j + 1]);
-      }
-      if (fliptets[3].tet != cavetet->tet) {
-        printf("Internal error in insertvertex(): Unknown flip case.\n");
-        terminatetetgen(1);
-      }
-      // Do a 3-to-2 flip to remove the degenerate tet.
-      flip32(fliptets, 0);
-      // Rememebr the new tet.
-      recenttet = fliptets[0];
-    } else {
-      removeque->push(cavetet);  // Wait for the next round.
-    } // if (j < 3)
+  if (loc == ONVERTEX) {
+    // The point already exists. Mark it and do nothing on it.
+    point2ppt(insertpt) = (tetrahedron) org(*searchtet);
+    pointtype(insertpt) = DUPLICATEDVERTEX;
+    dupverts++;
+    return;
   }
 
-  delete removeque;
+  // Clear flip stack.
+  futureflip = (badface *) NULL;
+
+  // Insert the new point by flipping.
+  if (loc == ONFACE) {
+    flip26(insertpt, searchtet, flipflag);
+  } else if (loc == ONEDGE) {
+    flipn2n(insertpt, searchtet, flipflag);
+  } else { // (loc == INTET) || (loc == OUTSIDE)
+    flip14(insertpt, searchtet, flipflag);
+  }
+
+  // Remember a new tet for point location.
+  recenttet = *searchtet;
+
+  // If flipflag == 1, do Delaunay flip.
+  if (flipflag > 0) {
+    lawsonflip();
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -869,23 +909,16 @@ void tetgenmesh::bowyerwatsonpostproc(list *cavebdrylist)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::lawsonflip(list *cavebdrylist)
+void tetgenmesh::lawsonflip()
 { 
   triface fliptets[5], baktets[2];
   triface fliptet, neightet;
-  point *pts, pd, pe;
+  point *pt, pd, pe;
   REAL sign, ori;
   long flipcount;
   int n, i;
 
   int *iptr;
-
-  // Put all boundary faces (except hull faces) into a stack. 
-  futureflip = (badface *) NULL;
-  for (i = 0; i < cavebdrylist->len(); i++) {
-    fliptet = * (triface *) cavebdrylist->get(i);
-    futureflip = flippush(futureflip, &fliptet, oppo(fliptet));
-  }
 
   if (b->verbose > 1) {
     printf("    Lawson flip %ld faces.\n", flippool->items);
@@ -895,21 +928,37 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
   while (futureflip != (badface *) NULL) {
 
     // Pop a face from the stack.
-    fliptet = futureflip->tt;  // bace
+    fliptet = futureflip->tt;  // abcd (may be a hull tet)
     pd = futureflip->foppo;  // The new vertex.
     futureflip = futureflip->nextitem;
 
-    pts = (point *) fliptet.tet;
-    // Skip it if it is a dead or a hull tet.
-    if ((pts[4] == NULL) || (pts[7] == dummypoint)) continue;
+    // Skip it if it is a dead tet.
+    if (fliptet.tet[4] == NULL) continue;
     // Skip it if it is not the same tet as we saved.
     if (oppo(fliptet) != pd) continue;
-    // Skip it if the opposite tet does not exist.
-    sym(fliptet, neightet);
-    pe = oppo(neightet);
-    if (pe == dummypoint) continue;
 
-    sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pe);
+    // Get its opposite tet.
+    symedge(fliptet, neightet);
+    if ((point) neightet.tet[7] == dummypoint) {
+      // A hull tet. Check if its base face is visible by d.
+      pt = (point *) neightet.tet;
+      ori = orient3d(pt[4], pt[5], pt[6], pd); orient3dcount++;
+      if (ori < 0) {
+        // Visible! Found a 2-to-3 flip on abc.
+        fliptet.ver &= ~1;
+        fliptets[0] = fliptet;
+        fliptets[1] = neightet;
+        flip23(fliptets, 1);
+        recenttet = fliptets[0];
+      }
+      continue;
+    }
+
+    pe = oppo(neightet);
+    pt = (point *) fliptet.tet;
+    assert((point) fliptet.tet[7] != dummypoint); // SELF_CHECK
+
+    sign = insphere_sos(pt[4], pt[5], pt[6], pt[7], pe);
 
     if (b->verbose > 2) {
       printf("  Insphere: (%d, %d, %d) %d, %d\n", pointmark(org(fliptet)),
@@ -1090,9 +1139,18 @@ void tetgenmesh::incrementaldelaunay()
     printf("  Incremental inserting vertices.\n");
   }
 
-  for (i = 4; i < in->numberofpoints; i++) {
-    searchtet.tet = NULL;  // Randomly sample tetrahedra.
-    insertvertex(permutarray[i], &searchtet, (b->bowyerwatson > 0), true);
+  if (b->bowyerwatson) {
+    // Use incremental Bowyer-Watson algorithm.
+    for (i = 4; i < in->numberofpoints; i++) {
+      searchtet.tet = NULL;  // Randomly sample tetrahedra.
+      insertvertex(permutarray[i], &searchtet, true);    
+    }
+  } else {
+    // Use incremental flip algorithm.
+    for (i = 4; i < in->numberofpoints; i++) {
+      searchtet.tet = NULL;  // Randomly sample tetrahedra.
+      flipinsertvertex(permutarray[i], &searchtet, 1);    
+    }
   }
 
   delete [] permutarray;
