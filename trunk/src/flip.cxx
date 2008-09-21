@@ -394,8 +394,9 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 //                                                                           //
 // flip23()    Remove a face by tranforming 2-to-3 tetrahedra.               //
 //                                                                           //
-// This is the reverse operation of flip23(). 'oldtets' are two origin tets, //
-// abcd and bace, 'newtets' returns three new tets, edab, edbc, and edca.    //
+// 'flipface' (abc) is shared by two tets: abcd and bace. This routine rep-  //
+// laces them by three new tets:  edab, edbc, and edca. As a result, the abc //
+// is replaced by the edge de. On return, 'flipface' is edab.                //
 //                                                                           //
 // In case there are hull tets involved in this flip.  There are two cases:  //
 //   (1) If d is 'dummypoint', all three new tets are hull tets.  If e is    //
@@ -408,19 +409,18 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 // If 'flipflag != 0', the convex hull faces will be checked and flipped if  //
 // they are locally non-Delaunay. If 'flipflag == 1', we assume that d is a  //
 // newly inserted vertex, so only the lower part of the convex hull will be  //
-// cehcked (this avoids unnecessary insphere() testes).                      //
+// checked (this avoids unnecessary insphere() testes).                      //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::flip23(triface* fliptets, int flipflag)
 {
-  triface topcastets[3], botcastets[3]; // The outer boundary faces.
+  triface topcastets[3], botcastets[3];
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // range = {-1, 0, 1, 2}.
   int i;
 
-  tetrahedron ptr;
   int *iptr;
 
   // Check if e is dummypoint.
@@ -524,49 +524,33 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
     enext2self(newface);
     bond(newface, botcastets[i]);
   }
-  
-  if (dummyflag != 0) {
-    // Restore the original position of the points (for flipnm()).
-    if (dummyflag == -1) { 
-      // Reverse the edge.
-      for (i = 0; i < 3; i++) {
-        enext0fnextself(fliptets[i]);
-        esymself(fliptets[i]);
-      }
-      // Swap the last two new tets.
-      newface = fliptets[1];
-      fliptets[1] = fliptets[2];
-      fliptets[2] = newface;
-    } else {
-      // either a or b were swapped.
-      i = dummyflag;
-      // Down-shift new tets i times.
-      for (; i > 0; i--) {
-        newface = fliptets[0];
-        fliptets[0] = fliptets[2];
-        fliptets[2] = fliptets[1];
-        fliptets[1] = newface;
-      }
-    }
-  }
 
   if (flipflag > 0) {
     // Queue faces which may be locally non-Delaunay.  
     pd = dest(fliptets[0]);
     for (i = 0; i < 3; i++) {
-      if ((point) botcastets[i].tet[7] != dummypoint) {
-        enext2fnext(fliptets[i], newface);
-        futureflip = flippush(futureflip, &newface, pd);
-      }
+      enext2fnext(fliptets[i], newface);
+      futureflip = flippush(futureflip, &newface, pd);
     }
     if (flipflag > 1) {
       pe = org(fliptets[0]);
       for (i = 0; i < 3; i++) {
-        if ((point) topcastets[i].tet[7] != dummypoint) {
-          enextfnext(fliptets[i], newface);
-          futureflip = flippush(futureflip, &newface, pe);
-        }
+        enextfnext(fliptets[i], newface);
+        futureflip = flippush(futureflip, &newface, pe);
       }
+    }
+  }
+
+  // Return original edab in 'flipface'.
+  if (dummyflag != 0) {
+    // Restore the original position of the points (for flipnm()).
+    if (dummyflag == -1) { 
+      // Reverse the edge.
+      enext0fnextself(fliptets[0]);
+      esymself(fliptets[0]);
+    } else {
+      // either a or b were swapped.
+      fliptets[0] = fliptets[3 - dummyflag];
     }
   }
 }
@@ -575,10 +559,9 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
 //                                                                           //
 // flip32()    Remove an edge by transforming 3-to-2 tetrahedra.             //
 //                                                                           //
-// The three old tetrahedra, denoted edab, edbc, and edca, share at the edge //
-// de, are given in 'oldtets'.  The flip32() operation replace them into two //
-// new tetrahedra, abcd and bace, in 'newtets'.  At a result, the edge de is //
-// replaced by the face abc within the convex hull of the points.            //
+// 'flipedge' (ab) is shared by three tets: edab, edbc, and edca. This rout- //
+// ine replaces them by two new tets:  abcd and bace.  As a result, the edge //
+// ab is replaced by the face abc. On return, 'flipedge' is abcd.            //
 //                                                                           //
 // In case there are hull tets involved in this flip.  There are two cases:  //
 //   (1) If d is 'dummypoint', then abcd is hull tet, and bace is normal.    //
@@ -597,13 +580,13 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
 
 void tetgenmesh::flip32(triface* fliptets, int flipflag)
 {
-  triface topcastets[3], botcastets[3]; // The outer boundary faces.
+  triface topcastets[3], botcastets[3];
   triface newface, casface;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
   int i;
 
-  tetrahedron ptr;
+  // tetrahedron ptr;
   int *iptr; 
 
   // Check if e is 'dummypoint'.
