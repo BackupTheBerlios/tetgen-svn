@@ -884,10 +884,7 @@ void tetgenmesh::lawsonflip(list *cavebdrylist)
   futureflip = (badface *) NULL;
   for (i = 0; i < cavebdrylist->len(); i++) {
     fliptet = * (triface *) cavebdrylist->get(i);
-    sym(fliptet, neightet);
-    if ((point) neightet.tet[7] != dummypoint) {
-      futureflip = flippush(futureflip, &fliptet, oppo(fliptet));
-    }
+    futureflip = flippush(futureflip, &fliptet, oppo(fliptet));
   }
 
   if (b->verbose > 1) {
