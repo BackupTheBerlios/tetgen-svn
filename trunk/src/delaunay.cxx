@@ -434,6 +434,10 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
             enextfnextself(*searchtet);
             if (oridest == 0) {
               enextself(*searchtet); // edge apex->oppo
+              if (oriapex == 0) {
+                enextself(*searchtet); // oppo is duplicated with p.
+                return ONVERTEX;
+              }
               return ONEDGE;
             }
             if (oriapex == 0) {
@@ -851,6 +855,10 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
 
   if (b->verbose > 1) {
     printf("    Insert point %d\n", pointmark(insertpt));
+  }
+
+  if (pointmark(insertpt) == 324) {
+    printf("#%d\n", 324);
   }
 
   tetcount = ptloc_count;
