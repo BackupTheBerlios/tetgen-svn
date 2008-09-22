@@ -192,20 +192,21 @@ void tetgenmesh::checkdelaunay()
   }
   
   horrors = 0;
+  tetloop.ver = 0;
   // Run through the list of triangles, checking each one.
   tetrahedronpool->traversalinit();
   tetloop.tet = tetrahedrontraverse(tetrahedronpool);
   while (tetloop.tet != (tetrahedron *) NULL) {
-    pa = (point) tetloop.tet[4];
-    pb = (point) tetloop.tet[5];
-    pc = (point) tetloop.tet[6];
-    pd = (point) tetloop.tet[7];
     // Check all four faces of the tetrahedron.
     for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
       sym(tetloop, symtet);
       // Only do test if its adjoining tet is not a hull tet or its pointer
       //   is larger (to ensure that each pair isn't tested twice).
       if (((point) symtet.tet[7] != dummypoint)&&(tetloop.tet < symtet.tet)) {
+        pa = org(tetloop);
+        pb = dest(tetloop);
+        pc = apex(tetloop);
+        pd = oppo(tetloop);
         pe = oppo(symtet);
         sign = insphere_sos(pa, pb, pc, pd, pe);
         if (sign < 0.0) {
