@@ -907,6 +907,10 @@ void bond(triface& t1, triface& t2) {
   t1.ver = t1ver; t2.ver = t2ver;
 }
 
+// elemmarker() -- to read or set element's marker.
+
+#define elemmarker(ptr) ((int *) (ptr))[elemmarkerindex]
+
 // elemattribute() -- to check or set element attributes.
 
 #define elemattribute(ptr, num) (((REAL *) (ptr))[elemattribindex + num])
@@ -914,10 +918,6 @@ void bond(triface& t1, triface& t2) {
 // volumebound() -- to check or set element's maximum volume bound.
 
 #define volumebound(ptr) (((REAL *) (ptr))[volumeboundindex])
-
-// elemmarker() -- to read or set element's marker.
-
-#define elemmarker(ptr) ((int *) (ptr))[elemmarkerindex]
 
 // infect(), infected(), uninfect() -- primitives to flag or unflag a
 //   tetrahedron. The last bit of the element marker is flagged (1)
@@ -1239,7 +1239,8 @@ badface *futureflip;
 
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
-int elemattribindex, volumeboundindex, elemmarkerindex, highorderindex;
+int elemmarkerindex;
+int elemattribindex, volumeboundindex, highorderindex;
 
 // Current random number seed, number of random samples (for point location).
 unsigned long randomseed, samples;
@@ -1406,7 +1407,8 @@ tetgenmesh() {
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
   point2tetindex = pointmarkindex = 0;
-  elemattribindex = volumeboundindex = elemmarkerindex = highorderindex = 0;
+  elemmarkerindex = 0;
+  elemattribindex = volumeboundindex = highorderindex = 0;
   randomseed = samples = 1l;
   recenttet.tet = (tetrahedron *) NULL;
   recenttet.loc = recenttet.ver = 0;
