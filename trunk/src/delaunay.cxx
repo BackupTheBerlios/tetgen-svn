@@ -894,6 +894,11 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
     flip14(insertpt, searchtet, flipflag);
   }
 
+  // Set the point type.
+  if (pointtype(insertpt) == UNUSEDVERTEX) {
+    pointtype(insertpt) = VOLVERTEX;
+  }
+
   // Remember a new tet for point location.
   recenttet = *searchtet;
 
