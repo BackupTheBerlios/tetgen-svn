@@ -328,20 +328,31 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     maketetrahedron(tetrahedronpool, &(fliptets[n - 1])); // app[n-1]p[0]
     maketetrahedron(tetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
     maketetrahedron(tetrahedronpool, &(bfliptets[n - 1])); // pbp[n-1]p[0]
+    setvertices(fliptets[0], pa, newpt, pt[0], pt[1]);
+    setvertices(fliptets[n - 1], pa, newpt, pt[n - 1], pt[0]);
+    setvertices(bfliptets[0], newpt, pb, pt[0], pt[1]);
+    setvertices(bfliptets[n - 1], newpt, pb, pt[n - 1], pt[0]);
   } else {
     maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // app[0]p[1]
     maketetrahedron(hulltetrahedronpool, &(fliptets[n - 1])); // app[n-1]p[0]
     maketetrahedron(hulltetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
     maketetrahedron(hulltetrahedronpool, &(bfliptets[n - 1])); // pbp[n-1]p[0]
+    // NOTE: the base face must contain no 'dummypoint'.
+    setvertices(fliptets[0], newpt, pa, pt[1], pt[0]); 
+    setvertices(fliptets[n - 1], pa, newpt, pt[n - 1], pt[0]);
+    setvertices(bfliptets[0], pb, newpt, pt[1], pt[0]);
+    setvertices(bfliptets[n - 1], newpt, pb, pt[n - 1], pt[0]);
+    // Adjust the faces of fliptets[0] and bfliptets[0].
+    enext0fnextself(fliptets[0]);
+    esymself(fliptets[0]);
+    enext0fnextself(bfliptets[0]);
+    esymself(bfliptets[0]);
   }
   for (i = 1; i < n - 1; i++) {
     maketetrahedron(tetrahedronpool, &(fliptets[i])); // app[i]p[i+1]
     maketetrahedron(tetrahedronpool, &(bfliptets[i])); // pbp[i]p[i+1]
-  }
-  // Set new vertices.
-  for (i = 0; i < n; i++) {
-    setvertices(fliptets[i], pa, newpt, pt[i], pt[(i + 1) % n]);
-    setvertices(bfliptets[i], pb, newpt, pt[i], pt[(i + 1) % n]);
+    setvertices(fliptets[i], pa, newpt, pt[i], pt[i + 1]);
+    setvertices(bfliptets[i], newpt, pb, pt[i], pt[i + 1]);
   }
 
   // Bond new tets to outer boundary faces.

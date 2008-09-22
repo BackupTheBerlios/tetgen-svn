@@ -287,9 +287,12 @@ void tetgenmesh::statistics()
     printf("  Number of insphere tests: %ld\n", inspherecount);
     printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
     if (b->bowyerwatson == 0) {
+      printf("  Number of 1-to-4 flips: %ld\n", flip14count);
+      printf("  Number of 2-to-6 flips: %ld\n", flip26count);
+      printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
+      printf("  Number of n-to-m flips: %ld\n", flipnmcount);
       printf("  Number of 2-to-3 flips: %ld\n", flip23count);
       printf("  Number of 3-to-2 flips: %ld\n", flip32count);
-      printf("  Number of n-to-m flips: %ld\n", flipnmcount);
       printf("  Number of total primitive flips: %ld\n",
              flip23count + flip32count);
     }

@@ -971,7 +971,7 @@ void tetgenmesh::lawsonflip()
 
     pe = oppo(neightet);
     pt = (point *) fliptet.tet;
-    assert((point) fliptet.tet[7] != dummypoint); // SELF_CHECK
+    // assert((point) fliptet.tet[7] != dummypoint); // SELF_CHECK
 
     sign = insphere_sos(pt[4], pt[5], pt[6], pt[7], pe);
 
