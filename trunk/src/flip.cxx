@@ -391,8 +391,8 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     }
   }
 
-  // If dummyflag !=0, the original tet is shifted by (n - dummyflag).
-  *splitedge = (dummyflag == 0 ? fliptets[0] : fliptets[n - dummyflag]);
+  // If dummyflag !=0, the original tet is shifted by (n - dummyflag + 1).
+  *splitedge = (dummyflag == 0 ? fliptets[0] : fliptets[n - dummyflag + 1]);
 
   delete [] fliptets;
   delete [] bfliptets;
