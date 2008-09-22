@@ -886,15 +886,20 @@ void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
   int i;
 
   newtet->tet = (tetrahedron *) pool->alloc();
-  for (i = 0; i < 12; i++) {
+  for (i = 0; i < 4; i++) {
     newtet->tet[i] = (tetrahedron) NULL;
+  }
+  /*if (b->useshelles) {
+    for (i = 8; i < 12; i++) {
+      newtet->tet[i] = (tetrahedron) NULL;
+    }
   }
   for (i = 0; i < in->numberoftetrahedronattributes; i++) {
     elemattribute(newtet->tet, i) = 0.0;
   }
   if (b->varvolume) {
     volumebound(newtet->tet) = -1.0;
-  }
+  }*/
   elemmarker(newtet->tet) = 0;
   newtet->loc = 0;
   newtet->ver = 0;

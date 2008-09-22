@@ -682,7 +682,7 @@ static int loc2oppo[4];
 // For fnext() primitives, uses ('loc' * 8 + 'ver') as the key. Returns
 //   an array containing a new ('loc', 'ver'). 
 // Note: Only valid for 'ver' equals one of {0, 2, 4}.
-static int locver2nextf[24];
+static int locver2nextf[32];
 
 // Twos maps between ('loc', 'ver') and the edge number (from 0 to 5).
 static int locver2edge[4][6];
@@ -811,35 +811,35 @@ static int edge2locver[6][2];
 // Note: The input edge version is in {0, 2, 4}.
 
 #define enext0fnext(t1, t2) \
-  iptr = &(locver2nextf[(t1).loc * 6 + (t1).ver]);\
+  iptr = &(locver2nextf[(t1).loc * 8 + (t1).ver]);\
   (t2).tet = (t1).tet;\
   (t2).loc = iptr[0];\
   (t2).ver = iptr[1]
 
 #define enext0fnextself(t) \
-  iptr = &(locver2nextf[(t).loc * 6 + (t).ver]);\
+  iptr = &(locver2nextf[(t).loc * 8 + (t).ver]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
 
 #define enextfnext(t1, t2) \
-  iptr = &(locver2nextf[(t1).loc * 6 + ve[(t1).ver]]);\
+  iptr = &(locver2nextf[(t1).loc * 8 + ve[(t1).ver]]);\
   (t2).tet = (t1).tet;\
   (t2).loc = iptr[0];\
   (t2).ver = iptr[1]
 
 #define enextfnextself(t) \
-  iptr = &(locver2nextf[(t).loc * 6 + ve[(t).ver]]);\
+  iptr = &(locver2nextf[(t).loc * 8 + ve[(t).ver]]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
 
 #define enext2fnext(t1, t2) \
-  iptr = &(locver2nextf[(t1).loc * 6 + ve[ve[(t1).ver]]]);\
+  iptr = &(locver2nextf[(t1).loc * 8 + ve[ve[(t1).ver]]]);\
   (t2).tet = (t1).tet;\
   (t2).loc = iptr[0];\
   (t2).ver = iptr[1]
 
 #define enext2fnextself(t) \
-  iptr = &(locver2nextf[(t).loc * 6 + ve[ve[(t).ver]]]);\
+  iptr = &(locver2nextf[(t).loc * 8 + ve[ve[(t).ver]]]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
 
@@ -855,12 +855,12 @@ void fnext(triface& t1, triface& t2) {
     // Adjust the edge (see Fig. fnext-base).
     t2.ver = zero2ver[t1.ver][t2.ver];
     // Go to the next face in t2.
-    iptr = &(locver2nextf[t2.loc * 6 + t2.ver]);
+    iptr = &(locver2nextf[t2.loc * 8 + t2.ver]);
     t2.loc = iptr[0];
     t2.ver = iptr[1];
   } else {
     // Go to the next face in t1.
-    iptr = &(locver2nextf[t1.loc * 6 + t1.ver]);
+    iptr = &(locver2nextf[t1.loc * 8 + t1.ver]);
     // Get the adjacent tet.
     decode(t1.tet[iptr[0]], t2);
     // Adjust the edge (see Fig. fnext-base).
@@ -876,11 +876,11 @@ void fnextself(triface& t) {
     tver = t.ver;
     decode(ptr, t);
     t.ver = zero2ver[tver][t.ver];
-    iptr = &(locver2nextf[t.loc * 6 + t.ver]);
+    iptr = &(locver2nextf[t.loc * 8 + t.ver]);
     t.loc = iptr[0];
     t.ver = iptr[1]; 
   } else {
-    iptr = &(locver2nextf[t.loc * 6 + t.ver]);
+    iptr = &(locver2nextf[t.loc * 8 + t.ver]);
     ptr = t.tet[iptr[0]];
     decode(ptr, t);
     t.ver = zero2ver[iptr[1]][t.ver];

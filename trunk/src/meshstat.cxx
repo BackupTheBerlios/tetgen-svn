@@ -54,11 +54,11 @@ int tetgenmesh::locver2apex[4][6] = {
 
 int tetgenmesh::loc2oppo[4] = { 3, 2, 0, 1 };
 
-int tetgenmesh::locver2nextf[24] = {
-  1, 5, 2, 5, 3, 5,
-  3, 3, 2, 1, 0, 1,
-  1, 3, 3, 1, 0, 3,
-  2, 3, 1, 1, 0, 5
+int tetgenmesh::locver2nextf[32] = {
+  1, 5, 2, 5, 3, 5, 0, 0,
+  3, 3, 2, 1, 0, 1, 0, 0,
+  1, 3, 3, 1, 0, 3, 0, 0,
+  2, 3, 1, 1, 0, 5, 0, 0
 };
 
 int tetgenmesh::locver2edge[4][6] = {
