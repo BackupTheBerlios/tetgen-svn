@@ -966,10 +966,10 @@ void tetgenmesh::lawsonflip()
             if (i == 0) {
               // apex(fliptets[0]) is the new point. The opposite face may be
               // not locally Delaunay. Put it in flip stack.
-              assert(apex(fliptets[0]) == pd); // SELF_CHECK
+              // assert(apex(fliptets[0]) == pd); // SELF_CHECK
               enext0fnextself(fliptets[0]);
               futureflip = flippush(futureflip, &(fliptets[0]), pd);
-              assert(apex(fliptets[1]) == pd); // SELF_CHECK
+              // assert(apex(fliptets[1]) == pd); // SELF_CHECK
               enext0fnextself(fliptets[1]);
               futureflip = flippush(futureflip, &(fliptets[1]), pd);
             }
