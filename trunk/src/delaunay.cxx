@@ -938,7 +938,7 @@ void tetgenmesh::lawsonflip()
     if (oppo(fliptet) != pd) continue;
 
     // Get its opposite tet.
-    fliptet.ver &= ~1;
+    fliptet.ver = 4;
     symedge(fliptet, neightet);
     if ((point) neightet.tet[7] == dummypoint) {
       // A hull tet. Check if its base face is visible by d.
@@ -951,8 +951,19 @@ void tetgenmesh::lawsonflip()
         flip23(fliptets, 1);
         recenttet = fliptets[0];
       } else if (ori == 0) {
-        if ((point) fliptet.tet[7] == dummypoint) {
+        // Handle degenerate case ori == 0.
+        if (oppo(fliptet) == oppo(neightet)) {
           // Two hull tets (fliptet and neightet) have the same base face.
+          for (i = 0; i < 3; i++) {
+            fnext(fliptet, fliptets[0]);
+            fnext(neightet, fliptets[1]);
+            bond(fliptets[0], fliptets[1]);
+            enextself(fliptet);
+            enext2self(neightet);
+          }
+          // Delete the two tets.
+          tetrahedrondealloc(fliptet.tet);
+          tetrahedrondealloc(neightet.tet);
         }
       }
       continue;

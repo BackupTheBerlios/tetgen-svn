@@ -96,6 +96,7 @@ void tetgenmesh::checkmesh(memorypool* pool)
   }
 
   horrors = 0;
+  tetloop.ver = 0;
   // Run through the list of tetrahedra, checking each one.
   pool->traversalinit();
   tetloop.tet = tetrahedrontraverse(pool);
@@ -123,7 +124,7 @@ void tetgenmesh::checkmesh(memorypool* pool)
         horrors++;
       } else {
         // Find the neighboring tetrahedron on this face.
-        sym(tetloop, neightet);
+        symedge(tetloop, neightet);
         // Check that the tetrahedron's neighbor knows it's a neighbor.
         sym(neightet, symtet);
         if ((tetloop.tet != symtet.tet) || (tetloop.loc != symtet.loc)) {
@@ -138,11 +139,7 @@ void tetgenmesh::checkmesh(memorypool* pool)
             pointmark(oppo(neightet)));
           horrors++;
         }
-        // Check bond() operation.
-        tetloop.ver = 0; // Fix at the 0th edge.
-        pa = org(tetloop);
-        pb = dest(tetloop);
-        // The edge of neightet should symmetric to this.
+        // Check if they have the same edge (the bond() operation).
         if ((org(neightet) != pb) || (dest(neightet) != pa)) {
           printf("  !! !! Wrong edge-edge bond:\n");
           printf("    First:  (%d, %d, %d, %d)\n", pointmark(pa),
@@ -151,7 +148,17 @@ void tetgenmesh::checkmesh(memorypool* pool)
             pointmark(dest(neightet)), pointmark(apex(neightet)),
             pointmark(oppo(neightet)));
           horrors++;
-        }        
+        }
+        // Check if they have the same opposite.
+        if (oppo(neightet) == pd) {
+          printf("  !! !! Two identical tetra:\n");
+          printf("    First:  (%d, %d, %d, %d)\n", pointmark(pa),
+            pointmark(pb), pointmark(pc), pointmark(pd));
+          printf("    Second: (%d, %d, %d, %d)\n", pointmark(org(neightet)),
+            pointmark(dest(neightet)), pointmark(apex(neightet)),
+            pointmark(oppo(neightet)));
+          horrors++;
+        }
       }
     }
     tetloop.tet = tetrahedrontraverse(pool);
