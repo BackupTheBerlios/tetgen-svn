@@ -1,2 +1,2 @@
 clean:
-	$(RM) *.bak *.aux *.log *.dvi *.eps *~
+	$(RM) *.bak *.aux *.log *.dvi *.pstex *.pstex_t *.eps *~

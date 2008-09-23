@@ -19,15 +19,15 @@ There are four types of mesh elements: vertices, tetrahedra, subfaces, and subse
 \subsection{Point}
 
 The {\it point} data structure is a list of floating-point numbers. This list contains the following data of the point:\\
-\begin{tabular}{l | l | c | c}
+\begin{tabular}{l | l | c | c }
  index & contents & type & comments\\ \hline
- $1$ & $x$-coord & {\tt double} & \\
- $2$ & $y$-coord & {\tt double} & \\
- $3$ & $z$-coord & {\tt double} & \\ \hline
- $4$ & weight    & {\tt double} & (metric) \\ \hline
- $4 + 1$ & $1$st attribute & {\tt double} & optional \\
+ $0$ & $x$-coord & {\tt double} & \\
+ $1$ & $y$-coord & {\tt double} & \\
+ $2$ & $z$-coord & {\tt double} & \\ \hline
+ $3$ & weight    & {\tt double} & (metric) \\ \hline
+ $3+1$ & $1$st attribute & {\tt double} & optional \\
  $\vdots$ & $\vdots$ & $\vdots$ & \\
- $4 + n$ & $n$-th attribute & {\tt double} & \\ \hline
+ $3 + n$ & $n$-th attribute & {\tt double} & \\ \hline
  $i$ & tetrahedron & {\tt pointer} & $i =$ {\tt point2tetindex} \\
  $i + 1$ & point & {\tt pointer} & parent point\\ \hline
  $j$ & marker & {\tt integer} & $j = $ {\tt pointmarkindex}\\
@@ -38,7 +38,7 @@ Without the point attributes ($n = 0$), the total size (in byte) of a point can 
 \[
   4 * \textrm{sizeof(double)} + 2 * \textrm{sizeof(pointer)} + 2 * \textrm{sizeof(integer)}
 \]
-On a $32$-bit machine, $\textrm{sizeof(double)} = 8$, $\textrm{sizeof(pointer)} = 8$, and $\textrm{sizeof(int)} = 4$. The total size of a point is $(\textrm{pointmarkindex} + 1) * \textrm{sizeof(integer)} = 56$ (bytes).
+On a $32$-bit machine, $\textrm{sizeof(double)} = 8$, $\textrm{sizeof(pointer)} = 4$, and $\textrm{sizeof(int)} = 4$. The total size of a point is $(\textrm{pointmarkindex} + 1) * \textrm{sizeof(integer)} = 48$ (bytes).
 
 \subsection{Shellface}
 
@@ -67,16 +67,36 @@ Note that a shellface is also used to store a subsegment. In such case, the thir
 
 \subsection{Tetrahedron}
 
-The {\it tetrahedron} data structure represent a tetrahedron. It contains the following data (see Fig.~\ref{fig:tetrahedron} right):
-\begin{itemize}
-\item $4$ pointers to adjacent tetrahedron;
-\item $4$ pointers to its points;
-\item $4$ pointers to adjacent subfaces (optional, -p, -r options);
-\item $2$ pointers to adjacent subsegments (optional, -p, -r options);
-\item $n$ user-defined attributes (optional);
-\item $1$ double of maximum volume (optional);
-\item $1$ pointer to a list of higher order nodes (-o2 option);
-\end{itemize}
+The {\it tetrahedron} data structure represent a tetrahedron. It contains the following data (see also Fig.~\ref{fig:tetrahedron}):\\
+\begin{tabular}{l | l | l | l}
+ index & contents & type & comments\\ \hline
+ $0$ & $1$st neighbor tet & {\tt tetrahedron} & \\
+ $1$ & $2$nd neighbor tet & {\tt tetrahedron} & \\
+ $2$ & $3$rd neighbor tet & {\tt tetrahedron} & \\
+ $3$ & $4$th neighbor tet & {\tt tetrahedron} & \\ \hline
+ $4$ & $1$st point & {\tt point} & \\
+ $5$ & $2$nd point & {\tt point} & \\
+ $6$ & $3$rd point & {\tt point} & \\
+ $7$ & $4$th point & {\tt point} & \\ \hline
+ $8$ & $1$st subface & {\tt shellface} & optional \\
+ $9$ & $2$nd subface & {\tt shellface} & optional \\
+ $10$ & $3$rd subface & {\tt shellface} & optional \\
+ $11$ & $4$th subface & {\tt shellface} & optional \\ \hline
+ $11 + 1$ & $1$st ele attributes & {\tt REAL} & optional (elemattribindex) \\
+ $\vdots$ & $\vdots$ & $\vdots$ & \\
+ $11 + n$ & $n$th ele attributes & {\tt REAL} & optional \\ \hline
+ $12 + n$ & $n$th ele attributes & {\tt REAL} & '-a' (volumeboundindex) \\  \hline
+ $i$ & marker & {\tt int} & (elemmarkerindex)\\ \hline
+ $i+1$ & pointer & {\tt point} & '-o2' (highorderindex)
+\end{tabular}
+
+If no element attribute, no higher order option are used, the total size of a tetrahedron can be calculated as follows (assume on $32$-bit pointers):
+\[
+ 12 * \textrm{sizeof(pointer)} + \textrm{sizeof(double)} + \textrm{sizeof(int)} = 12 * 4 + 8 + 4 = 60.
+\]
+Since the pointers of the neighbor tetrahedra (indices from $0$ to $3$) also encoded face and edge informations. These need $4$ bits additional spaces in each pointer. For save space, each pointer is aligned to $16$-byte boundary, so the last four bit of each pointer is zero, and can be used to encoded the additional informations. So the total space for a tetrahedron is $64$ bytes.
+
+The use of element marker field needs to be further explained as follows.
 
 \begin{figure}
   \centering
