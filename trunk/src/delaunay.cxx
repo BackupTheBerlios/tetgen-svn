@@ -857,10 +857,6 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
     printf("    Insert point %d\n", pointmark(insertpt));
   }
 
-  if (pointmark(insertpt) == 324) {
-    printf("#%d\n", 324);
-  }
-
   tetcount = ptloc_count;
   
   if (searchtet->tet == NULL) {

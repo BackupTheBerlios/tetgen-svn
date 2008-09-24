@@ -2805,7 +2805,7 @@ void tetgenio::save_elements(const char* filename)
     }
   } else {
     // Save a two-dimensional mesh.
-    fprintf(fout, "%d  %d  %d\n", numberoftrifaces, 3, trifacemarkerlist ? 1 : 0);
+    fprintf(fout, "%d  %d  %d\n", numberoftrifaces,3,trifacemarkerlist ? 1:0);
     for (i = 0; i < numberoftrifaces; i++) {
       fprintf(fout, "%d", i + firstnumber);
       for (j = 0; j < 3; j++) {

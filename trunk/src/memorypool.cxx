@@ -677,7 +677,7 @@ void* tetgenmesh::link::getnitem(int pos)
 void tetgenmesh::initializepools()
 {
   enum wordtype wtype;
-  int ptsize, elesize;
+  int ptsize, elesize, shsize;
 
   // A point contains 3 coordinates, 1 weight, plus 'n' attributes in REALs,
   //   and other fields, such as pointers, boundary markers, etc. The total
@@ -709,9 +709,9 @@ void tetgenmesh::initializepools()
   pointmark(dummypoint) = -1;
 
   // The number of bytes occupied by a tetrahedron.  There are 4 pointers
-  //   to other tetrahedra, 4 pointers to corners, and possibly 4 pointers
-  //   to subfaces.
-  elesize = (8 + b->useshelles * 4) * sizeof(tetrahedron);
+  //   to other tetrahedra, 4 pointers to corners, and possibly 1 pointers
+  //   to an array of subfaces/subsegments.
+  elesize = (8 + b->useshelles) * sizeof(tetrahedron);
   // The index within each element at which its attributes are found, where
   //   the index is measured in REALs. 
   elemattribindex = (elesize + sizeof(REAL) - 1) / sizeof(REAL);
@@ -739,6 +739,35 @@ void tetgenmesh::initializepools()
   // Having determined the memory size of an element, initialize the pools.
   tetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
   hulltetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
+
+  if (b->useshelles) {
+    // The number of bytes occupied by a subface.  The list of pointers
+    //   stored in a subface are: three to other subfaces, three to corners,
+    //   three to subsegments, one to an adjacent tetrahedron.
+    shsize = 10 * sizeof(shellface);
+    // The index within each subface at which the maximum area bound is
+    //   found, where the index is measured in REALs.
+    areaboundindex = (shsize + sizeof(REAL) - 1) / sizeof(REAL);
+    // If -q switch is in use, increase the number of bytes occupied by
+    //   a subface for saving maximum area bound.
+    if (b->quality && varconstraint) {
+      shsize = (areaboundindex + 1) * sizeof(REAL);
+    } else {
+      shsize = areaboundindex * sizeof(REAL);
+    }
+    // The index within subface at which the facet marker is found. Ensure
+    //   the marker is aligned to a sizeof(int)-byte address.
+    shmarkindex = (shsize + sizeof(int) - 1) / sizeof(int);
+    // Increase the number of bytes by two or three integers, one for facet
+    //   marker, one for shellface type, and optionally one for pbc group.
+    shsize = (shmarkindex + 2 + checkpbcs) * sizeof(int);
+    // Initialize the pool of subfaces. Each subface record is eight-byte
+    //   aligned so it has room to store an edge version (from 0 to 5) in
+    //   the least three bits.
+    subfacepool = new memorypool(shsize, SUBPERBLOCK, POINTER, 8);
+    // Initialize the pool of subsegments.
+    subsegpool = new memorypool(shsize, SUBPERBLOCK, POINTER, 8);
+  }
 
   // Initialize the pool for flips.
   flippool = new memorypool(sizeof(badface), 1024, POINTER, 0);
@@ -889,12 +918,10 @@ void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
   for (i = 0; i < 4; i++) {
     newtet->tet[i] = (tetrahedron) NULL;
   }
-  /*if (b->useshelles) {
-    for (i = 8; i < 12; i++) {
-      newtet->tet[i] = (tetrahedron) NULL;
-    }
+  if (b->useshelles) {
+    newtet->tet[8] = (tetrahedron) NULL;
   }
-  for (i = 0; i < in->numberoftetrahedronattributes; i++) {
+  /*for (i = 0; i < in->numberoftetrahedronattributes; i++) {
     elemattribute(newtet->tet, i) = 0.0;
   }
   if (b->varvolume) {
@@ -903,6 +930,32 @@ void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
   elemmarker(newtet->tet) = 0;
   newtet->loc = 0;
   newtet->ver = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// makeshellface()    Create a new shellface and initialize its data fields. //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::makeshellface(memorypool* pool, face* newsh)
+{
+  int i;
+
+  newsh->sh = (shellface *) pool->alloc();
+  for (i = 0; i < 10; i++) {
+    newsh->sh[i] = (shellface) NULL;
+  }
+  if (b->quality && varconstraint) {
+    // setareabound(*newsh, 0.0);
+  }
+  // setshellmark(*newsh, 0);
+  // setshelltype(*newsh, NSHARP);
+  if (checkpbcs) {
+    // setshellpbcgroup(*newsh, -1);
+  }
+  // Initialize the version to be Zero.
+  newsh->shver = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

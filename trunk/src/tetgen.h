@@ -718,7 +718,7 @@ static int edge2locver[6][2];
 //   divide it by 2 (>> 1), next we shift it to the second last two bits
 //   of the pointer, this is equal to multiply it by 4 (<< 2). Combining
 //   the two operations, we only need to multiply it by 2 (<< 1). 
-    
+
 #define encode(t) (tetrahedron) ((unsigned long) (t).tet | \
     ((unsigned long) ((t).ver << 1)) | (unsigned long) (t).loc)
 
@@ -1227,6 +1227,7 @@ tetgenbehavior *b;
 
 // Pools of tetrahedra, hull tetrahedra, points, etc.
 memorypool *tetrahedronpool, *hulltetrahedronpool;
+memorypool *subfacepool, *subsegpool;
 memorypool *pointpool;
 memorypool *flippool;
 
@@ -1241,6 +1242,7 @@ badface *futureflip;
 int point2tetindex, pointmarkindex;
 int elemmarkerindex;
 int elemattribindex, volumeboundindex, highorderindex;
+int shmarkindex, areaboundindex;
 
 // Current random number seed, number of random samples (for point location).
 unsigned long randomseed, samples;
@@ -1252,14 +1254,14 @@ triface recenttet;
 // The size of bounding boxes.
 REAL xmax, xmin, ymax, ymin, zmax, zmin;
 
-// Count the number of duplicated vertices (useful in proc STL files).
-long dupverts;
+// The number of duplicated vertices, mesh edges, and input segments.
+long dupverts, meshedges, insegments;
 
-// The number of input segments.
-long insegments;
+// Flag to impose constraints (max. area/length) on facets or segments.
+int varconstraint;
 
-// Count the total number mesh edges.
-long meshedges;
+// Flag to use periodic boundary conditions.
+int checkpbcs;
 
 // Algorithm statistical counters.
 long ptloc_count, ptloc_max_count;  
@@ -1285,6 +1287,7 @@ badface *badfacetraverse(memorypool*);
 void pointdealloc(point);
 point pointtraverse();
 void maketetrahedron(memorypool*, triface*);
+void makeshellface(memorypool*, face*);
 void makepoint(point*);
 void makeindex2pointmap(point** idx2ptmap);
 
@@ -1402,6 +1405,7 @@ tetgenmesh() {
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
   tetrahedronpool = hulltetrahedronpool = (memorypool *) NULL;
+  subfacepool = subsegpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
   flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;
@@ -1413,9 +1417,8 @@ tetgenmesh() {
   recenttet.tet = (tetrahedron *) NULL;
   recenttet.loc = recenttet.ver = 0;
   xmax = xmin = ymax = ymin = zmax = zmin = 0.0;
-  dupverts = 0l;
-  insegments = 0l;
-  meshedges = 0l;
+  dupverts = meshedges = insegments = 0l;
+  varconstraint = checkpbcs = 0;
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
@@ -1430,6 +1433,10 @@ tetgenmesh() {
   if (tetrahedronpool != (memorypool *) NULL) {
     delete tetrahedronpool;
     delete hulltetrahedronpool;
+  }
+  if (subfacepool != (memorypool *) NULL) {
+    delete subfacepool;
+    delete subsegpool;
   }
   if (pointpool != (memorypool *) NULL) {
     delete pointpool;
