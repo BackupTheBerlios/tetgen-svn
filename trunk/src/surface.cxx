@@ -5,6 +5,80 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// triangulate()    Create a CDT for the facet.                              //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
+  int holes, REAL* holelist)
+{
+  face newsh, newseg;
+  point *pts;
+  int i;
+
+  if (b->verbose > 1) {
+    printf("    %d vertices, %d segments", ptlist->len(), conlist->len());
+    if (holes > 0) {
+      printf(", %d holes", holes);
+    }
+    printf(", shmark: %d.\n", shmark);
+  }
+
+  if ((ptlist->len() == 3) && (conlist->len() == 3)) {
+    // This CDT contains only one triangle.
+    pts = (point *) ptlist->base;
+    makeshellface(subfacepool, &newsh);
+    setshvertices(newsh, pts[0], pts[1], pts[2]);
+    // Bond three neighbors to its self.
+    for (i = 0; i < 3; i++) {
+      // sbond1(newsh, newsh);
+      senextself(newsh);
+    }
+    // shellmark(newsh) = shmark;
+    // Create three new segments.
+    for (i = 0; i < 3; i++) {
+      makeshellface(subsegpool, &newseg);
+      setshvertices(newseg, sorg(newsh), sdest(newsh), NULL);
+      // ssbond(newsh, newseg);
+      senextself(newsh);
+    }
+  }
+
+  /*// Create the DT of V by the 2D incremental flip algorithm.
+  if (incrflipdelaunaysub(shmark, eps, ptlist, holes, holelist, flipqueue)) {
+    // Recover boundary edges.
+    if (ptlist->len() > 3) {
+      // Insert segments into the DT.
+      for (i = 0; i < conlist->len(); i++) {
+        cons = (point *)(* conlist)[i];
+        recoversegment(cons[0], cons[1], flipqueue);        
+      }
+      // Carve holes and concavities.
+      carveholessub(holes, holelist, viri);
+    } else if (ptlist->len() == 3) {
+      // Insert 3 segments directly.
+      newsh.sh = dummysh;
+      newsh.shver = 0;
+      spivotself(newsh);
+      for (i = 0; i < 3; i++) {
+        insertsubseg(&newsh);
+        senextself(newsh);
+      }
+    } else if (ptlist->len() == 2) {
+      // This facet is actually a segment. It is not support by the mesh data
+      //   strcuture. Hence the segment will not be maintained in the mesh.
+      //   However, during segment recovery, the segment can be processed.
+      cons = (point *)(* conlist)[0];
+      makeshellface(subsegs, &newsh);
+      setsorg(newsh, cons[0]);
+      setsdest(newsh, cons[1]);
+    }
+  }
+  */
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // meshsurface()    Create a surface mesh of the input PLC.                  //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -12,7 +86,6 @@
 void tetgenmesh::meshsurface()
 {
   list *ptlist, *conlist;
-  memorypool *viri;
   point *idx2verlist;
   point tstart, tend, *cons;
   tetgenio::facet *f;
@@ -28,7 +101,6 @@ void tetgenmesh::meshsurface()
   // Initialize working lists.
   ptlist = new list(sizeof(point *));
   conlist = new list(sizeof(point *) * 2);
-  viri = new memorypool(sizeof(shellface *), 1024, POINTER, 0);
   worklist = new int[pointpool->items + 1];
   for (i = 0; i < pointpool->items + 1; i++) worklist[i] = 0;
 
@@ -136,13 +208,12 @@ void tetgenmesh::meshsurface()
       worklist[end1] = 0;
     }
 
-    // Create a CDT of F.
-// triangulate(shmark, ptlist, conlist, f->numberofholes, f->holelist, viri);
+    // Triangulate F into a CDT.
+    triangulate(shmark, ptlist, conlist, f->numberofholes, f->holelist);
 
     // Clear working lists.
     ptlist->clear();
     conlist->clear();
-    viri->restart();
   }
 
   // There are redundant segments in 'subsegpool', unify them, and build the
@@ -164,7 +235,6 @@ void tetgenmesh::meshsurface()
 
   delete ptlist;
   delete conlist;
-  delete viri;
   delete [] worklist;
   delete [] idx2verlist;
 }

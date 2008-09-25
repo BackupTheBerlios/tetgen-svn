@@ -656,6 +656,9 @@ class face {
 // For enext() primitive, uses 'ver' as the key.
 static int ve[6];
 
+// For sorg(), sdest, spaex(), use 'shver' as the key.
+static int vo[6], vd[6], va[6];
+
 // For bond(), t1 and t2 are two symmetric faces sharing the same edges, it
 //   takes t1's and t2's edge versions as the first and second keys, returns
 //   t2's edge corresponds to t1's 0th edge.
@@ -965,8 +968,9 @@ void bond(triface& t1, triface& t2) {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-// sencode(), sdecode -- to compress/uncompress a face/pointer.
-    
+// sencode(), sdecode -- to compress/uncompress a face/pointer. 
+//   The pointer 's.sh' is assumed to be 8-byte aligned.
+
 #define sencode(s) \
   (shellface) ((unsigned long) (s).sh | (unsigned long) (s).shver)
 
@@ -977,10 +981,49 @@ void bond(triface& t1, triface& t2) {
 // spivot() -- find the next face in the face ring.
 
 #define spivot(s1, s2) sdecode((s1).sh[(s1).shver >> 1], (s2))
-    
+
 #define spivotself(s) \
   sptr = (s).sh[(s).shver >> 1];\
   sdecode(sptr, (s))
+
+// sorg(), sdest(), sapex() -- return the origin, destination, apex,
+//   of the subface.
+    
+#define sorg(s) (point) (s).sh[vo[(s).shver] + 3]
+
+#define sdest(s) (point) (s).sh[vd[(s).shver] + 3]
+
+#define sapex(s) (point) (s).sh[va[(s).shver] + 3]
+
+#define setshvertices(s, p1, p2, p3) \
+  (s).sh[vo[(s).shver] + 3] = (shellface) (p1); \
+  (s).sh[vd[(s).shver] + 3] = (shellface) (p2); \
+  (s).sh[va[(s).shver] + 3] = (shellface) (p3)
+
+// sesym() - change the origin and destination of the face edge.
+
+#define sesym(s1, s2) \
+  (s2).sh = (s1).sh;\
+  (s2).shver = (s1).shver + ((s1).shver & 01 ? -1 : 1);
+
+#define sesymself(s) \
+  (s).shver += ((s).shver & 01 ? -1 : 1);
+
+// senext(), senext2() - go to the next (and the next) face edge.
+
+#define senext(s1, s2) \
+  (s2).sh = (s1).sh;\
+  (s2).shver = ve[(s1).shver]
+  
+#define senextself(s) \
+  (s).shver = ve[(s).shver]
+
+#define senext2(s1, s2) \
+  (s2).sh = (s1).sh;\
+  (s2).shver = ve[ve[(s1).shver]]
+  
+#define senext2self(s) \
+  (s).shver = ve[ve[(s).shver]]
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1367,7 +1410,7 @@ void incrementaldelaunay();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-
+void triangulate(int, list*, list*, int, REAL*);
 void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////
