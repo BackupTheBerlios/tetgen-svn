@@ -2196,23 +2196,23 @@ bool tetgenio::load_vtk(const char* filename)
 
 bool tetgenio::load_plc(const char* filename, int object)
 {
-  enum objecttype type;
+  enum tetgenbehavior::objecttype type;
 
-  type = (enum objecttype) object;
+  type = (enum tetgenbehavior::objecttype) object;
   switch (type) {
-  case NODES:
+  case tetgenbehavior::NODES:
     return load_node(filename);
-  case POLY:
+  case tetgenbehavior::POLY:
     return load_poly(filename);
-  case OFF:
+  case tetgenbehavior::OFF:
     return load_off(filename);
-  case PLY:
+  case tetgenbehavior::PLY:
     return load_ply(filename);
-  case STL:
+  case tetgenbehavior::STL:
     return load_stl(filename);
-  case MEDIT:
+  case tetgenbehavior::MEDIT:
     return load_medit(filename);
-  case VTK:
+  case tetgenbehavior::VTK:
     return load_vtk(filename);
   default:
     return load_poly(filename);

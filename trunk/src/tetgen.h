@@ -95,20 +95,6 @@ enum {FILENAMESIZE = 1024};
 
 enum {INPUTLINESIZE = 1024};
 
-// Labels defining the input objects supported by TetGen. They are 
-//   identified from the file extension of the inputs.
-//   - NODES, a list of nodes (.node); 
-//   - POLY, a piecewise linear complex (.poly or .smesh); 
-//   - OFF, a polyhedron (.off, Geomview's file format); 
-//   - PLY, a polyhedron (.ply, file format from gatech);
-//   - STL, a surface mesh (.stl, stereolithography format);
-//   - MEDIT, a surface mesh (.mesh, Medit's file format); 
-//   - MESH, a tetrahedral mesh (.ele).
-//   If no extension is available, the imposed commandline switch
-//   (-p or -r) implies the type of the object. 
-
-enum objecttype {NONE, NODES, POLY, OFF, PLY, STL, MEDIT, VTK, MESH};
-
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // tetgenio    Passing data into and out of the library.                     //
@@ -408,6 +394,20 @@ class tetgenio {
 class tetgenbehavior {    // Begin of class tetgenbehavior
 
   public:
+
+  // Labels defining the input objects supported by TetGen. They are 
+  //   identified from the file extension of the inputs.
+  //   - NODES, a list of nodes (.node); 
+  //   - POLY, a piecewise linear complex (.poly or .smesh); 
+  //   - OFF, a polyhedron (.off, Geomview's file format); 
+  //   - PLY, a polyhedron (.ply, file format from gatech);
+  //   - STL, a surface mesh (.stl, stereolithography format);
+  //   - MEDIT, a surface mesh (.mesh, Medit's file format); 
+  //   - MESH, a tetrahedral mesh (.ele).
+  //   If no extension is available, the imposed commandline switch
+  //   (-p or -r) implies the type of the object. 
+
+  enum objecttype {NONE, NODES, POLY, OFF, PLY, STL, MEDIT, VTK, MESH};
 
   // Variables of command line switches. Each variable corresponds to a
   //   switch. Most of them are initialized to 0.
@@ -994,7 +994,7 @@ void bond(triface& t1, triface& t2) {
     
 #define point2tet(pt) ((tetrahedron *) (pt))[point2tetindex]
     
-#define point2ppt(pt) ((tetrahedron *) (pt))[point2tetindex + 1]
+#define point2ppt(pt) ((point *) (pt))[point2tetindex + 1]
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1360,6 +1360,15 @@ void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
 void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
 void lawsonflip();
 void incrementaldelaunay();
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Surface mesh routines.                                                    //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
+void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

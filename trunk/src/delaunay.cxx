@@ -626,7 +626,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   if (loc == ONVERTEX) {
     // The point already exists. Mark it and do nothing on it.
-    point2ppt(insertpt) = (tetrahedron) org(*searchtet);
+    // In a STL mesh, duplicated points are implicitly included.
+    if (b->object != tetgenbehavior::STL) {
+      printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
+        pointmark(insertpt), pointmark(org(*searchtet)));
+    }
+    point2ppt(insertpt) = org(*searchtet);
     pointtype(insertpt) = DUPLICATEDVERTEX;
     dupverts++;
     return;
@@ -880,7 +885,12 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
   
   if (loc == ONVERTEX) {
     // The point already exists. Mark it and do nothing on it.
-    point2ppt(insertpt) = (tetrahedron) org(*searchtet);
+    // In a STL mesh, duplicated points are implicitly included.
+    if (b->object != tetgenbehavior::STL) {
+      printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
+        pointmark(insertpt), pointmark(org(*searchtet)));
+    }
+    point2ppt(insertpt) = org(*searchtet);
     pointtype(insertpt) = DUPLICATEDVERTEX;
     dupverts++;
     return;
@@ -1072,6 +1082,10 @@ void tetgenmesh::incrementaldelaunay()
   REAL v1[3], v2[3], n[3];
   REAL bboxsize, bboxsize2, bboxsize3, ori;
   int randindex, i, j;
+
+  if (!b->quiet) {
+    printf("Creating Delaunay tetrahedralization.\n");
+  }
 
   // Form a random permuation (uniformly at random) of the set of vertices.
   permutarray = new point[in->numberofpoints];
