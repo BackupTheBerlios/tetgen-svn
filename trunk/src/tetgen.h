@@ -1384,7 +1384,8 @@ point pointtraverse();
 void maketetrahedron(memorypool*, triface*);
 void makeshellface(memorypool*, face*);
 void makepoint(point*);
-void makeindex2pointmap(point** idx2ptmap);
+void makeindex2pointmap(point*&);
+void makesubfacemap(int*&, face*&);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1463,6 +1464,7 @@ void incrementaldelaunay();
 ///////////////////////////////////////////////////////////////////////////////
 
 void triangulate(int, list*, list*, int, REAL*);
+void unifysegments();
 void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////

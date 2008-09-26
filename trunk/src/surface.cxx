@@ -29,12 +29,7 @@ void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
     pts = (point *) ptlist->base;
     makeshellface(subfacepool, &newsh);
     setshvertices(newsh, pts[0], pts[1], pts[2]);
-    // Bond three neighbors to its self.
-    for (i = 0; i < 3; i++) {
-      sbond1(newsh, newsh);
-      senextself(newsh);
-    }
-    // shellmark(newsh) = shmark;
+    shellmark(newsh) = shmark;
     // Create three new segments.
     for (i = 0; i < 3; i++) {
       makeshellface(subsegpool, &newseg);
@@ -42,6 +37,158 @@ void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
       ssbond(newsh, newseg);
       senextself(newsh);
     }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// unifysegments()    Remove redundant segments and create face links.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::unifysegments()
+{
+  list *sfacelist;
+  face *facperverlist;
+  face subsegloop, testseg;
+  face sface, sface1, sface2;
+  point torg, tdest;
+  REAL ori1, ori2, ori3;
+  int *idx2faclist;
+  int segmarker;
+  int idx, k, m;
+
+  if (b->verbose) {
+    printf("  Unifying segments.\n");
+  }
+
+  // Initialize a list for storing the face link at a segment.
+  sfacelist = new list(sizeof(face), NULL); 
+
+  // Create a mapping from vertices to subfaces incident at them.
+  makesubfacemap(idx2faclist, facperverlist);
+
+  segmarker = 1;
+  subsegloop.shver = 0;
+  subsegpool->traversalinit();
+  subsegloop.sh = shellfacetraverse(subsegpool);
+  while (subsegloop.sh != (shellface *) NULL) {
+    torg = sorg(subsegloop);
+    tdest = sdest(subsegloop);
+
+    idx = pointmark(torg) - in->firstnumber;
+    // Loop through the set of subfaces containing 'torg'.  Get all the
+    //   subfaces containing the edge (torg, tdest). Save and order them
+    //   in 'sfacelist', the ordering is defined by the right-hand rule
+    //   with thumb points from torg to tdest.
+    for (k = idx2faclist[idx]; k < idx2faclist[idx + 1]; k++) {
+      sface = facperverlist[k];
+      // The face may be deleted if it is a duplicated face.
+      if (sface.sh[3] == NULL) continue;
+      // Search the edge torg->tdest.
+      assert(sorg(sface) == torg); // SELF_CHECK
+      if (sdest(sface) != tdest) {
+        senext2self(sface);
+        sesymself(sface);
+      }
+      assert(sdest(sface) == tdest); // SELF_CHECK
+      // Save the face f in 'sfacelist'.
+      if (sfacelist->len() > 2) {
+        for (m = 0; m < sfacelist->len() - 1; m++) {
+          sface1 = * (face *)(* sfacelist)[m];
+          sface2 = * (face *)(* sfacelist)[m + 1];
+          ori1 = orient3d(torg, tdest, sapex(sface1), sapex(sface2));
+          ori2 = orient3d(torg, tdest, sapex(sface1), sapex(sface));
+          if (ori1 > 0) {
+            if (ori2 > 0) {
+              // Both apex(f), apex(f2) are below f1 (see Fig.1). 
+              ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
+              if (ori3 > 0) {
+                // f is after both f1 and f2, continue. 
+              } else if (ori3 < 0) {
+                // f is between f1 and f2.
+                break; 
+              } else {
+                // f is duplicated with f2. Not handled yet.
+                assert(0);  // ori3 == 0; 
+              }
+            } else if (ori2 < 0) {
+              // apex(f) is above f1, continue (see Fig. 2).
+            } else { // ori2 == 0;
+              // f is duplicated with f1. Not handled yet.
+              assert(0); 
+            }
+          } else if (ori1 < 0) {
+            if (ori2 > 0) {
+              // apex(f) is between f1 and f2 (see Fig. 3).
+              break;
+            } else if (ori2 < 0) {
+              // Both apex(f), apex(f2) are below f1 (see Fig.4).
+              ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
+              if (ori3 > 0) {
+                // f is between f1 and f2 (see Fig.4).
+                break;
+              } else if (ori3 < 0) {
+                // f is after f1 and f2, continue.
+              } else { // ori3 == 0;
+                // f is duplicated with f2. Not handled yet.
+                assert(0);
+              }
+            } else { // ori2 == 0;
+              // f is duplicated with f2. Not handled yet.
+              assert(0);
+            }
+          } else { // ori1 == 0;
+            // f is duplicated with f1. Not handled yet.
+            assert(0);
+          }
+        } // for (m = 0; ...)
+        sfacelist->insert(m + 1, &sface);
+      } else {
+        sfacelist->append(&sface);
+      }
+    } // for (k = idx2faclist[idx]; ...)
+
+    if (b->verbose > 1) {
+      printf("    Found %d segments at (%d  %d).\n", sfacelist->len(),
+             pointmark(torg), pointmark(tdest));
+    }
+
+    // Set the connection between this segment and faces containing it,
+    //   at the same time, remove redundant segments.
+    for (k = 0; k < sfacelist->len(); k++) {
+      sface = *(face *)(* sfacelist)[k];
+      sspivot(sface, testseg);
+      // If 'testseg' is not 'subsegloop' and is not dead, it is redundant.
+      if ((testseg.sh != subsegloop.sh) && (testseg.sh[3] != NULL)) {
+        shellfacedealloc(subsegpool, testseg.sh);
+      }
+      // Bonds the subface and the segment together.
+      ssbond(sface, subsegloop);
+    }
+    // Set connection between these faces.
+    sface = *(face *)(* sfacelist)[0];
+    for (k = 1; k <= sfacelist->len(); k++) {
+      if (k < sfacelist->len()) {
+        sface1 = *(face *)(* sfacelist)[k];
+      } else {
+        sface1 = *(face *)(* sfacelist)[0];    // Form a face loop.
+      }
+      if (b->verbose > 2) {
+        printf("    Bond subfaces (%d, %d, %d) and (%d, %d, %d).\n",
+               pointmark(torg), pointmark(tdest), pointmark(sapex(sface)),
+               pointmark(torg), pointmark(tdest), pointmark(sapex(sface1)));
+      }
+      sbond1(sface, sface1);
+      sface = sface1;
+    }
+
+    // Set the unique segment marker into the unified segment.
+    shellmark(subsegloop) = segmarker;
+    segmarker++;
+    // Clear the working list.
+    sfacelist->clear(); 
+    subsegloop.sh = shellfacetraverse(subsegpool);
   }
 }
 
@@ -73,7 +220,7 @@ void tetgenmesh::meshsurface()
   for (i = 0; i < pointpool->items + 1; i++) worklist[i] = 0;
 
   // Compute a mapping from indices to points.
-  makeindex2pointmap(&idx2verlist);
+  makeindex2pointmap(idx2verlist);
 
   // Loop the facet list, triangulate each facet.
   for (shmark = 1; shmark <= in->numberoffacets; shmark++) {
@@ -184,8 +331,7 @@ void tetgenmesh::meshsurface()
     conlist->clear();
   }
 
-  // There are redundant segments in 'subsegpool', unify them, and build the
-  //   face links of segments.
+  // Remove redundant segments and build the face links.
   // unifysegments();
 
   // Remember the number of input segments (for output).

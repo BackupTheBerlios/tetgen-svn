@@ -734,7 +734,7 @@ REAL tetgenmesh::test_orient3d(int i, int j, int k, int l)
     return 0;
   }
 
-  makeindex2pointmap(&idx2ptmap);
+  makeindex2pointmap(idx2ptmap);
   ori = orient3d(idx2ptmap[i], idx2ptmap[j], idx2ptmap[k], idx2ptmap[l]);
   delete [] idx2ptmap;
   
@@ -753,7 +753,7 @@ REAL tetgenmesh::test_insphere(int i, int j, int k, int l, int m)
     return 0;
   }
 
-  makeindex2pointmap(&idx2ptmap);
+  makeindex2pointmap(idx2ptmap);
   sign = insphere(idx2ptmap[i], idx2ptmap[j], idx2ptmap[k], idx2ptmap[l],
                   idx2ptmap[m]);
   if (sign == 0) {

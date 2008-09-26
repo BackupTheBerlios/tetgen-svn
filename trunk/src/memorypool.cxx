@@ -947,13 +947,12 @@ void tetgenmesh::makeshellface(memorypool* pool, face* newsh)
     newsh->sh[i] = (shellface) NULL;
   }
   if (b->quality && varconstraint) {
-    // setareabound(*newsh, 0.0);
+    areabound(*newsh) = 0.0;
   }
-  // setshellmark(*newsh, 0);
   // setshelltype(*newsh, NSHARP);
-  if (checkpbcs) {
+  // if (checkpbcs) {
     // setshellpbcgroup(*newsh, -1);
-  }
+  // }
   // Initialize the version to be Zero.
   newsh->shver = 0;
 }
@@ -992,19 +991,86 @@ void tetgenmesh::makepoint(point* pnewpoint)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::makeindex2pointmap(point** pidx2ptmap)
+void tetgenmesh::makeindex2pointmap(point*& idx2ptmap)
 {
   point pt;
   int idx;
 
-  *pidx2ptmap = new point[pointpool->items + 1];
+  idx2ptmap = new point[pointpool->items + 1];
   pointpool->traversalinit();
   idx = in->firstnumber;
   pt = pointtraverse();
   while (pt != NULL) {
-    (*pidx2ptmap)[idx++] = pt;
+    idx2ptmap[idx++] = pt;
     pt = pointtraverse();
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// makesubfacemap()    Create a map from vertex to subfaces incident at it.  //
+//                                                                           //
+// The map is returned in two arrays 'idx2faclist' and 'facperverlist'.  All //
+// subfaces incident at i-th vertex (i is counted from 0) are found in the   //
+// array facperverlist[j], where idx2faclist[i] <= j < idx2faclist[i + 1].   //
+// Each entry in facperverlist[j] is a subface whose origin is the vertex.   //
+//                                                                           //
+// NOTE: These two arrays will be created inside this routine, don't forget  //
+// to free them after using.                                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::makesubfacemap(int*& idx2faclist, face*& facperverlist)
+{
+  face shloop;
+  int i, j, k;
+
+  // Initialize 'idx2faclist'.
+  idx2faclist = new int[pointpool->items + 1];
+  for (i = 0; i < pointpool->items + 1; i++) idx2faclist[i] = 0;
+
+  // Loop all subfaces, counter the number of subfaces incident at a vertex.
+  subfacepool->traversalinit();
+  shloop.sh = shellfacetraverse(subfacepool);
+  while (shloop.sh != (shellface *) NULL) {
+    // Increment the number of incident subfaces for each vertex.
+    for (i = 0; i < 3; i++) {
+      j = pointmark((point) shloop.sh[3 + i]) - in->firstnumber;
+      idx2faclist[j]++;
+    }
+    shloop.sh = shellfacetraverse(subfacepool);
+  }
+
+  // Calculate the total length of array 'facperverlist'.
+  j = idx2faclist[0];
+  idx2faclist[0] = 0;  // Array starts from 0 element.
+  for (i = 0; i < pointpool->items; i++) {
+    k = idx2faclist[i + 1];
+    idx2faclist[i + 1] = idx2faclist[i] + j;
+    j = k;
+  }
+
+  // The total length is in the last unit of idx2faclist.
+  facperverlist = new face[idx2faclist[i]];
+
+  // Loop all subfaces again, remember the subfaces at each vertex.
+  subfacepool->traversalinit();
+  shloop.sh = shellfacetraverse(subfacepool);
+  while (shloop.sh != (shellface *) NULL) {
+    for (i = 0; i < 3; i++) {
+      j = pointmark((point) shloop.sh[3 + i]) - in->firstnumber;
+      shloop.shver = i * 2;  // save the origin.
+      facperverlist[idx2faclist[j]] = shloop;
+      idx2faclist[j]++;
+    }
+    shloop.sh = shellfacetraverse(subfacepool);
+  }
+
+  // Contents in 'idx2faclist' are shifted, now shift them back.
+  for (i = pointpool->items - 1; i >= 0; i--) {
+    idx2faclist[i + 1] = idx2faclist[i];
+  }
+  idx2faclist[0] = 0;
 }
 
 #endif // #ifndef memorypoolCXX
