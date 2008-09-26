@@ -191,6 +191,9 @@ void tetgenmesh::unifysegments()
     subsegloop.sh = shellfacetraverse(subsegpool);
   }
 
+  // The total number of iunput segments.
+  insegments = subsegpool->items;
+
   delete [] idx2faclist;
   delete [] facperverlist;
   delete sfacelist;
@@ -336,10 +339,7 @@ void tetgenmesh::meshsurface()
   }
 
   // Remove redundant segments and build the face links.
-  // unifysegments();
-
-  // Remember the number of input segments (for output).
-  insegments = subsegpool->items;
+  unifysegments();
 
   if (b->object == tetgenbehavior::STL) {
     // Remove redundant vertices (for .stl input mesh).
