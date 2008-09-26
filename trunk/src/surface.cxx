@@ -186,10 +186,14 @@ void tetgenmesh::unifysegments()
     // Set the unique segment marker into the unified segment.
     shellmark(subsegloop) = segmarker;
     segmarker++;
-    // Clear the working list.
-    sfacelist->clear(); 
+    sfacelist->clear();
+
     subsegloop.sh = shellfacetraverse(subsegpool);
   }
+
+  delete [] idx2faclist;
+  delete [] facperverlist;
+  delete sfacelist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
