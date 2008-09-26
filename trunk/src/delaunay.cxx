@@ -485,6 +485,25 @@ enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// flippush()    Push a face (possibly will be flipped) into stack.          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack, 
+  triface* flipface, point pushpt)
+{
+  badface *newflipface;
+
+  newflipface = (badface *) flippool->alloc();
+  newflipface->tt = *flipface;
+  newflipface->foppo = pushpt;
+  newflipface->nextitem = flipstack;
+
+  return newflipface;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // initialDT()    Create an initial Delaunay tetrahedralization.             //
 //                                                                           //
 // The tetrahedralization contains only one tetrahedron abcd, and four hull  //

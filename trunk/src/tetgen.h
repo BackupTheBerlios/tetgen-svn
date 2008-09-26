@@ -548,7 +548,8 @@ enum wordtype {POINTER, FLOATINGPOINT};
 
 // Labels that signify the type of a vertex. 
 
-enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, DEADVERTEX};
+enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, NACUTEVERTEX, 
+  ACUTEVERTEX, FREESEGVERTEX, FREESUBVERTEX, FREEVOLVERTEX, DEADVERTEX};
 
 // Labels that signify the result of point location.
 
@@ -1006,6 +1007,10 @@ void bond(triface& t1, triface& t2) {
   (s).sh[(s).shver >> 1 + 6] = sencode(seg);\
   (seg).sh[0] = sencode(s)
 
+// ssdisolve() -- dissolve a subface-subsegment connection (at subface side).
+
+#define ssdissolve(s) (s).sh[(s).shver >> 1 + 6] = NULL;
+
 // sorg(), sdest(), sapex() -- return the origin, destination, apex,
 //   of the subface.
     
@@ -1405,14 +1410,6 @@ void makesubfacemap(int*&, face*&);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Symbolic perturbation of the insphere test.                               //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // Mesh transformation operations.                                           //
 //                                                                           //
 // Mesh transformation operations translate an old set of tetrahedra into a  //
@@ -1421,7 +1418,6 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-badface* flippush(badface* flipstack, triface* flipface, point pushpt);
 void flip14(point newpt, triface* splittet, int flipflag);
 void flip26(point newpt, triface* splitface, int flipflag);
 void flipn2n(point newpt, triface* splitedge, int flipflag);
@@ -1444,13 +1440,15 @@ enum locateresult locate(point searchpt, triface* searchtet);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Incremental (flip) Delaunay tetrahedralization algorithms.                //
+// Incremental Delaunay tetrahedralization algorithms.                       //
 //                                                                           //
 // Bowyer and Watson's incrmental insertion algorithm [Bowyer81, Watson81],  //
 // and Edelsbrunner and Shah's incrmental flip algorithm [Edelsbrunner96].   //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
+badface* flippush(badface* flipstack, triface* flipface, point pushpt);
 void initialDT(point pa, point pb, point pc, point pd);
 void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
 void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
@@ -1463,8 +1461,11 @@ void incrementaldelaunay();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+bool iscoplanar(point k, point l, point m, point n, REAL tol);
+badface* flipshpush(badface* flipstack, face* flipedge);
 void triangulate(int, list*, list*, int, REAL*);
 void unifysegments();
+void mergefacets();
 void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -5,25 +5,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// flippush()    Push a face (possibly will be flipped) into stack.          //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack, 
-  triface* flipface, point pushpt)
-{
-  badface *newflipface;
-
-  newflipface = (badface *) flippool->alloc();
-  newflipface->tt = *flipface;
-  newflipface->foppo = pushpt;
-  newflipface->nextitem = flipstack;
-
-  return newflipface;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // flip14()    Insert a vertex by transforming 1-to-4 tetrahedra.            //
 //                                                                           //
 // 'newpt' (p) lies in the interior of 'splittet' (abcd).  This routine abcd //

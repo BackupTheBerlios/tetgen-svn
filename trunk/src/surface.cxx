@@ -5,6 +5,54 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// iscoplanar()    Check if four points are approximately coplanar.          //
+//                                                                           //
+// 'eps' is the relative error tolerance.  The coplanarity is determined by  //
+// the equation q < tol, where q = fabs(6 * vol) / L^3, vol is the volume of //
+// the tet klmn, and L is the average edge length of the tet.                //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
+{
+  REAL ori, L, q;
+
+  ori = orient3d(k, l, m, n);
+  if (ori == 0.0) return true;
+
+  L = DIST(k, l);
+  L += DIST(l, m);
+  L += DIST(m, k);
+  L += DIST(k, n);
+  L += DIST(l, n);
+  L += DIST(m, n);
+  assert(L > 0.0);  // SELF_CHECK
+  L /= 6.0;
+  q = fabs(ori) / (L * L * L);
+  return q <= tol;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// flipshpush()    Push a subface edge into flip stack.                      //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+tetgenmesh::badface* tetgenmesh::flipshpush(badface* flipstack, face* flipedge)
+{
+  badface *newflipface;
+
+  newflipface = (badface *) flippool->alloc();
+  newflipface->ss = *flipedge;
+  newflipface->forg = sorg(*flipedge);
+  newflipface->fdest = sdest(*flipedge);
+  newflipface->nextitem = flipstack;
+
+  return newflipface;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // triangulate()    Create a CDT for the facet.                              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -201,6 +249,100 @@ void tetgenmesh::unifysegments()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// mergefacets()    Merge adjacent coplanar facets.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::mergefacets()
+{
+  face parentsh, neighsh, neineighsh;
+  face segloop;
+  point eorg, edest;
+  bool mergeflag;
+  int* segspernodelist;
+  int fidx1, fidx2;
+  int i, j;
+
+  if (b->verbose) {
+    printf("  Merging adjacent coplanar facets.\n");
+  }
+
+  // Clear flip stack.
+  futureflip = (badface *) NULL;
+
+  // Initialize 'segspernodelist'.
+  segspernodelist = new int[pointpool->items + 1];
+  for (i = 0; i < pointpool->items + 1; i++) segspernodelist[i] = 0;
+
+  // Loop all segments, counter the number of segments sharing each vertex.
+  subsegpool->traversalinit();
+  segloop.sh = shellfacetraverse(subsegpool);
+  while (segloop.sh != (shellface *) NULL) {
+    // Increment the number of sharing segments for each endpoint.
+    for (i = 0; i < 2; i++) {
+      j = pointmark((point) segloop.sh[3 + i]);
+      segspernodelist[j]++;
+    }
+    segloop.sh = shellfacetraverse(subsegpool);
+  }
+
+  // Loop all segments, merge adjacent coplanar facets.
+  subsegpool->traversalinit();
+  segloop.sh = shellfacetraverse(subsegpool);
+  while (segloop.sh != (shellface *) NULL) {
+    eorg = sorg(segloop);
+    edest = sdest(segloop);
+    spivot(segloop, parentsh);
+    spivot(parentsh, neighsh);
+    spivot(neighsh, neineighsh);
+    if ((parentsh.sh != neighsh.sh) && (parentsh.sh == neineighsh.sh)) {
+      // Exactly two subfaces at this segment.
+      fidx1 = shellmark(parentsh) - 1;
+      fidx2 = shellmark(neighsh) - 1;
+      // Possible to merge them if they are not in the same facet.
+      if (fidx1 != fidx2) {
+        // Test if they are coplanar wrt the tolerance.
+        if (iscoplanar(eorg, edest, sapex(parentsh), sapex(neighsh),
+                       b->epsilon)) {
+          // Found two adjacent coplanar facets.
+          mergeflag = ((in->facetmarkerlist == NULL) || 
+            (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));
+          if (mergeflag) {
+            if (b->verbose > 1) {
+              printf("  Removing segment (%d, %d).\n", pointmark(eorg),
+                     pointmark(edest));
+            }
+            ssdissolve(parentsh);
+            ssdissolve(neighsh);
+            shellfacedealloc(subsegpool, segloop.sh);
+            j = pointmark(eorg);
+            segspernodelist[j]--;
+            if (segspernodelist[j] == 0) {
+              pointtype(eorg) = FREESUBVERTEX;
+            }
+            j = pointmark(edest);
+            segspernodelist[j]--;
+            if (segspernodelist[j] == 0) {
+              pointtype(edest) = FREESUBVERTEX;
+            }
+            // Add the edge to flip stack.
+            futureflip = flipshpush(futureflip, &parentsh);
+          }
+        }
+      }
+    }
+    segloop.sh = shellfacetraverse(subsegpool);
+  }
+
+  if (futureflip != NULL) {
+    // Do Delaunay flip.
+  }
+
+  delete [] segspernodelist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // meshsurface()    Create a surface mesh of the input PLC.                  //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -347,8 +489,8 @@ void tetgenmesh::meshsurface()
   }
 
   if (!b->nomerge && !b->nobisect) {
-    // No '-M' switch - merge adjacent facets if they are coplanar.
-    // mergefacets(flipqueue);
+    // Merge adjacent coplanar facets.
+    // mergefacets();
   }
 
   delete ptlist;
