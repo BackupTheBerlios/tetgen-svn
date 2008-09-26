@@ -31,7 +31,7 @@ void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
     setshvertices(newsh, pts[0], pts[1], pts[2]);
     // Bond three neighbors to its self.
     for (i = 0; i < 3; i++) {
-      // sbond1(newsh, newsh);
+      sbond1(newsh, newsh);
       senextself(newsh);
     }
     // shellmark(newsh) = shmark;
@@ -39,42 +39,10 @@ void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
     for (i = 0; i < 3; i++) {
       makeshellface(subsegpool, &newseg);
       setshvertices(newseg, sorg(newsh), sdest(newsh), NULL);
-      // ssbond(newsh, newseg);
+      ssbond(newsh, newseg);
       senextself(newsh);
     }
   }
-
-  /*// Create the DT of V by the 2D incremental flip algorithm.
-  if (incrflipdelaunaysub(shmark, eps, ptlist, holes, holelist, flipqueue)) {
-    // Recover boundary edges.
-    if (ptlist->len() > 3) {
-      // Insert segments into the DT.
-      for (i = 0; i < conlist->len(); i++) {
-        cons = (point *)(* conlist)[i];
-        recoversegment(cons[0], cons[1], flipqueue);        
-      }
-      // Carve holes and concavities.
-      carveholessub(holes, holelist, viri);
-    } else if (ptlist->len() == 3) {
-      // Insert 3 segments directly.
-      newsh.sh = dummysh;
-      newsh.shver = 0;
-      spivotself(newsh);
-      for (i = 0; i < 3; i++) {
-        insertsubseg(&newsh);
-        senextself(newsh);
-      }
-    } else if (ptlist->len() == 2) {
-      // This facet is actually a segment. It is not support by the mesh data
-      //   strcuture. Hence the segment will not be maintained in the mesh.
-      //   However, during segment recovery, the segment can be processed.
-      cons = (point *)(* conlist)[0];
-      makeshellface(subsegs, &newsh);
-      setsorg(newsh, cons[0]);
-      setsdest(newsh, cons[1]);
-    }
-  }
-  */
 }
 
 ///////////////////////////////////////////////////////////////////////////////

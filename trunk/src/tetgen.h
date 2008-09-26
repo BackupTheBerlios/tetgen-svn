@@ -986,6 +986,26 @@ void bond(triface& t1, triface& t2) {
   sptr = (s).sh[(s).shver >> 1];\
   sdecode(sptr, (s))
 
+// sspivot() -- find the abutting subsegment (seg) at the face (s).
+
+#define sspivot(s, seg) sdecode((s).sh[(s).shver >> 1 + 6], seg)
+
+// sbond1() -- s1 and s2 share an edge, connect s1 <-- s2, i.e., s1 knows
+//   its neighbor is s2. sbond2() connects s1 <==> s2.
+// Note: We assume that s1 and s2 are the same directed edge.
+
+#define sbond1(s1, s2) (s1).sh[(s1).shver >> 1] = sencode(s2);
+
+#define sbond2(s1, s2) \
+  (s1).sh[(s1).shver >> 1] = sencode(s2);\
+  (s2).sh[(s2).shver >> 1] = sencode(s1)
+
+// ssbond() -- connect a subface (s) and a subsegment (seg) together.
+
+#define ssbond(s, seg) \
+  (s).sh[(s).shver >> 1 + 6] = sencode(seg);\
+  (seg).sh[0] = sencode(s)
+
 // sorg(), sdest(), sapex() -- return the origin, destination, apex,
 //   of the subface.
     
@@ -1009,7 +1029,7 @@ void bond(triface& t1, triface& t2) {
 #define sesymself(s) \
   (s).shver += ((s).shver & 01 ? -1 : 1);
 
-// senext(), senext2() - go to the next (and the next) face edge.
+// senext(), senext2() -- go to the next (or the previous) face edge.
 
 #define senext(s1, s2) \
   (s2).sh = (s1).sh;\
@@ -1024,6 +1044,38 @@ void bond(triface& t1, triface& t2) {
   
 #define senext2self(s) \
   (s).shver = ve[ve[(s).shver]]
+
+// shellmark() -- set or read the shell mark.
+
+#define shellmark(s) ((int *) ((s).sh))[shmarkindex]
+
+// areabound() -- set of read the maximal area bound.
+
+#define areabound(s) ((REAL *) ((s).sh))[areaboundindex]
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Interactions between tetrahedra and subfaces.                             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+// tspivot(), stpivot -- given a tet's face t (or a subface s), find the
+//   abutting subface (or tet).
+
+#define tspivot(t, s) (t).tet[8] != NULL ? \
+  sdecode(((shellface *) (t).tet[8])[(t).loc], s) : (s).sh = NULL
+
+#define stpivot(s, t) decode((tetrahedron) (s).sh[9], t)
+
+// tsbond() -- connect a tet and subface.
+ 
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Interactions between tetrahedra and subsegments.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
