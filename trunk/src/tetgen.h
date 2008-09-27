@@ -1463,6 +1463,7 @@ void incrementaldelaunay();
 
 bool iscoplanar(point k, point l, point m, point n, REAL tol);
 badface* flipshpush(badface* flipstack, face* flipedge);
+void flip22(face* flipfaces, int flipflag);
 void triangulate(int, list*, list*, int, REAL*);
 void unifysegments();
 void mergefacets();
