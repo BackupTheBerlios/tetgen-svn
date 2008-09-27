@@ -120,6 +120,62 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// lawsonflip()    Flip non-locally Delaunay edges.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::lawsonflip()
+{
+  face flipfaces[2];
+  face checkseg;
+  point pa, pb, pc, pd;
+  REAL sign;
+  long flipcount;
+
+  if (b->verbose > 1) {
+    printf("    Lawson flip %ld edges.\n", flippool->items);
+  }
+  flipcount = 0l;
+
+  while (futureflip != (badface *) NULL) {
+    // Pop an edge from the stack.
+    flipfaces[0] = futureflip->ss;
+    pa = futureflip->forg;
+    pb = futureflip->fdest;
+    futureflip = futureflip->nextitem;
+
+    // Skip it if it is dead.
+    if (flipfaces[0].sh[3] == NULL) continue;
+    // Skip it if it is not the same edge as we saved.
+    if ((sorg(flipfaces[0]) != pa) || (sdest(flipfaces[0]) != pb)) continue;
+    // Skip it if it is a subsegment.
+    sspivot(flipfaces[0], checkseg);
+    if (checkseg.sh != NULL) continue;
+
+    // Get the adjacent face.
+    spivot(flipfaces[0], flipfaces[1]);
+    sesymself(flipfaces[1]);
+    pc = sapex(flipfaces[0]);
+    pd = sapex(flipfaces[1]);
+
+    // sign = incircle3d(pa, pb, pc, pd);
+
+    if (sign < 0) {
+      // It is non-locally Delaunay. Flip it.
+      flip22(flipfaces, 1);
+      flipcount++;
+    }
+  }
+
+  if (b->verbose > 1) {
+    printf("    %ld flips.\n", flipcount);
+  }
+
+  flippool->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // triangulate()    Create a CDT for the facet.                              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
