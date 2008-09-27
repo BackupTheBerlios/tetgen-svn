@@ -1452,7 +1452,7 @@ badface* flippush(badface* flipstack, triface* flipface, point pushpt);
 void initialDT(point pa, point pb, point pc, point pd);
 void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
 void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
-void lawsonflip();
+void lawsonflip3d();
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1464,6 +1464,7 @@ void incrementaldelaunay();
 bool iscoplanar(point k, point l, point m, point n, REAL tol);
 badface* flipshpush(badface* flipstack, face* flipedge);
 void flip22(face* flipfaces, int flipflag);
+void lawsonflip();
 void triangulate(int, list*, list*, int, REAL*);
 void unifysegments();
 void mergefacets();

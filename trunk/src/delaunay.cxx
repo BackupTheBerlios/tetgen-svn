@@ -937,7 +937,7 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
 
   // If flipflag == 1, do Delaunay flip.
   if (flipflag > 0) {
-    lawsonflip();
+    lawsonflip3d();
   }
 }
 
@@ -947,7 +947,7 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::lawsonflip()
+void tetgenmesh::lawsonflip3d()
 { 
   triface fliptets[5], baktets[2];
   triface fliptet, neightet;

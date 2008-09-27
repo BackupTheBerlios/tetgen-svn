@@ -102,7 +102,7 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
   // Transform bad -> dca.
   setshvertices(flipfaces[1], pd, pc, pa);
 
-  // Reconnect them to outer boundary faces.
+  // Reconnect boundary edges to outer boundary faces.
   for (i = 0; i < 4; i++) {
     sbond1(bdedges[i], outfaces[(3 + i) % 4]);
     sbond1(infaces[(3 + i) % 4], bdedges[i]);
@@ -333,9 +333,6 @@ void tetgenmesh::mergefacets()
   if (b->verbose) {
     printf("  Merging adjacent coplanar facets.\n");
   }
-
-  // Clear flip stack.
-  futureflip = (badface *) NULL;
 
   // Initialize 'segspernodelist'.
   segspernodelist = new int[pointpool->items + 1];
