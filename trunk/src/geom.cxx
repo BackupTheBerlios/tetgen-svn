@@ -108,10 +108,12 @@ bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
 //                                                                           //
 // The normal of the face abc can be calculated by the cross product of 2 of //
 // its 3 edge vectors.  A better choice of two edge vectors will reduce the  //
-// numerical error during the calculation.  Burdakov [Burdakov97 BIT] proves //
-// that the optimal basis problem is equivalent to the minimum spanning tree //
-// problem with the edge length be the functional.  If 'pivot' > 0, the two  //
-// edges in abc which minimize the edge lengths are chosen.                  //
+// numerical error during the calculation.  Burdakov proved that the optimal //
+// basis problem is equivalent to the minimum spanning tree problem with the //
+// edge length be the functional, see Burdakov, "A greedy algorithm for the  //
+// optimal basis problem", BIT 37:3 (1997), 591-599.                         //
+//                                                                           //
+// If 'pivot' > 0, the two short edges in abc are chosen for the calculation.//
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -167,8 +169,8 @@ void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, REAL *nlen,
 //                   of the given three or four points.                      //
 //                                                                           //
 // The circumsphere of four points (a tetrahedron) is unique if they are not //
-// degenerate. If 'pd = NULL', the smallest circumsphere of three points is  //
-// the diametral sphere of the triangle if they are not degenerate.          //
+// degenerate. If 'pd == NULL', the smallest circumsphere of three points is //
+// the diametral sphere of the triangle (pa, pb, pc).                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
