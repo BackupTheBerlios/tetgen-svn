@@ -5,35 +5,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// iscoplanar()    Check if four points are approximately coplanar.          //
-//                                                                           //
-// 'eps' is the relative error tolerance.  The coplanarity is determined by  //
-// the equation q < tol, where q = fabs(6 * vol) / L^3, vol is the volume of //
-// the tet klmn, and L is the average edge length of the tet.                //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
-{
-  REAL ori, L, q;
-
-  ori = orient3d(k, l, m, n);
-  if (ori == 0.0) return true;
-
-  L = DIST(k, l);
-  L += DIST(l, m);
-  L += DIST(m, k);
-  L += DIST(k, n);
-  L += DIST(l, n);
-  L += DIST(m, n);
-  assert(L > 0.0);  // SELF_CHECK
-  L /= 6.0;
-  q = fabs(ori) / (L * L * L);
-  return q <= tol;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // flipshpush()    Push a subface edge into flip stack.                      //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -49,73 +20,6 @@ tetgenmesh::badface* tetgenmesh::flipshpush(badface* flipstack, face* flipedge)
   newflipface->nextitem = flipstack;
 
   return newflipface;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// flip22()    Remove an edge by transforming 2-to-2 subfaces.               //
-//                                                                           //
-// 'flipfaces' contains two faces: abc and bad. This routine removes these 2 //
-// faces and replaces them by two new faces: cdb and dca.                    //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-void tetgenmesh::flip22(face* flipfaces, int flipflag)
-{
-  face bdedges[4], outfaces[4], infaces[4];
-  face checkface, checkseg;
-  point pa, pb, pc, pd;
-  int i;
-
-  pa = sorg(flipfaces[0]);
-  pb = sdest(flipfaces[0]);
-  pc = sapex(flipfaces[0]);
-  pd = sapex(flipfaces[1]);
-
-  if (b->verbose > 1) {
-    printf("    flip 2-to-2: (%d, %d, %d, %d)\n", pointmark(pa),
-      pointmark(pb), pointmark(pc), pointmark(pd));
-  }
-
-  // Collect the four boundary edges.
-  senext(flipfaces[0], bdedges[0]);
-  senext2(flipfaces[0], bdedges[1]);
-  senext(flipfaces[1], bdedges[2]);
-  senext2(flipfaces[1], bdedges[3]);
-
-  // Collect outer boundary faces.
-  for (i = 0; i < 4; i++) {
-    spivot(bdedges[i], outfaces[i]);
-    infaces[i] = outfaces[i];
-    sspivot(bdedges[i], checkseg);
-    if (checkseg.sh != NULL) {
-      spivot(infaces[i], checkface);
-      while (checkface.sh != bdedges[i].sh) {
-        infaces[i] = checkface;
-        spivot(infaces[i], checkface);
-      }
-    }
-  }
-
-  // Transform abc -> cdb.
-  setshvertices(flipfaces[0], pc, pd, pb);
-  // Transform bad -> dca.
-  setshvertices(flipfaces[1], pd, pc, pa);
-
-  // Reconnect boundary edges to outer boundary faces.
-  for (i = 0; i < 4; i++) {
-    sbond1(bdedges[i], outfaces[(3 + i) % 4]);
-    sbond1(infaces[(3 + i) % 4], bdedges[i]);
-    sspivot(outfaces[(3 + i) % 4], checkseg); // checkseg may be NULL.
-    ssbond(bdedges[i], checkseg); // Clear the old bond as well.
-  }
-
-  if (flipflag) {
-    // Put the boundary edges into flip stack.
-    for (i = 0; i < 4; i++) {
-      futureflip = flipshpush(futureflip, &bdedges[i]);
-    }
-  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

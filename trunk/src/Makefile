@@ -62,6 +62,9 @@ dbg.o:	dbg.cxx
 memorypool.o:	memorypool.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c memorypool.cxx
 
+geom.o:	geom.cxx
+	$(CXX) -I./ $(CXXFLAGS) -c geom.cxx
+
 flip.o:	flip.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c flip.cxx
 
@@ -80,8 +83,8 @@ meshstat.o:	meshstat.cxx
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o memorypool.o flip.o delaunay.o surface.o meshio.o meshstat.o predicates.o
-	ar r libtet.a io.o flip.o memorypool.o delaunay.o surface.o meshio.o meshstat.o predicates.o
+tetlib:	io.o memorypool.o geom.o flip.o delaunay.o surface.o meshio.o meshstat.o predicates.o
+	ar r libtet.a io.o memorypool.o geom.o flip.o delaunay.o surface.o meshio.o meshstat.o predicates.o
 
 tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet

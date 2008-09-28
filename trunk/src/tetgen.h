@@ -1403,10 +1403,26 @@ void makesubfacemap(int*&, face*&);
 #define DIST(p1, p2) \
   sqrt(NORM2((p2)[0] - (p1)[0], (p2)[1] - (p1)[1], (p2)[2] - (p1)[2]))
 
+#define DOT(v1, v2) (v1)[0] * (v2)[0] + (v1)[1] * (v2)[1] + (v1)[2] * (v2)[2]
+
 #define CROSS(v1, v2, n) \
   (n)[0] =   (v1)[1] * (v2)[2] - (v2)[1] * (v1)[2];\
   (n)[1] = -((v1)[0] * (v2)[2] - (v2)[0] * (v1)[2]);\
   (n)[2] =   (v1)[0] * (v2)[1] - (v2)[0] * (v1)[1]
+
+bool lu_decmp(REAL lu[4][4], int n, int* ps, REAL* d, int N);
+void lu_solve(REAL lu[4][4], int n, int* ps, REAL* b, int N);
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Geometric predicates, advanced tests, intersections.                      //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
+bool iscoplanar(point k, point l, point m, point n, REAL tol);
+void facenormal(point, point, point, REAL *n, REAL *nlen, int pivot);
+void circumsphere(point, point, point, point, REAL* cent, REAL* radius);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1418,6 +1434,7 @@ void makesubfacemap(int*&, face*&);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+void flip22(face* flipfaces, int flipflag);
 void flip14(point newpt, triface* splittet, int flipflag);
 void flip26(point newpt, triface* splitface, int flipflag);
 void flipn2n(point newpt, triface* splitedge, int flipflag);
@@ -1447,7 +1464,6 @@ enum locateresult locate(point searchpt, triface* searchtet);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 badface* flippush(badface* flipstack, triface* flipface, point pushpt);
 void initialDT(point pa, point pb, point pc, point pd);
 void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
@@ -1461,9 +1477,7 @@ void incrementaldelaunay();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool iscoplanar(point k, point l, point m, point n, REAL tol);
 badface* flipshpush(badface* flipstack, face* flipedge);
-void flip22(face* flipfaces, int flipflag);
 void lawsonflip();
 void triangulate(int, list*, list*, int, REAL*);
 void unifysegments();
