@@ -263,15 +263,13 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
   // Calculate the circumcenter and radius.
   circumsphere(pk, pl, pm, NULL, c, &r);
   l = DIST(c, pn);
-  q = (r - l) / r;
+  q = (l - r) / r;
 
   if (q > tol) {
-    q *= sign;  // Adjust the sign.
+    return (l -r) * sign;  // Adjust the sign.
   } else {
-    q = 0;  // Round to zero.
+    return 0;  // Round to zero.
   }
-
-  return q;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
