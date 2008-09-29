@@ -514,7 +514,7 @@ void tetgenmesh::meshsurface()
 
   if (!b->nomerge && !b->nobisect) {
     // Merge adjacent coplanar facets.
-    // mergefacets();
+    mergefacets();
   }
 
   delete ptlist;

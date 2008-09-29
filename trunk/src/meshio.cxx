@@ -119,6 +119,43 @@ void tetgenmesh::jettisonnodes()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// numberedges()    Count the number of mesh edges (in 'meshedges').         //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::numberedges()
+{
+  triface worktet, spintet;
+  int i;
+
+  meshedges = 0l;
+  tetrahedronpool->traversalinit();
+  worktet.tet = tetrahedrontraverse(tetrahedronpool);
+  while (worktet.tet != NULL) {
+    // Count the number of Voronoi faces. Look at the six edges of this
+    //   tet. Count an edge only if this tet's pointer is smaller than
+    //   those of other non-hull tets which share this edge.
+    for (i = 0; i < 6; i++) {
+      worktet.loc = edge2locver[i][0];
+      worktet.ver = edge2locver[i][1];
+      fnext(worktet, spintet);
+      do {
+        if ((point) spintet.tet[7] != dummypoint) {
+          if (spintet.tet < worktet.tet) break;
+        }
+        fnextself(spintet);
+      } while (spintet.tet != worktet.tet);
+      // Count this edge if no adjacent tets are smaller than this tet.
+      if (spintet.tet == worktet.tet) {
+        meshedges++;
+      }
+    }
+    worktet.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // outnodes()    Output the points to a .node file or a tetgenio structure.  //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -423,8 +460,8 @@ void tetgenmesh::outfaces(tetgenio* out)
   point torg, tdest, tapex;
   long faces;
   int *elist, *emlist;
-  // int neigh1, neigh2;
-  int bmark, /*faceid,*/ marker;
+  int neigh1, neigh2;
+  int bmark, faceid, marker;
   int firstindex, shift;
   int facenumber;
   int index;
@@ -467,16 +504,14 @@ void tetgenmesh::outfaces(tetgenio* out)
         terminatetetgen(1);
       }
     }
-    /*
     if (b->neighout > 1) {
       // '-nn' switch.
-      out->adjtetlist = new int[subfaces->items * 2];
+      out->adjtetlist = new int[faces * 2];
       if (out->adjtetlist == (int *) NULL) {
         printf("Error:  Out of memory.\n");
         terminatetetgen(1);
       }
     }
-    */
     out->numberoftrifaces = faces;
     elist = out->trifacelist;
     emlist = out->trifacemarkerlist;
@@ -508,11 +543,10 @@ void tetgenmesh::outfaces(tetgenio* out)
         if (bmark) {
           // Get the boundary marker of this face. If it is an inner face,
           //   it has no boundary marker, set it be zero.
-          /*
           if (b->useshelles) {
             // Shell face is used.
-            tspivot(tface, checkmark);
-            if (checkmark.sh == dummysh) {
+            // tspivot(tface, checkmark);
+            if (checkmark.sh == NULL) {
               marker = 0;  // It is an inner face.
             } else {
               faceid = shellmark(checkmark) - 1;
@@ -520,22 +554,18 @@ void tetgenmesh::outfaces(tetgenio* out)
             }
           } else {
             // Shell face is not used, only distinguish outer and inner face.
-            marker = tsymface.tet != dummytet ? 1 : 0;
+            marker = tsymface.tet != NULL ? 1 : 0;
           }
-          */
-          marker = ((point) tsymface.tet[7] != dummypoint ? 1 : 0);
         }
-        /*
         if (b->neighout > 1) {
           // '-nn' switch. Output adjacent tets indices.
           neigh1 = * (int *)(tface.tet + elemmarkerindex);
-          if (tsymface.tet != dummytet) {
+          if (tsymface.tet != NULL) {
             neigh2 = * (int *)(tsymface.tet + elemmarkerindex);
           } else {
             neigh2 = -1;  
           }
         }
-        */
         if (out == (tetgenio *) NULL) {
           // Face number, indices of three vertices.
           fprintf(outfile, "%5d   %4d  %4d  %4d", facenumber,
@@ -545,11 +575,9 @@ void tetgenmesh::outfaces(tetgenio* out)
             // Output a boundary marker.
             fprintf(outfile, "  %d", marker);
           }
-          /*
           if (b->neighout > 1) {
             fprintf(outfile, "    %5d  %5d", neigh1, neigh2);
           }
-          */
           fprintf(outfile, "\n");
         } else {
           // Output indices of three vertices.
@@ -559,12 +587,10 @@ void tetgenmesh::outfaces(tetgenio* out)
           if (bmark) {
             emlist[facenumber - in->firstnumber] = marker;
           }
-          /*
           if (b->neighout > 1) {
             out->adjtetlist[(facenumber - in->firstnumber) * 2]     = neigh1;
             out->adjtetlist[(facenumber - in->firstnumber) * 2 + 1] = neigh2;
           }
-          */
         }
         facenumber++;
       }
@@ -659,6 +685,154 @@ void tetgenmesh::outhullfaces(tetgenio* out)
     hulltet.tet = tetrahedrontraverse(hulltetrahedronpool);
   }
   
+  if (out == (tetgenio *) NULL) {
+    fprintf(outfile, "# Generated by %s\n", b->commandline);
+    fclose(outfile);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// outsubfaces()    Output subfaces to a .face file or a tetgenio object.    //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::outsubfaces(tetgenio* out)
+{
+  FILE *outfile;
+  char facefilename[FILENAMESIZE];
+  int *elist;
+  int *emlist;
+  int index, index1, index2;
+  triface abuttingtet;
+  face faceloop;
+  point torg, tdest, tapex;
+  int bmark, faceid, marker;
+  int firstindex, shift;
+  int neigh1, neigh2;
+  int facenumber;
+
+  if (out == (tetgenio *) NULL) {
+    strcpy(facefilename, b->outfilename);
+    strcat(facefilename, ".face");
+  }
+
+  if (!b->quiet) {
+    if (out == (tetgenio *) NULL) {
+      printf("Writing %s.\n", facefilename);
+    } else {
+      printf("Writing faces.\n");
+    }
+  }
+
+  bmark = !b->nobound && in->facetmarkerlist;
+
+  if (out == (tetgenio *) NULL) {
+    outfile = fopen(facefilename, "w");
+    if (outfile == (FILE *) NULL) {
+      printf("File I/O Error:  Cannot create file %s.\n", facefilename);
+      terminatetetgen(1);
+    }
+    // Number of subfaces.
+    fprintf(outfile, "%ld  %d\n", subfacepool->items, bmark);
+  } else {
+    // Allocate memory for 'trifacelist'.
+    out->trifacelist = new int[subfacepool->items * 3];
+    if (out->trifacelist == (int *) NULL) {
+      printf("Error:  Out of memory.\n");
+      terminatetetgen(1);
+    }
+    if (bmark) {
+      // Allocate memory for 'trifacemarkerlist'.
+      out->trifacemarkerlist = new int[subfacepool->items];
+      if (out->trifacemarkerlist == (int *) NULL) {
+        printf("Error:  Out of memory.\n");
+        terminatetetgen(1);
+      }
+    }
+    if (b->neighout > 1) {
+      // '-nn' switch.
+      out->adjtetlist = new int[subfacepool->items * 2];
+      if (out->adjtetlist == (int *) NULL) {
+        printf("Error:  Out of memory.\n");
+        terminatetetgen(1);
+      }
+    }
+    out->numberoftrifaces = subfacepool->items;
+    elist = out->trifacelist;
+    emlist = out->trifacemarkerlist;
+  }
+
+  // Determine the first index (0 or 1).
+  firstindex = b->zeroindex ? 0 : in->firstnumber;
+  shift = 0; // Default no shiftment.
+  if ((in->firstnumber == 1) && (firstindex == 0)) {
+    shift = 1; // Shift the output indices by 1.
+  }
+
+  subfacepool->traversalinit();
+  faceloop.sh = shellfacetraverse(subfacepool);
+  facenumber = firstindex; // in->firstnumber;
+  while (faceloop.sh != (shellface *) NULL) {
+    abuttingtet.tet = NULL; // stpivot(faceloop, abuttingtet);
+    if (abuttingtet.tet != NULL) {
+      // There is a tetrahedron containing this subface, orient it.
+      abuttingtet.ver = 0;
+      torg = org(abuttingtet);
+      tdest = dest(abuttingtet);
+      tapex = apex(abuttingtet);
+    } else {
+      // This may happen when only a surface mesh be generated.
+      torg = sorg(faceloop);
+      tdest = sdest(faceloop);
+      tapex = sapex(faceloop);
+    }
+    if (bmark) {
+      faceid = shellmark(faceloop) - 1;
+      marker = in->facetmarkerlist[faceid];
+    }
+    if (b->neighout > 1) {
+      // '-nn' switch. Output adjacent tets indices.
+      neigh1 = -1;
+      // stpivot(faceloop, abuttingtet);
+      if (abuttingtet.tet != NULL) {
+        neigh1 = * (int *)(abuttingtet.tet + elemmarkerindex);
+      }
+      neigh2 = -1;
+      sesymself(faceloop);
+      // stpivot(faceloop, abuttingtet);
+      if (abuttingtet.tet != NULL) {
+        neigh2 = * (int *)(abuttingtet.tet + elemmarkerindex);
+      }
+    }
+    if (out == (tetgenio *) NULL) {
+      fprintf(outfile, "%5d   %4d  %4d  %4d", facenumber,
+              pointmark(torg) - shift, pointmark(tdest) - shift,
+              pointmark(tapex) - shift);
+      if (bmark) {
+        fprintf(outfile, "    %d", marker);
+      }
+      if (b->neighout > 1) {
+        fprintf(outfile, "    %5d  %5d", neigh1, neigh2);
+      }
+      fprintf(outfile, "\n");
+    } else {
+      // Output three vertices of this face;
+      elist[index++] = pointmark(torg) - shift;
+      elist[index++] = pointmark(tdest) - shift;
+      elist[index++] = pointmark(tapex) - shift;
+      if (bmark) {
+        emlist[index1++] = marker;
+      }
+      if (b->neighout > 1) {
+        out->adjtetlist[index2++] = neigh1;
+        out->adjtetlist[index2++] = neigh2;
+      }
+    }
+    facenumber++;
+    faceloop.sh = shellfacetraverse(subfacepool);
+  }
+
   if (out == (tetgenio *) NULL) {
     fprintf(outfile, "# Generated by %s\n", b->commandline);
     fclose(outfile);
@@ -786,6 +960,91 @@ void tetgenmesh::outedges(tetgenio* out)
       }
     }
     tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+
+  if (out == (tetgenio *) NULL) {
+    fprintf(outfile, "# Generated by %s\n", b->commandline);
+    fclose(outfile);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// outsubsegments()    Output subsegments into an .edge file or an object.   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::outsubsegments(tetgenio* out)
+{
+  FILE *outfile;
+  char edgefilename[FILENAMESIZE];
+  int *elist;
+  int index;
+  face edgeloop;
+  point torg, tdest;
+  int firstindex, shift;
+  int edgenumber;
+
+  if (out == (tetgenio *) NULL) {
+    strcpy(edgefilename, b->outfilename);
+    strcat(edgefilename, ".edge");
+  }
+
+  if (!b->quiet) {
+    if (out == (tetgenio *) NULL) {
+      printf("Writing %s.\n", edgefilename);
+    } else {
+      printf("Writing edges.\n");
+    }
+  }
+
+  // Avoid compile warnings.
+  outfile = (FILE *) NULL;
+  elist = (int *) NULL;
+  index = 0;  
+
+  if (out == (tetgenio *) NULL) {
+    outfile = fopen(edgefilename, "w");
+    if (outfile == (FILE *) NULL) {
+      printf("File I/O Error:  Cannot create file %s.\n", edgefilename);
+      terminatetetgen(1);
+    }
+    // Number of subsegments.
+    fprintf(outfile, "%ld\n", subsegpool->items);
+  } else {
+    // Allocate memory for 'edgelist'.
+    out->edgelist = new int[subsegpool->items * 2];
+    if (out->edgelist == (int *) NULL) {
+      printf("Error:  Out of memory.\n");
+      terminatetetgen(1);
+    }
+    out->numberofedges = subsegpool->items;
+    elist = out->edgelist;
+  }
+
+  // Determine the first index (0 or 1).
+  firstindex = b->zeroindex ? 0 : in->firstnumber;
+  shift = 0; // Default no shiftment.
+  if ((in->firstnumber == 1) && (firstindex == 0)) {
+    shift = 1; // Shift the output indices by 1.
+  }
+
+  subsegpool->traversalinit();
+  edgeloop.sh = shellfacetraverse(subsegpool);
+  edgenumber = firstindex; // in->firstnumber;
+  while (edgeloop.sh != (shellface *) NULL) {
+    torg = sorg(edgeloop);
+    tdest = sdest(edgeloop);
+    if (out == (tetgenio *) NULL) {
+      fprintf(outfile, "%5d   %4d  %4d\n", edgenumber,
+              pointmark(torg) - shift, pointmark(tdest) - shift);
+    } else {
+      // Output three vertices of this face;
+      elist[index++] = pointmark(torg) - shift;
+      elist[index++] = pointmark(tdest) - shift;
+    }
+    edgenumber++;
+    edgeloop.sh = shellfacetraverse(subsegpool);
   }
 
   if (out == (tetgenio *) NULL) {

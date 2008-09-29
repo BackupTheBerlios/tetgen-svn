@@ -615,6 +615,120 @@ void tetgenmesh::ptet(triface* t)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Print the detail informations of a shellface.
+
+void tetgenmesh::psh(face *s)
+{
+  face prtsh;
+  triface prttet;
+  point printpoint;
+
+  if (s->sh == NULL) {
+    printf("Not a handle.\n");
+    return;
+  }
+
+  if (s->sh[3] == NULL) {
+    printf("A dead subface x%lx.\n", (unsigned long)(s->sh));
+    return;
+  }
+
+  if (s->sh[5] != NULL) {
+    printf("subface x%lx, ver %d, mark %d:", (unsigned long)(s->sh), s->shver,
+      shellmark(*s));
+  } else {
+    printf("Subsegment x%lx, ver %d, mark %d:", (unsigned long)(s->sh),
+      s->shver, shellmark(*s));
+  }
+  // if (sinfected(*sface)) {
+  //   printf(" (infected)");
+  // }
+  // if (shell2badface(*sface)) {
+  //   printf(" (queued)");
+  // }
+  // if (checkpbcs) {
+  //   if (shellpbcgroup(*sface) >= 0) {
+  //     printf(" (pbc %d)", shellpbcgroup(*sface));
+  //   }
+  // }
+  printf("\n");
+
+  sdecode(s->sh[0], prtsh);
+  if (prtsh.sh == NULL) {
+    printf("      [0] = No shell\n");
+  } else {
+    printf("      [0] = x%lx  %d\n", (unsigned long)(prtsh.sh), prtsh.shver);
+  }
+  sdecode(s->sh[1], prtsh);
+  if (prtsh.sh == NULL) {
+    printf("      [1] = No shell\n");
+  } else {
+    printf("      [1] = x%lx  %d\n", (unsigned long)(prtsh.sh), prtsh.shver);
+  }
+  sdecode(s->sh[2], prtsh);
+  if (prtsh.sh == NULL) {
+    printf("      [2] = No shell\n");
+  } else {
+    printf("      [2] = x%lx  %d\n", (unsigned long)(prtsh.sh), prtsh.shver);
+  }
+
+  printpoint = sorg(*s);
+  if (printpoint == (point) NULL)
+    printf("      Org [%d] = NULL\n", vo[s->shver]);
+  else
+    printf("      Org [%d] = x%lx  (%.12g,%.12g,%.12g) %d\n",
+           vo[s->shver], (unsigned long)(printpoint), printpoint[0],
+           printpoint[1], printpoint[2], pointmark(printpoint));
+  printpoint = sdest(*s);
+  if (printpoint == (point) NULL)
+    printf("      Dest[%d] = NULL\n", vd[s->shver]);
+  else
+    printf("      Dest[%d] = x%lx  (%.12g,%.12g,%.12g) %d\n",
+            vd[s->shver], (unsigned long)(printpoint), printpoint[0],
+            printpoint[1], printpoint[2], pointmark(printpoint));
+
+  if (sapex(*s) != NULL) {
+    printpoint = sapex(*s);
+    if (printpoint == (point) NULL)
+      printf("      Apex[%d] = NULL\n", va[s->shver]);
+    else
+      printf("      Apex[%d] = x%lx  (%.12g,%.12g,%.12g) %d\n",
+             va[s->shver], (unsigned long)(printpoint), printpoint[0],
+             printpoint[1], printpoint[2], pointmark(printpoint));
+
+    sdecode(s->sh[6], prtsh);
+    if (prtsh.sh == NULL) {
+      printf("      [6] = No subsegment\n");
+    } else {
+      printf("      [6] = x%lx  %d\n",
+             (unsigned long)(prtsh.sh), prtsh.shver);
+    }
+    sdecode(s->sh[7], prtsh);
+    if (prtsh.sh == NULL) {
+      printf("      [7] = No subsegment\n");
+    } else {
+      printf("      [7] = x%lx  %d\n",
+             (unsigned long)(prtsh.sh), prtsh.shver);
+    }
+    sdecode(s->sh[8], prtsh);
+    if (prtsh.sh == NULL) {
+      printf("      [8]= No subsegment\n");
+    } else {
+      printf("      [8]= x%lx  %d\n",
+             (unsigned long)(prtsh.sh), prtsh.shver);
+    }
+
+    decode(s->sh[9], prttet);
+    if (prttet.tet == NULL) {
+      printf("      [9] = Outer space\n");
+    } else {
+      printf("      [9] = x%lx  %d\n",
+             (unsigned long)(prttet.tet), prttet.loc);
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Find and print the tetrahedron (or face or edge) with the given indices.
 // Do not handle 'dummypoint' (-1).
 
@@ -894,6 +1008,30 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     printf("  %g\n", (tv[2] - tv[1]) / (REAL) CLOCKS_PER_SEC);
   }
 
+  if (b->plc) {
+    m.meshsurface();
+    tv[3] = clock();
+  }
+
+  if (!b->quiet) {
+    if (b->plc) {
+      if (b->diagnose != 1) {
+        printf("Segment and facet ");
+      } else {
+        printf("Intersection "); 
+      }
+      printf("seconds:  %g\n", (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+      if ((b->diagnose != 1) && (b->verbose > 0)) {
+        printf("  Surface mesh seconds:  %g\n",
+               (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+        /*printf("  Segment recovery seconds:  %g\n",
+               (tv[16] - tv[15]) / (REAL) CLOCKS_PER_SEC);
+        printf("  facet recovery seconds:  %g\n",
+               (tv[4] - tv[16]) / (REAL) CLOCKS_PER_SEC);*/
+      }
+    }
+  }
+
   printf("\n");
 
   if (out != (tetgenio *) NULL) {
@@ -913,7 +1051,7 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     if (!b->quiet) {
       printf("NOT writing an .ele file.\n");
     }
-    // m.numberedges();
+    m.numberedges();
   } else {
     m.outelements(out);
   }
@@ -929,9 +1067,9 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
       }
     } else {
       if (b->plc || b->refine) {
-        //if (m.subfaces->items > 0l) {
-        //  m.outsubfaces(out); // Output boundary faces.
-        //}
+        if (m.subfacepool->items > 0l) {
+          m.outsubfaces(out); // Output boundary faces.
+        }
       } else {
         if (m.tetrahedronpool->items > 0l) {
           m.outhullfaces(out); // Output convex hull faces.
@@ -944,7 +1082,7 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     if (b->edgesout > 1) {
       m.outedges(out); // -ee, output all mesh edges. 
     } else {
-      // m.outsubsegments(out); // -e, only output subsegments.
+      m.outsubsegments(out); // -e, only output subsegments.
     }
   }
 
@@ -956,13 +1094,17 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     // m.outvoronoi(out);
   }
 
-  tv[3] = clock();
+  tv[4] = clock();
 
   if (!b->quiet) {
     printf("\nOutput seconds:  %g\n",
-           (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+           (tv[4] - tv[3]) / (REAL) CLOCKS_PER_SEC);
     printf("Total running seconds:  %g\n",
-           (tv[3] - tv[0]) / (REAL) CLOCKS_PER_SEC);
+           (tv[4] - tv[0]) / (REAL) CLOCKS_PER_SEC);
+  }
+
+  if (b->docheck) {
+    m.checkdelaunay();
   }
 
   if (!b->quiet) {

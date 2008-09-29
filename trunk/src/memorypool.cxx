@@ -750,7 +750,7 @@ void tetgenmesh::initializepools()
     areaboundindex = (shsize + sizeof(REAL) - 1) / sizeof(REAL);
     // If -q switch is in use, increase the number of bytes occupied by
     //   a subface for saving maximum area bound.
-    if (b->quality && varconstraint) {
+    if (b->quality && checkconstraints) {
       shsize = (areaboundindex + 1) * sizeof(REAL);
     } else {
       shsize = areaboundindex * sizeof(REAL);
@@ -946,7 +946,7 @@ void tetgenmesh::makeshellface(memorypool* pool, face* newsh)
   for (i = 0; i < 10; i++) {
     newsh->sh[i] = (shellface) NULL;
   }
-  if (b->quality && varconstraint) {
+  if (b->quality && checkconstraints) {
     areabound(*newsh) = 0.0;
   }
   // setshelltype(*newsh, NSHARP);

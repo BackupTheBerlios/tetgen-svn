@@ -266,7 +266,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
   q = (l - r) / r;
 
   if (q > tol) {
-    return (l -r) * sign;  // Adjust the sign.
+    return (l - r) * sign;  // Adjust the sign.
   } else {
     return 0;  // Round to zero.
   }

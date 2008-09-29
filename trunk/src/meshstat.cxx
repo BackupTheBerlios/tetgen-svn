@@ -178,6 +178,39 @@ void tetgenmesh::checkmesh(memorypool* pool)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// checkshells()    Test the surface mesh for consistencies.                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::checkshells()
+{
+  face shloop;
+  int horrors;
+
+  if (!b->quiet) {
+    printf("  Checking consistency of the mesh boundary...\n");
+  }
+  horrors = 0;
+
+  subfacepool->traversalinit();
+  shloop.sh = shellfacetraverse(subfacepool);
+  while (shloop.sh != NULL) {
+    shloop.sh = shellfacetraverse(subfacepool);
+  }
+
+  if (horrors == 0) {
+    if (!b->quiet) {
+      printf("  Mesh boundaries connected correctly.\n");
+    }
+  } else {
+    printf("  !! !! !! !! %d boundary connection viewed with horror.\n",
+           horrors);
+    return;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // checkdelaunay()    Ensure that the mesh is (constrained) Delaunay.        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

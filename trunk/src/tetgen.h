@@ -1357,11 +1357,8 @@ REAL xmax, xmin, ymax, ymin, zmax, zmin;
 // The number of duplicated vertices, mesh edges, and input segments.
 long dupverts, meshedges, insegments;
 
-// Flag to impose constraints (max. area/length) on facets or segments.
-int varconstraint;
-
-// Flag to use periodic boundary conditions.
-int checkpbcs;
+// Flags to check imposed constraints, subfaces, pbc conditions.
+int checkconstraints, checksubfaces, checkpbcs;
 
 // Algorithm statistical counters.
 long ptloc_count, ptloc_max_count;  
@@ -1542,7 +1539,7 @@ tetgenmesh() {
   recenttet.loc = recenttet.ver = 0;
   xmax = xmin = ymax = ymin = zmax = zmin = 0.0;
   dupverts = meshedges = insegments = 0l;
-  varconstraint = checkpbcs = 0;
+  checkconstraints = checksubfaces = checkpbcs = 0;
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
@@ -1581,9 +1578,12 @@ tetgenmesh() {
 ///////////////////////////////////////////////////////////////////////////////
 
 void ptet(triface* t);
+void psh(face* s);
 void ptet(int i, int j, int k, int l);
 void pface(int i, int j, int k);
 void pedge(int i, int j);
+void psubface(int i, int j, int k);
+void psubseg(int i, int j);
 int pmark(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
