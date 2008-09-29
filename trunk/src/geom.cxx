@@ -111,14 +111,12 @@ bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
 // numerical error during the calculation.  Burdakov proved that the optimal //
 // basis problem is equivalent to the minimum spanning tree problem with the //
 // edge length be the functional, see Burdakov, "A greedy algorithm for the  //
-// optimal basis problem", BIT 37:3 (1997), 591-599.                         //
-//                                                                           //
-// If 'pivot' > 0, the two short edges in abc are chosen for the calculation.//
+// optimal basis problem", BIT 37:3 (1997), 591-599. If 'pivot' > 0, the two //
+// short edges in abc are chosen for the calculation.                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, REAL *nlen,
-  int pivot)
+void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, int pivot)
 {
   REAL v1[3], v2[3], v3[3], *p1, *p2;
   REAL L1, L2, L3;
@@ -131,7 +129,7 @@ void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, REAL *nlen,
   v2[2] = pc[2] - pa[2];
 
   if (pivot > 0) {
-    // Choose two edge vectors by Burdakov's algorithm.
+    // Choose edge vectors by Burdakov's algorithm.
     v3[0] = pc[0] - pb[0];
     v3[1] = pc[1] - pb[1];
     v3[2] = pc[2] - pb[2];
@@ -157,10 +155,6 @@ void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, REAL *nlen,
   }
 
   CROSS(p1, p2, n);
-
-  if (nlen != NULL) {
-    *nlen = sqrt(DOT(n, n));
-  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -218,6 +212,66 @@ void tetgenmesh::circumsphere(point pa, point pb, point pc, point pd,
   if (radius != (REAL *) NULL) {
     *radius = sqrt(rhs[0] * rhs[0] + rhs[1] * rhs[1] + rhs[2] * rhs[2]);
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// isincircle()    Test if d lies inside the circumcircle of abc.            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
+{
+  point pk, pl, pm, pn;
+  REAL area2[4], n[3], c[3];
+  REAL amax, sign, r, l, q;
+  int imax;
+
+  // Calculate the areas of the four triangles in a, b, c, and d.
+  //   Get the triangle which has the largest area.
+  facenormal(pa, pb, pc, n, 1);
+  area2[0] = DOT(n, n); 
+  facenormal(pb, pa, pd, n, 1);
+  area2[1] = DOT(n, n);
+  if (area2[0] < area2[1]) {
+    amax = area2[1]; imax = 1;
+  } else {
+    amax = area2[0]; imax = 0;
+  }
+  facenormal(pc, pd, pb, n, 1);
+  area2[2] = DOT(n, n);
+  if (amax < area2[2]) {
+    amax = area2[2]; imax = 2;
+  }
+  facenormal(pd, pc, pa, n, 1);
+  area2[3] = DOT(n, n);
+  if (amax < area2[3]) {
+    amax = area2[3]; imax = 3;
+  }
+
+  // Permute the vertices.
+  if (imax == 0) {
+    pk = pa; pl = pb; pm = pc; pn = pd; sign = 1.0;
+  } else if (imax == 1) {
+    pk = pb; pl = pa; pm = pd; pn = pc; sign = 1.0;
+  } else if (imax == 2) {
+    pk = pc; pl = pd; pm = pb; pn = pa; sign = -1.0;
+  } else {
+    pk = pd; pl = pc; pm = pa; pn = pb; sign = -1.0;
+  }
+
+  // Calculate the circumcenter and radius.
+  circumsphere(pk, pl, pm, NULL, c, &r);
+  l = DIST(c, pn);
+  q = (r - l) / r;
+
+  if (q > tol) {
+    q *= sign;  // Adjust the sign.
+  } else {
+    q = 0;  // Round to zero.
+  }
+
+  return q;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
