@@ -712,9 +712,9 @@ void tetgenmesh::psh(face *s)
     }
     sdecode(s->sh[8], prtsh);
     if (prtsh.sh == NULL) {
-      printf("      [8]= No subsegment\n");
+      printf("      [8] = No subsegment\n");
     } else {
-      printf("      [8]= x%lx  %d\n",
+      printf("      [8] = x%lx  %d\n",
              (unsigned long)(prtsh.sh), prtsh.shver);
     }
 

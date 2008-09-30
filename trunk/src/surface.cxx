@@ -166,7 +166,7 @@ void tetgenmesh::unifysegments()
         senext2self(sface);
         sesymself(sface);
       }
-      assert(sdest(sface) == tdest); // SELF_CHECK
+      if (sdest(sface) != tdest) continue;
       // Save the face f in 'sfacelist'.
       if (sfacelist->len() > 2) {
         for (m = 0; m < sfacelist->len() - 1; m++) {
@@ -266,9 +266,6 @@ void tetgenmesh::unifysegments()
     subsegloop.sh = shellfacetraverse(subsegpool);
   }
 
-  // The total number of iunput segments.
-  insegments = subsegpool->items;
-
   delete [] idx2faclist;
   delete [] facperverlist;
   delete sfacelist;
@@ -360,6 +357,7 @@ void tetgenmesh::mergefacets()
 
   if (futureflip != NULL) {
     // Do Delaunay flip.
+    lawsonflip();
   }
 
   delete [] segspernodelist;
@@ -516,6 +514,9 @@ void tetgenmesh::meshsurface()
     // Merge adjacent coplanar facets.
     mergefacets();
   }
+
+  // The total number of iunput segments.
+  insegments = subsegpool->items;
 
   delete ptlist;
   delete conlist;

@@ -989,7 +989,7 @@ void bond(triface& t1, triface& t2) {
 
 // sspivot() -- find the abutting subsegment (seg) at the face (s).
 
-#define sspivot(s, seg) sdecode((s).sh[(s).shver >> 1 + 6], seg)
+#define sspivot(s, seg) sdecode((s).sh[((s).shver >> 1) + 6], seg)
 
 // sbond1() -- s1 and s2 share an edge, connect s1 <-- s2, i.e., s1 knows
 //   its neighbor is s2. sbond2() connects s1 <==> s2.
@@ -1002,14 +1002,15 @@ void bond(triface& t1, triface& t2) {
   (s2).sh[(s2).shver >> 1] = sencode(s1)
 
 // ssbond() -- connect a subface (s) and a subsegment (seg) together.
+// NOTE: we allow that 'seg.sh' may be a NULL.
 
 #define ssbond(s, seg) \
-  (s).sh[(s).shver >> 1 + 6] = sencode(seg);\
-  (seg).sh[0] = sencode(s)
+  (s).sh[((s).shver >> 1) + 6] = sencode(seg);\
+  if ((seg).sh != NULL) (seg).sh[0] = sencode(s)
 
 // ssdisolve() -- dissolve a subface-subsegment connection (at subface side).
 
-#define ssdissolve(s) (s).sh[(s).shver >> 1 + 6] = NULL;
+#define ssdissolve(s) (s).sh[((s).shver >> 1) + 6] = NULL;
 
 // sorg(), sdest(), sapex() -- return the origin, destination, apex,
 //   of the subface.
@@ -1029,10 +1030,10 @@ void bond(triface& t1, triface& t2) {
 
 #define sesym(s1, s2) \
   (s2).sh = (s1).sh;\
-  (s2).shver = (s1).shver + ((s1).shver & 01 ? -1 : 1);
+  (s2).shver = (s1).shver + (((s1).shver & 01) ? -1 : 1);
 
 #define sesymself(s) \
-  (s).shver += ((s).shver & 01 ? -1 : 1);
+  (s).shver += (((s).shver & 01) ? -1 : 1);
 
 // senext(), senext2() -- go to the next (or the previous) face edge.
 

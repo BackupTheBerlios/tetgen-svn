@@ -260,6 +260,16 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
     pk = pd; pl = pc; pm = pa; pn = pb; sign = -1.0;
   }
 
+  // Make sure that the base triangle is not degenerate.
+  l = DIST(pk, pl);
+  l += DIST(pl, pm);
+  l += DIST(pm, pk);
+  l /= 3.0;
+  if (sqrt(amax) < (l * l * tol)) {
+    // A (nearly) degenerate base triangle.
+    assert(0);  // Not handle yet.
+  }
+
   // Calculate the circumcenter and radius.
   circumsphere(pk, pl, pm, NULL, c, &r);
   l = DIST(c, pn);
