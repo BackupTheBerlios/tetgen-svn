@@ -184,8 +184,9 @@ void tetgenmesh::checkmesh(memorypool* pool)
 
 void tetgenmesh::checkshells()
 {
-  face shloop;
-  int horrors;
+  face shloop, spinsh, nextsh;
+  point pa, pb;
+  int horrors, i;
 
   if (!b->quiet) {
     printf("  Checking consistency of the mesh boundary...\n");
@@ -195,6 +196,29 @@ void tetgenmesh::checkshells()
   subfacepool->traversalinit();
   shloop.sh = shellfacetraverse(subfacepool);
   while (shloop.sh != NULL) {
+    shloop.shver = 0;
+    for (i = 0; i < 3; i++) {
+      // Check the face ring at this edge.
+      pa = sorg(shloop);
+      pb = sdest(shloop);
+      spinsh = shloop;
+      spivot(spinsh, nextsh);
+      while (nextsh.sh != shloop.sh) {
+        // check if they have the same edge.
+        if (!((sorg(nextsh) == pa) && (sdest(nextsh) == pb) ||
+             (sorg(nextsh) == pb) && (sdest(nextsh) == pa))) {
+           printf("  !! !! Wrong subface-subface connection.\n");
+           printf("    First: x%lx (%d, %d, %d).\n", (unsigned long) spinsh.sh,
+             pmark(sorg(spinsh)), pmark(sdest(spinsh)), pmark(sapex(spinsh)));
+           printf("    Scond: x%lx (%d, %d, %d).\n", (unsigned long) nextsh.sh,
+             pmark(sorg(nextsh)), pmark(sdest(nextsh)), pmark(sapex(nextsh)));
+           horrors++;
+        }
+        spinsh = nextsh;
+        spivot(spinsh, nextsh);
+      }
+      senextself(shloop);
+    }
     shloop.sh = shellfacetraverse(subfacepool);
   }
 

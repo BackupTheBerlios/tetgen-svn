@@ -66,6 +66,11 @@ void tetgenmesh::lawsonflip()
 
     if (sign < 0) {
       // It is non-locally Delaunay. Flip it.
+      if (b->verbose > 1) {
+        printf("  # %ld ", flipcount);
+      }
+      // Orient the two faces properly: abc and bad.
+      if (sorg(flipfaces[0]) == sorg(flipfaces[1])) sesymself(flipfaces[1]);
       flip22(flipfaces, 1);
       flipcount++;
     }

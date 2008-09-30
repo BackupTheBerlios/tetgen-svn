@@ -621,7 +621,8 @@ void tetgenmesh::psh(face *s)
 {
   face prtsh;
   triface prttet;
-  point printpoint;
+  point *pt, printpoint;
+  REAL n[3];
 
   if (s->sh == NULL) {
     printf("Not a handle.\n");
@@ -633,12 +634,17 @@ void tetgenmesh::psh(face *s)
     return;
   }
 
+  pt = (point *) s->sh;
   if (s->sh[5] != NULL) {
-    printf("subface x%lx, ver %d, mark %d:", (unsigned long)(s->sh), s->shver,
+    printf("subface x%lx, ver %d, mark %d,", (unsigned long)(s->sh), s->shver,
       shellmark(*s));
+    facenormal(pt[3], pt[4], pt[5], n, 1);
+    printf(" area %g, edge lengths %g %g %g", sqrt(DOT(n, n)),
+      DIST(pt[3], pt[4]), DIST(pt[4], pt[5]), DIST(pt[5], pt[3]));
   } else {
-    printf("Subsegment x%lx, ver %d, mark %d:", (unsigned long)(s->sh),
+    printf("Subsegment x%lx, ver %d, mark %d,", (unsigned long)(s->sh),
       s->shver, shellmark(*s));
+    printf(" length %g:", DIST(pt[3], pt[4]));
   }
   // if (sinfected(*sface)) {
   //   printf(" (infected)");

@@ -228,7 +228,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
   int imax;
 
   // Calculate the areas of the four triangles in a, b, c, and d.
-  //   Get the triangle which has the largest area.
+  //   Get the base triangle which has the largest area.
   facenormal(pa, pb, pc, n, 1);
   area2[0] = DOT(n, n); 
   facenormal(pb, pa, pd, n, 1);
@@ -249,7 +249,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
     amax = area2[3]; imax = 3;
   }
 
-  // Permute the vertices.
+  // Permute the vertices s. t. the base triangle is (pk, pl, pm).
   if (imax == 0) {
     pk = pa; pl = pb; pm = pc; pn = pd; sign = 1.0;
   } else if (imax == 1) {
@@ -265,15 +265,17 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
   l += DIST(pl, pm);
   l += DIST(pm, pk);
   l /= 3.0;
-  if (sqrt(amax) < (l * l * tol)) {
+
+  if (sqrt(amax) > (l * l * tol)) {
+    // Calculate the circumcenter and radius.
+    circumsphere(pk, pl, pm, NULL, c, &r);
+    l = DIST(c, pn);
+    q = fabs((l - r) / r);
+  } else {
     // A (nearly) degenerate base triangle.
     assert(0);  // Not handle yet.
+    q = 0;
   }
-
-  // Calculate the circumcenter and radius.
-  circumsphere(pk, pl, pm, NULL, c, &r);
-  l = DIST(c, pn);
-  q = (l - r) / r;
 
   if (q > tol) {
     return (l - r) * sign;  // Adjust the sign.
