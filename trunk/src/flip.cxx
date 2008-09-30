@@ -28,6 +28,7 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
     printf("    flip 2-to-2: (%d, %d, %d, %d)\n", pointmark(pa),
       pointmark(pb), pointmark(pc), pointmark(pd));
   }
+  flip22count++;
 
   // Collect the four boundary edges.
   senext(flipfaces[0], bdedges[0]);

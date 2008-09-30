@@ -39,7 +39,7 @@ void tetgenmesh::lawsonflip()
   if (b->verbose > 1) {
     printf("    Lawson flip %ld edges.\n", flippool->items);
   }
-  flipcount = 0l;
+  flipcount = flip22count;
 
   while (futureflip != (badface *) NULL) {
     // Pop an edge from the stack.
@@ -58,7 +58,6 @@ void tetgenmesh::lawsonflip()
 
     // Get the adjacent face.
     spivot(flipfaces[0], flipfaces[1]);
-    sesymself(flipfaces[1]);
     pc = sapex(flipfaces[0]);
     pd = sapex(flipfaces[1]);
 
@@ -66,9 +65,6 @@ void tetgenmesh::lawsonflip()
 
     if (sign < 0) {
       // It is non-locally Delaunay. Flip it.
-      if (b->verbose > 1) {
-        printf("  # %ld ", flipcount);
-      }
       // Orient the two faces properly: abc and bad.
       if (sorg(flipfaces[0]) == sorg(flipfaces[1])) sesymself(flipfaces[1]);
       flip22(flipfaces, 1);
@@ -77,7 +73,7 @@ void tetgenmesh::lawsonflip()
   }
 
   if (b->verbose > 1) {
-    printf("    %ld flips.\n", flipcount);
+    printf("    %ld flips.\n", flip22count - flipcount);
   }
 
   flippool->restart();

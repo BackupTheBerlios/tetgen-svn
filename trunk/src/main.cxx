@@ -636,15 +636,15 @@ void tetgenmesh::psh(face *s)
 
   pt = (point *) s->sh;
   if (s->sh[5] != NULL) {
-    printf("subface x%lx, ver %d, mark %d,", (unsigned long)(s->sh), s->shver,
+    printf("subface x%lx, ver %d, mark %d:\n",(unsigned long)(s->sh),s->shver,
       shellmark(*s));
     facenormal(pt[3], pt[4], pt[5], n, 1);
-    printf(" area %g, edge lengths %g %g %g", sqrt(DOT(n, n)),
+    printf("      area %g, edge lengths %g %g %g\n", 0.5 * sqrt(DOT(n, n)),
       DIST(pt[3], pt[4]), DIST(pt[4], pt[5]), DIST(pt[5], pt[3]));
   } else {
-    printf("Subsegment x%lx, ver %d, mark %d,", (unsigned long)(s->sh),
+    printf("Subsegment x%lx, ver %d, mark %d:\n", (unsigned long)(s->sh),
       s->shver, shellmark(*s));
-    printf(" length %g:", DIST(pt[3], pt[4]));
+    printf("      length %g", DIST(pt[3], pt[4]));
   }
   // if (sinfected(*sface)) {
   //   printf(" (infected)");
@@ -826,6 +826,49 @@ void tetgenmesh::pface(int i, int j, int k)
   }
   
   if (t.tet == NULL) {
+    printf("  !! Not exist.\n");
+  }
+  delete [] marklist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Find the subface with indices (i, j, k)
+
+void tetgenmesh::psubface(int i, int j, int k)
+{
+  face s;
+  point *pts;
+  REAL n[3];
+  int *marklist;
+  int ii;
+
+  marklist = new int[pointpool->items + 1];
+  for (ii = 0; ii < pointpool->items + 1; ii++) marklist[ii] = 0;
+  // Marke the given indices. 
+  marklist[i] = marklist[j] = marklist[k] = 1;
+
+  s.shver = 0;
+  subfacepool->traversalinit();
+  s.sh = shellfacetraverse(subfacepool);
+  while (s.sh != NULL) {
+    pts = (point *) s.sh;
+    if (pts[3] != NULL) {
+      if ((marklist[pointmark(pts[3])] + marklist[pointmark(pts[4])] +
+           marklist[pointmark(pts[5])]) == 3) {
+        // Found.
+        printf("  sub x%lx (%d, %d, %d) mark=%d\n", (unsigned long) s.sh,
+          pointmark(pts[3]), pointmark(pts[4]), pointmark(pts[5]),
+          shellmark(s));
+        facenormal(pts[3], pts[4], pts[5], n, 1);
+        printf("    area=%g, lengths: %g, %g, %g\n", 0.5 * sqrt(DOT(n, n)),
+          DIST(pts[3], pts[4]), DIST(pts[4], pts[5]), DIST(pts[5], pts[3]));
+        break;
+      }
+    }
+    s.sh = shellfacetraverse(subfacepool);
+  }
+  
+  if (s.sh == NULL) {
     printf("  !! Not exist.\n");
   }
   delete [] marklist;

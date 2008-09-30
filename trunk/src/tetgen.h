@@ -1366,7 +1366,7 @@ long ptloc_count, ptloc_max_count;
 long orient3dcount;
 long inspherecount, insphere_sos_count;
 long flip14count, flip26count, flipn2ncount;
-long flip23count, flip32count, flipnmcount;
+long flip23count, flip32count, flipnmcount, flip22count;
 REAL tloctime, tfliptime, tinserttime;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1396,12 +1396,13 @@ void makesubfacemap(int*&, face*&);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-#define NORM2(x, y, z) (x) * (x) + (y) * (y) + (z) * (z)
+#define NORM2(x, y, z) ((x) * (x) + (y) * (y) + (z) * (z))
 
 #define DIST(p1, p2) \
   sqrt(NORM2((p2)[0] - (p1)[0], (p2)[1] - (p1)[1], (p2)[2] - (p1)[2]))
 
-#define DOT(v1, v2) (v1)[0] * (v2)[0] + (v1)[1] * (v2)[1] + (v1)[2] * (v2)[2]
+#define DOT(v1, v2) \
+  ((v1)[0] * (v2)[0] + (v1)[1] * (v2)[1] + (v1)[2] * (v2)[2])
 
 #define CROSS(v1, v2, n) \
   (n)[0] =   (v1)[1] * (v2)[2] - (v2)[1] * (v1)[2];\
@@ -1545,7 +1546,7 @@ tetgenmesh() {
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
   flip14count = flip26count = flipn2ncount = 0l;
-  flip23count = flip32count = flipnmcount = 0l;
+  flip23count = flip32count = flipnmcount = flip22count = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
 }
 
