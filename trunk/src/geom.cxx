@@ -118,19 +118,20 @@ bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
 
 void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, int pivot)
 {
-  REAL v1[3], v2[3], v3[3], *p1, *p2;
+  REAL v1[3], v2[3], v3[3], *pv1, *pv2;
   REAL L1, L2, L3;
 
-  v1[0] = pb[0] - pa[0];
+  v1[0] = pb[0] - pa[0];  // edge vector v1: a->b
   v1[1] = pb[1] - pa[1];
   v1[2] = pb[2] - pa[2];
-  v2[0] = pc[0] - pa[0];
-  v2[1] = pc[1] - pa[1];
-  v2[2] = pc[2] - pa[2];
+  v2[0] = pa[0] - pc[0];  // edge vector v2: c->a
+  v2[1] = pa[1] - pc[1];
+  v2[2] = pa[2] - pc[2];
 
+  // Default, normal is calculated by: v1 x (-v2) (see Fig. fnormal).
   if (pivot > 0) {
     // Choose edge vectors by Burdakov's algorithm.
-    v3[0] = pc[0] - pb[0];
+    v3[0] = pc[0] - pb[0];  // edge vector v3: b->c
     v3[1] = pc[1] - pb[1];
     v3[2] = pc[2] - pb[2];
     L1 = DOT(v1, v1);
@@ -139,22 +140,27 @@ void tetgenmesh::facenormal(point pa, point pb, point pc, REAL *n, int pivot)
     // Sort the three edge lengths.
     if (L1 < L2) {
       if (L2 < L3) {
-        p1 = v1; p2 = v2;
+        pv1 = v1; pv2 = v2; // n = v1 x (-v2).
       } else {
-        p1 = v1; p2 = v3;
+        pv1 = v3; pv2 = v1; // n = v3 x (-v1).
       }
     } else {
       if (L1 < L3) {
-        p1 = v2; p2 = v1;
+        pv1 = v1; pv2 = v2; // n = v1 x (-v2).
       } else {
-        p1 = v2; p2 = v3;
+        pv1 = v2; pv2 = v3; // n = v2 x (-v3).
       }
     }
   } else {
-    p1 = v1; p2 = v2;
+    pv1 = v1; pv2 = v2; // n = v1 x (-v2).
   }
 
-  CROSS(p1, p2, n);
+  // Calculate the face normal.
+  CROSS(pv1, pv2, n);
+  // Inverse the direction;
+  n[0] = -n[0];
+  n[1] = -n[1];
+  n[2] = -n[2];
 }
 
 ///////////////////////////////////////////////////////////////////////////////
