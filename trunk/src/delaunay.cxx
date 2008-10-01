@@ -733,8 +733,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     triface fliptets[4];
     tetrahedron ptr;
 
-    // Queue all degenerate tets.
     futureflip = (badface *) NULL;
+    
+    // Queue all degenerate tets.
     for (i = 0; i < cavebdrylist->len(); i++) {
       cavetet = (triface *) cavebdrylist->get(i);
       pts = (point *) cavetet->tet;
@@ -759,7 +760,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
 
     if (b->verbose > 1) {
-      printf("    Removing %ld degenerate tets.\n", flippool->items);
+      printf("    Found %ld degenerate tets.\n", flippool->items);
     }
 
     while (futureflip != NULL) {
@@ -767,7 +768,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       futureflip = futureflip->nextitem;
       if (b->verbose > 1) {
         pts = (point *) fliptets[0].tet;
-        printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+        printf("    Removing tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
           pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
       }
       // Find the hull edge in cavetet.

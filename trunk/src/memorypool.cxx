@@ -130,6 +130,231 @@ tetgenmesh::list::list(int itbytes, int mitems, int exsize)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// restart()    Deallocate all objects in this pool.                         //
+//                                                                           //
+// The pool returns to a fresh state, like after it was initialized, except  //
+// that no memory is freed to the operating system.  Rather, the previously  //
+// allocated blocks are ready to be used.                                    //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::arraypool::restart()
+{
+  objects = 0l;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// poolinit()    Initialize an arraypool for allocation of objects.          //
+//                                                                           //
+// Before the pool may be used, it must be initialized by this procedure.    //
+// After initialization, memory can be allocated and freed in this pool.     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::arraypool::poolinit(int sizeofobject, int log2objperblk)
+{
+  // Each object must be at least one byte long.
+  objectbytes = sizeofobject > 1 ? sizeofobject : 1;
+
+  log2objectsperblock = log2objperblk;
+  // Compute the number of objects in each block.
+  objectsperblock = ((int) 1) << log2objectsperblock;
+
+  // No memory has been allocated.
+  totalmemory = 0l;
+  // The top array has not been allocated yet.
+  toparray = (char **) NULL;
+  toparraylen = 0;
+
+  // Ready all indices to be allocated.
+  restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// arraypool()    The constructor and destructor.                            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+tetgenmesh::arraypool::arraypool(int sizeofobject, int log2objperblk)
+{
+  poolinit(sizeofobject, log2objperblk);
+}
+
+tetgenmesh::arraypool::~arraypool()
+{
+  int i;
+
+  // Has anything been allocated at all?
+  if (toparray != (char **) NULL) {
+    // Walk through the top array.
+    for (i = 0; i < toparraylen; i++) {
+      // Check every pointer; NULLs may be scattered randomly.
+      if (toparray[i] != (char *) NULL) {
+        // Free an allocated block.
+        free((void *) toparray[i]);
+      }
+    }
+    // Free the top array.
+    free((void *) toparray);
+  }
+
+  // The top array is no longer allocated.
+  toparray = (char **) NULL;
+  toparraylen = 0;
+  objects = 0;
+  totalmemory = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// getblock()    Return (and perhaps create) the block containing the object //
+//               with a given index.                                         //
+//                                                                           //
+// This function takes care of allocating or resizing the top array if nece- //
+// ssary, and of allocating the block if it hasn't yet been allocated.       //
+//                                                                           //
+// Return a pointer to the beginning of the block (NOT the object).          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+char* tetgenmesh::arraypool::getblock(int objectindex)
+{
+  char **newarray;
+  char *block;
+  int newsize;
+  int topindex;
+  int i;
+
+  // Compute the index in the top array (upper bits).
+  topindex = objectindex >> log2objectsperblock;
+  // Does the top array need to be allocated or resized?
+  if (toparray == (char **) NULL) {
+    // Allocate the top array big enough to hold 'topindex', and NULL out
+    //   its contents.
+    newsize = topindex + 128;
+    toparray = (char **) malloc((size_t) (newsize * sizeof(char *)));
+    toparraylen = newsize;
+    for (i = 0; i < newsize; i++) {
+      toparray[i] = (char *) NULL;
+    }
+    // Account for the memory.
+    totalmemory = newsize * (unsigned long) sizeof(char *);
+  } else if (topindex >= toparraylen) {
+    // Resize the top array, making sure it holds 'topindex'.
+    newsize = 3 * toparraylen;
+    if (topindex >= newsize) {
+      newsize = topindex + 128;
+    }
+    // Allocate the new array, copy the contents, NULL out the rest, and
+    //   free the old array.
+    newarray = (char **) malloc((size_t) (newsize * sizeof(char *)));
+    for (i = 0; i < toparraylen; i++) {
+      newarray[i] = toparray[i];
+    }
+    for (i = toparraylen; i < newsize; i++) {
+      newarray[i] = (char *) NULL;
+    }
+    free(toparray);
+    // Account for the memory.
+    totalmemory += (newsize - toparraylen) * sizeof(char *);
+    toparray = newarray;
+    toparraylen = newsize;
+  }
+
+  // Find the block, or learn that it hasn't been allocated yet.
+  block = toparray[topindex];
+  if (block == (char *) NULL) {
+    // Allocate a block at this index.
+    block = (char *) malloc((size_t) (objectsperblock * objectbytes));
+    toparray[topindex] = block;
+    // Account for the memory.
+    totalmemory += objectsperblock * objectbytes;
+  }
+
+  // Return a pointer to the block.
+  return block;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// lookup()    Return the pointer to the object with a given index, or NULL  //
+//             if the object's block doesn't exist yet.                      //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void* tetgenmesh::arraypool::lookup(int objectindex)
+{
+  char *block;
+  int topindex;
+
+  // Has the top array been allocated yet?
+  if (toparray == (char **) NULL) {
+    return (void *) NULL;
+  }
+
+  // Compute the index in the top array (upper bits).
+  topindex = objectindex >> log2objectsperblock;
+  // Does the top index fit in the top array?
+  if (topindex >= toparraylen) {
+    return (void *) NULL;
+  }
+
+  // Find the block, or learn that it hasn't been allocated yet.
+  block = toparray[topindex];
+  if (block == (char *) NULL) {
+    return (void *) NULL;
+  }
+
+  // Compute a pointer to the object with the given index.  Note that
+  //   'objectsperblock' is a power of two, so the & operation is a bit mask
+  //   that preserves the lower bits.
+  return (void *)(block + (objectindex & (objectsperblock - 1)) * objectbytes);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// fastlookup()    A fast, unsafe operation. Return the pointer to the       //
+//                 object with a given index.                                //
+//                                                                           //
+// The object's block must have been allocated. Use this function only for   //
+// indices that have previously been allocated with newindex().              //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void* tetgenmesh::arraypool::fastlookup(int objectindex)
+{
+  return (void *) (toparray[(objectindex) >> log2objectsperblock] + 
+            ((objectindex) & (objectsperblock - 1)) * objectbytes);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// newindex()    Allocate space for a fresh object from the pool.            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+int tetgenmesh::arraypool::newindex(void **newptr)
+{
+  void *newobject;
+  int newindex;
+
+  // Allocate an object at index 'firstvirgin'.
+  newindex = objects;
+  newobject = (void *) (getblock(objects) +
+    (objects & (objectsperblock - 1)) * objectbytes);
+  objects++;
+
+  // If 'newptr' is not NULL, use it to return a pointer to the object.
+  if (newptr != (void **) NULL) {
+    *newptr = newobject;
+  }
+  return newindex;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // restart()   Deallocate all items in this pool.                            //
 //                                                                           //
 // The pool is returned to its starting state, except that no memory is      //

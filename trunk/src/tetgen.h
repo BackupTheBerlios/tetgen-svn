@@ -1173,7 +1173,47 @@ class list {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Memorypool                                                                //
+// Arraypool    A dynamic array                                              //
+//                                                                           //
+// Each arraypool contains an array of pointers to a number of blocks.  Each //
+// block contains the same fixed number of objects.  Each index of the array //
+// addesses a particular object in the pool.  The most significant bits add- //
+// ress the index of the block containing the object. The less significant   //
+// bits address this object within the block.                                //
+//                                                                           //
+// 'objectbytes' is the size of one object in blocks; 'log2objectsperblock'  //
+// is the base-2 logarithm of 'objectsperblock'; 'objects' counts the number //
+// of allocated objects; 'totalmemory' is the totoal memorypool in bytes.    //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+class arraypool {
+
+  public:
+
+  int objectbytes;
+  int objectsperblock;
+  int log2objectsperblock; 
+  unsigned long objects;
+  unsigned long totalmemory;
+
+  char **toparray;
+  int toparraylen;
+
+  void restart();
+  void poolinit(int sizeofobject, int log2objperblk);
+  char* getblock(int objectindex);
+  void* lookup(int objectindex);
+  void* fastlookup(int objectindex);
+  int newindex(void **newptr);
+
+  arraypool(int sizeofobject, int log2objperblk);
+  ~arraypool();
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Memorypool    A dynamic pool of memory                                    //
 //                                                                           //
 // A type used to allocate memory written by J. Shewchuk.                    //
 //                                                                           //
