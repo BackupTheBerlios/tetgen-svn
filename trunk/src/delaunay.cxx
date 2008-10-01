@@ -587,8 +587,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
 
   // Initialize working lists.
-  cavetetlist = new list(sizeof(triface));
-  cavebdrylist = new list(sizeof(triface));
+  cavetetlist = new list(sizeof(triface), 128, 128);
+  cavebdrylist = new list(sizeof(triface), 128, 128);
 
   // The number of coplanar cavity boundary face.
   copcount = 0;
@@ -729,13 +729,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   
   // There may exist degenerate tetrahedra. Check and remove them.
   if (bowyerwatson && (copcount > 0)) {
-    queue *removeque;
+    badface *newflip, *lastflip;
     triface fliptets[4];
     tetrahedron ptr;
 
-    removeque = new queue(sizeof(triface));
-
     // Queue all degenerate tets.
+    futureflip = (badface *) NULL;
     for (i = 0; i < cavebdrylist->len(); i++) {
       cavetet = (triface *) cavebdrylist->get(i);
       pts = (point *) cavetet->tet;
@@ -743,39 +742,50 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         // Check if the new tet is degenerate.
         ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
         if (ori == 0) {
-          removeque->push(cavetet);
+          if (futureflip == NULL) {
+            futureflip = (badface *) flippool->alloc();
+            futureflip->tt = *cavetet;
+            futureflip->nextitem = NULL;
+            lastflip = futureflip;
+          } else {
+            newflip = (badface *) flippool->alloc();
+            newflip->tt = *cavetet;
+            newflip->nextitem = NULL;
+            lastflip->nextitem = newflip;
+            lastflip = newflip;
+          }
         }
       }
     }
 
     if (b->verbose > 1) {
-      printf("    Removing %ld degenerate tets.\n", removeque->len());
+      printf("    Removing %ld degenerate tets.\n", flippool->items);
     }
 
-    while (!removeque->empty()) {
-      cavetet = (triface *) removeque->pop();
+    while (futureflip != NULL) {
+      fliptets[0] = futureflip->tt;
+      futureflip = futureflip->nextitem;
       if (b->verbose > 1) {
-        pts = (point *) cavetet->tet;
+        pts = (point *) fliptets[0].tet;
         printf("    Remove tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
           pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
       }
       // Find the hull edge in cavetet.
-      cavetet->ver = 0;
+      fliptets[0].ver = 0;
       for (j = 0; j < 3; j++) {
-        enext0fnext(*cavetet, neightet);
+        enext0fnext(fliptets[0], neightet);
         symself(neightet);
         if ((point) neightet.tet[7] == dummypoint) break;
-        enextself(*cavetet);
+        enextself(fliptets[0]);
       }
       // Because of existing multiple degenerate cases. It is possible
       //   that the other hull face is not pop yet.
       if (j < 3) {
         // Collect tets for flipping the edge.
-        fliptets[0] = *cavetet;
         for (j = 0; j < 3; j++) {
           fnext(fliptets[j], fliptets[j + 1]);
         }
-        if (fliptets[3].tet != cavetet->tet) {
+        if (fliptets[3].tet != fliptets[0].tet) {
           printf("Internal error in insertvertex(): Unknown flip case.\n");
           terminatetetgen(1);
         }
@@ -784,11 +794,23 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         // Rememebr the new tet.
         recenttet = fliptets[0];
       } else {
-        removeque->push(cavetet);  // Wait for the next round.
+        // Put the face back into queue.
+        if (futureflip == NULL) {
+          futureflip = (badface *) flippool->alloc();
+          futureflip->tt = fliptets[0];
+          futureflip->nextitem = NULL;
+          lastflip = futureflip;
+        } else {
+          newflip = (badface *) flippool->alloc();
+          newflip->tt = fliptets[0];
+          lastflip->nextitem = newflip;
+          newflip->nextitem = NULL;
+          lastflip = newflip;
+        }
       } // if (j < 3)
     }
 
-    delete removeque;
+    flippool->restart();
   } // if (bowyerwatson && (copcount > 0))
 
   // Set the point type.

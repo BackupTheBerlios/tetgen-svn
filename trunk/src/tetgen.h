@@ -1233,89 +1233,6 @@ class memorypool {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Link                                                                      //
-//                                                                           //
-// A 'link' is a double linked nodes. It uses the memorypool data structure  //
-// for memory management.  Following is an image of a link.                  //
-//                                                                           //
-//   head-> ____0____      ____1____      ____2____      _________<-tail     //
-//         |__next___|--> |__next___|--> |__next___|--> |__NULL___|          //
-//         |__NULL___|<-- |__prev___|<-- |__prev___|<-- |__prev___|          //
-//         |         |    |_       _|    |_       _|    |         |          //
-//         |         |    |_ Data1 _|    |_ Data2 _|    |         |          //
-//         |_________|    |_________|    |_________|    |_________|          //
-//                                                                           //
-// The unit size for storage is size of pointer, which may be 4-byte (in 32- //
-//   bit machine) or 8-byte (in 64-bit machine). The real size of an item is //
-//   stored in 'linkitembytes'.                                              //
-//                                                                           //
-// 'head' and 'tail' are pointers pointing to the first and last nodes. They //
-//   do not conatin data (See above).                                        //
-//                                                                           //
-// 'nextlinkitem' is a pointer pointing to a node which is the next one will //
-//   be traversed. 'curpos' remembers the position (1-based) of the current  //
-//   traversing node.                                                        //
-//                                                                           //
-// 'linkitems' indicates how many items in link. Note it is different with   //
-//   'items' of memorypool.                                                  //
-//                                                                           //
-// The index of link starts from 1, i.e., for a link K contains n elements,  //
-//   the first element of the link is K[1], and the last element is K[n].    //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-class link : public memorypool {
-
-  public:
-
-  void **head, **tail;
-  void *nextlinkitem;
-  int  linkitembytes;
-  int  linkitems;
-  int  curpos;
-
-  void rewind() { nextlinkitem = *head; curpos = 1; }
-  void goend() { nextlinkitem = *(tail + 1); curpos = linkitems; }    
-  long len() { return linkitems; }
-  void clear();
-  bool move(int numberofnodes);
-  bool locate(int pos);
-  void *add(void* newitem);
-  void *insert(int pos, void* insitem);
-  void *deletenode(void** delnode);
-  void *del(int pos);
-  void *getitem();
-  void *getnitem(int pos);
-
-  link(int bytecount, int itemcount = 256);
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// Queue and Stack                                                           //
-//                                                                           //
-// A 'queue' is basically a link.  Following is an image of a queue.         //
-//              ___________     ___________     ___________                  //
-//   Pop() <-- |_         _|<--|_         _|<--|_         _| <-- Push()      //
-//             |_  Data0  _|   |_  Data1  _|   |_  Data2  _|                 //
-//             |___________|   |___________|   |___________|                 //
-//              queue head                       queue tail                  //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-class queue : public link {
-
-  public:
-  
-  bool empty() { return linkitems == 0; }
-  void *push(void* newitem) {return link::add(newitem);} 
-  void *pop() {return link::deletenode((void **) *head);}
-
-  queue(int bytes, int count = 256) : link(bytes, count) {}
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // Class Variables.                                                          //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1336,7 +1253,7 @@ memorypool *flippool;
 //   tetrahedra having this point as a vertex.
 point dummypoint;
 
-// A flip statck (use flippool).
+// Statck and queue (use flippool) for flips.
 badface *futureflip;
 
 // Variables for accessing data fields (initialized in initializepools()).
