@@ -137,7 +137,7 @@ void tetgenmesh::unifysegments()
   }
 
   // Initialize a list for storing the face link at a segment.
-  sfacelist = new list(sizeof(face), NULL); 
+  sfacelist = new list(sizeof(face)); 
 
   // Create a mapping from vertices to subfaces incident at them.
   makesubfacemap(idx2faclist, facperverlist);

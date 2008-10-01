@@ -664,6 +664,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     printf("    Size of the cavity: %d faces %d tets.\n", cavebdrylist->len(),
            cavetetlist->len());
   }
+
+  totalbowatcavsize += cavebdrylist->len();
+  if (maxbowatcavsize < cavebdrylist->len()) {
+    maxbowatcavsize = cavebdrylist->len();
+  }
   
   // Create new tetrahedra in the Bowyer-Watson cavity. Connect them to the
   //   tetrahedra at outside of the cavity.
@@ -1139,12 +1144,14 @@ void tetgenmesh::incrementaldelaunay()
   if (b->bowyerwatson) {
     // Use incremental Bowyer-Watson algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
+      if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
       insertvertex(permutarray[i], &searchtet, true);    
     }
   } else {
     // Use incremental flip algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
+      if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
       flipinsertvertex(permutarray[i], &searchtet, 1);    
     }

@@ -347,7 +347,10 @@ void tetgenmesh::statistics()
     printf("  Number of orient3d tests: %ld\n", orient3dcount);
     printf("  Number of insphere tests: %ld\n", inspherecount);
     printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
-    if (b->bowyerwatson == 0) {
+    if (b->bowyerwatson) {
+      printf("  Total size of cavities (# tets): %ld\n", totalbowatcavsize);
+      printf("  Maximal size of a single cavity: %ld\n", maxbowatcavsize);
+    } else {
       printf("  Number of 1-to-4 flips: %ld\n", flip14count);
       printf("  Number of 2-to-6 flips: %ld\n", flip26count);
       printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);

@@ -738,7 +738,7 @@ void tetgenmesh::psh(face *s)
 // Find and print the tetrahedron (or face or edge) with the given indices.
 // Do not handle 'dummypoint' (-1).
 
-void tetgenmesh::ptet(int i, int j, int k, int l)
+void tetgenmesh::pteti(int i, int j, int k, int l)
 {
   triface t;
   point *pts;
@@ -1059,8 +1059,9 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
 
   if (b->plc) {
     m.meshsurface();
-    tv[3] = clock();
   }
+
+  tv[3] = clock();
 
   if (!b->quiet) {
     if (b->plc) {

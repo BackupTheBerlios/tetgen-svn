@@ -1365,6 +1365,7 @@ int checkconstraints, checksubfaces, checkpbcs;
 long ptloc_count, ptloc_max_count;  
 long orient3dcount;
 long inspherecount, insphere_sos_count;
+long maxbowatcavsize, totalbowatcavsize;
 long flip14count, flip26count, flipn2ncount;
 long flip23count, flip32count, flipnmcount, flip22count;
 REAL tloctime, tfliptime, tinserttime;
@@ -1545,6 +1546,7 @@ tetgenmesh() {
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
+  maxbowatcavsize = totalbowatcavsize = 0l;
   flip14count = flip26count = flipn2ncount = 0l;
   flip23count = flip32count = flipnmcount = flip22count = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
@@ -1581,7 +1583,7 @@ tetgenmesh() {
 
 void ptet(triface* t);
 void psh(face* s);
-void ptet(int i, int j, int k, int l);
+void pteti(int i, int j, int k, int l);
 void pface(int i, int j, int k);
 void pedge(int i, int j);
 void psubface(int i, int j, int k);
