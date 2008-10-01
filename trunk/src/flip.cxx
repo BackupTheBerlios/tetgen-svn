@@ -19,6 +19,11 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
   point pa, pb, pc, pd;
   int i;
 
+  // Orient the two faces properly: abc and bad.
+  if (sorg(flipfaces[0]) == sorg(flipfaces[1])) {
+    sesymself(flipfaces[1]);
+  }
+
   pa = sorg(flipfaces[0]);
   pb = sdest(flipfaces[0]);
   pc = sapex(flipfaces[0]);

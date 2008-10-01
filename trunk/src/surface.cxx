@@ -65,10 +65,7 @@ void tetgenmesh::lawsonflip()
 
     if (sign < 0) {
       // It is non-locally Delaunay. Flip it.
-      // Orient the two faces properly: abc and bad.
-      if (sorg(flipfaces[0]) == sorg(flipfaces[1])) sesymself(flipfaces[1]);
       flip22(flipfaces, 1);
-      flipcount++;
     }
   }
 
@@ -130,6 +127,7 @@ void tetgenmesh::unifysegments()
   face sface, sface1, sface2;
   point torg, tdest;
   REAL ori1, ori2, ori3;
+  REAL n1[3], n2[3];
   int *idx2faclist;
   int segmarker;
   int idx, k, m;
@@ -169,58 +167,94 @@ void tetgenmesh::unifysegments()
       }
       if (sdest(sface) != tdest) continue;
       // Save the face f in 'sfacelist'.
-      if (sfacelist->len() > 2) {
+      if (sfacelist->len() >= 2) {
         for (m = 0; m < sfacelist->len() - 1; m++) {
           sface1 = * (face *)(* sfacelist)[m];
           sface2 = * (face *)(* sfacelist)[m + 1];
           ori1 = orient3d(torg, tdest, sapex(sface1), sapex(sface2));
           ori2 = orient3d(torg, tdest, sapex(sface1), sapex(sface));
           if (ori1 > 0) {
+            // apex(f2) is below f1.
             if (ori2 > 0) {
-              // Both apex(f), apex(f2) are below f1 (see Fig.1). 
+              // apex(f) is below f1 (see Fig.1). 
               ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
               if (ori3 > 0) {
-                // f is after both f1 and f2, continue. 
-              } else if (ori3 < 0) {
-                // f is between f1 and f2.
+                // apex(f) is below f2, insert it.
                 break; 
-              } else {
-                // f is duplicated with f2. Not handled yet.
-                assert(0);  // ori3 == 0; 
+              } else if (ori3 < 0) {
+                // apex(f) is above f2, continue.
+              } else { // ori3 == 0; 
+                // f is coplanar and codirection with f2. 
+                assert(0);
               }
             } else if (ori2 < 0) {
-              // apex(f) is above f1, continue (see Fig. 2).
-            } else { // ori2 == 0;
-              // f is duplicated with f1. Not handled yet.
-              assert(0); 
-            }
-          } else if (ori1 < 0) {
-            if (ori2 > 0) {
-              // apex(f) is between f1 and f2 (see Fig. 3).
+              // apex(f) is above f1 below f2, inset it (see Fig. 2).
               break;
-            } else if (ori2 < 0) {
-              // Both apex(f), apex(f2) are below f1 (see Fig.4).
+            } else { // ori2 == 0;
+              // apex(f) is coplanar with f1 (see Fig. 5).
               ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
               if (ori3 > 0) {
-                // f is between f1 and f2 (see Fig.4).
+                // apex(f) is below f2, insert it.
+                break; 
+              } else {
+                // f is coplanar and codirection with f1.
+                assert(0);
+              }
+            }
+          } else if (ori1 < 0) {
+            // apex(f2) is above f1.
+            if (ori2 > 0) {
+              // apex(f) is below f1, continue (see Fig. 3).
+            } else if (ori2 < 0) {
+              // apex(f) is above f1 (see Fig.4).
+              ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
+              if (ori3 > 0) {
+                // apex(f) is below f2, insert it.
                 break;
               } else if (ori3 < 0) {
-                // f is after f1 and f2, continue.
+                // apex(f) is above f2, continue.
               } else { // ori3 == 0;
-                // f is duplicated with f2. Not handled yet.
+                // f is coplanar and codirection with f2.
                 assert(0);
               }
             } else { // ori2 == 0;
-              // f is duplicated with f2. Not handled yet.
+              // f is coplanar and codirection with f1.
               assert(0);
             }
           } else { // ori1 == 0;
-            // f is duplicated with f1. Not handled yet.
-            assert(0);
+            // apex(f2) is coplanar with f1. By assumption, f1 is not
+            //   coplanar and codirection with f2.
+            if (ori2 > 0) {
+              // apex(f) is below f1, continue (see Fig. 7).
+            } else if (ori2 < 0) {
+              // apex(f) is above f1, insert it (see Fig. 7).
+              break;
+            } else { // ori2 == 0.
+              // apex(f) is coplanar with f1 (see Fig. 8).
+              assert(0);  // Two more cases need to work out here.
+            }
           }
         } // for (m = 0; ...)
         sfacelist->insert(m + 1, &sface);
+      } else if (sfacelist->len() == 1) {
+        sface1 = * (face *)(* sfacelist)[0];
+        // Make sure that f is not coplanar and codirection with f1.
+        ori1 = orient3d(torg, tdest, sapex(sface1), sapex(sface));
+        if (ori1 != 0) {
+          sfacelist->append(&sface);
+        } else {
+          // f is coplanar with f1 (see Fig. 8).
+          facenormal(torg, tdest, sapex(sface1), n1, 1);
+          facenormal(torg, tdest, sapex(sface), n2, 1);
+          if (DOT(n1, n2) < 0) {
+            sfacelist->append(&sface);
+          } else {
+            // The two faces are codirectional as well.
+            assert(0); 
+          }
+        }
       } else {
+        // The first face.
         sfacelist->append(&sface);
       }
     } // for (k = idx2faclist[idx]; ...)
