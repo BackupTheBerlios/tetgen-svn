@@ -1194,11 +1194,10 @@ class arraypool {
   int objectbytes;
   int objectsperblock;
   int log2objectsperblock; 
+  int toparraylen;
+  char **toparray;
   unsigned long objects;
   unsigned long totalmemory;
-
-  char **toparray;
-  int toparraylen;
 
   void restart();
   void poolinit(int sizeofobject, int log2objperblk);
@@ -1302,6 +1301,9 @@ point dummypoint;
 
 // Statck and queue (use flippool) for flips.
 badface *futureflip;
+
+// Two dynmaic arrays used by Bowyer-Watson algorithm.
+arraypool *cavetetlist, *cavebdrylist;
 
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
@@ -1498,6 +1500,7 @@ tetgenmesh() {
   flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
+  cavetetlist = cavebdrylist = (arraypool *) NULL;
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
   elemattribindex = volumeboundindex = highorderindex = 0;
@@ -1535,6 +1538,10 @@ tetgenmesh() {
   }
   if (dummypoint != (point) NULL) {
     delete [] dummypoint;
+  }
+  if (cavetetlist != (arraypool *) NULL) {
+    delete cavetetlist;
+    delete cavebdrylist;
   }
   futureflip = (badface *) NULL;
 }

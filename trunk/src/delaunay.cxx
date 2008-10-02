@@ -529,8 +529,7 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   bool bowyerwatson)
 {
-  list *cavetetlist, *cavebdrylist;
-  triface *cavetet, neightet, newtet;
+  triface *cavetet, *parytet, neightet, newtet;
   point *pts;
   enum locateresult loc;
   REAL sign, ori;
@@ -586,10 +585,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     return;
   }
 
-  // Initialize working lists.
-  cavetetlist = new list(sizeof(triface), 128, 128);
-  cavebdrylist = new list(sizeof(triface), 128, 128);
-
   // The number of coplanar cavity boundary face.
   copcount = 0;
 
@@ -597,25 +592,28 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   // Add the searchtet into list.
   infect(*searchtet);
-  cavetetlist->append(searchtet);
+  cavetetlist->newindex((void **) &parytet);
+  *parytet = *searchtet;
   if (loc == ONFACE) {
     // Add its neighbor tet into list.
     sym(*searchtet, neightet);
     infect(neightet);
-    cavetetlist->append(&neightet);
+    cavetetlist->newindex((void **) &parytet);
+    *parytet = neightet;
   } else if (loc == ONEDGE) {
     // Add all tets sharing its edge into list.
     fnext(*searchtet, neightet);
     while (neightet.tet != searchtet->tet) {
       infect(neightet);
-      cavetetlist->append(&neightet);
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = neightet;
       fnextself(neightet);
     }
   }
 
   // Form a star-shaped cavity with respect to the inserting point.
-  for (i = 0; i < cavetetlist->len(); i++) {
-    cavetet = (triface *) cavetetlist->get(i);
+  for (i = 0; i < cavetetlist->objects; i++) {
+    cavetet = (triface *) fastlookup(cavetetlist, i);
     for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
       sym(*cavetet, neightet);
       // Do check if it is not deleted and not infected.
@@ -645,14 +643,16 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         if (enqflag) {
           // Found a tet in the cavity.
           infect(neightet);
-          cavetetlist->append(&neightet);
+          cavetetlist->newindex((void **) &parytet);
+          *parytet = neightet;
         } else {
           // Found a boundary face of the cavity. It may be a face of a hull
           //   tet which contains 'dummypoint'. Choose the edge in the face 
           //   such that its endpoints are not 'dummypoint', while its apex
           //   may be 'dummypoint' (see Fig. 1.4).
           neightet.ver = 4;
-          cavebdrylist->append(&neightet);
+          cavebdrylist->newindex((void **) &parytet);
+          *parytet = neightet;
         }
       } // if (neightet.tet[4] != NULL)
     } // for (cavetet->loc = 0;
@@ -661,19 +661,19 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   } // for (i = 0;
 
   if (b->verbose > 1) {
-    printf("    Size of the cavity: %d faces %d tets.\n", cavebdrylist->len(),
-           cavetetlist->len());
+    printf("    Size of the cavity: %d faces %d tets.\n",cavebdrylist->objects,
+           cavetetlist->objects);
   }
 
-  totalbowatcavsize += cavebdrylist->len();
-  if (maxbowatcavsize < cavebdrylist->len()) {
-    maxbowatcavsize = cavebdrylist->len();
+  totalbowatcavsize += cavebdrylist->objects;
+  if (maxbowatcavsize < cavebdrylist->objects) {
+    maxbowatcavsize = cavebdrylist->objects;
   }
   
   // Create new tetrahedra in the Bowyer-Watson cavity. Connect them to the
   //   tetrahedra at outside of the cavity.
-  for (i = 0; i < cavebdrylist->len(); i++) {
-    cavetet = (triface *) cavebdrylist->get(i);
+  for (i = 0; i < cavebdrylist->objects; i++) {
+    cavetet = (triface *) fastlookup(cavebdrylist, i);
     neightet = *cavetet;
     if (apex(neightet) != dummypoint) {
       // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
@@ -701,8 +701,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
   
   // Connect the set of new tetrahedra together.
-  for (i = 0; i < cavebdrylist->len(); i++) {
-    cavetet = (triface *) cavebdrylist->get(i);
+  for (i = 0; i < cavebdrylist->objects; i++) {
+    cavetet = (triface *) fastlookup(cavebdrylist, i);
     cavetet->ver = 0;
     for (j = 0; j < 3; j++) {
       enext0fnext(*cavetet, newtet); // Go to the face.
@@ -725,7 +725,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
   // Set a handle for the point location.
-  recenttet = * (triface *) cavebdrylist->get(0);
+  recenttet = * (triface *) fastlookup(cavebdrylist, 0);
   
   // There may exist degenerate tetrahedra. Check and remove them.
   if (bowyerwatson && (copcount > 0)) {
@@ -736,8 +736,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     futureflip = (badface *) NULL;
     
     // Queue all degenerate tets.
-    for (i = 0; i < cavebdrylist->len(); i++) {
-      cavetet = (triface *) cavebdrylist->get(i);
+    for (i = 0; i < cavebdrylist->objects; i++) {
+      cavetet = (triface *) fastlookup(cavebdrylist, i);
       pts = (point *) cavetet->tet;
       if (pts[7] != dummypoint) {
         // Check if the new tet is degenerate.
@@ -819,8 +819,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     pointtype(insertpt) = VOLVERTEX;
   }
 
-  delete cavetetlist;
-  delete cavebdrylist;
+  cavetetlist->restart();
+  cavebdrylist->restart();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
