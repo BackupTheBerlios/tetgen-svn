@@ -1326,14 +1326,6 @@ void makesubfacemap(int*&, face*&);
   pool->deaditemstack = (void *) (dyingtet); \
   pool->items--
 
-// fastmaketetrahedron() -- Allocate a new tetrahedron. Only do the basic
-//   initialization.
-
-#define fastmaketetrahedron(pool, newtet) \
-  (newtet)->tet = (tetrahedron *) (pool)->alloc();\
-  elemmarker((newtet)->tet) = 0;\
-  (newtet)->loc = (newtet)->ver = 0
-
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Linear algebra operators.                                                 //
