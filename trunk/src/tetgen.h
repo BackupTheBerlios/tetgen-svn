@@ -1132,47 +1132,6 @@ struct badface {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// List                                                                      //
-//                                                                           //
-// A 'list' is an array of items with automatically reallocation of memory.  //
-// It behaves like an array.                                                 //
-//                                                                           //
-// 'base' is the starting address of the array;  The memory unit in list is  //
-//   byte, i.e., sizeof(char). 'itembytes' is the size of each item in byte, //
-//   so that the next item in list will be found at the next 'itembytes'     //
-//   counted from the current position.                                      //
-//                                                                           //
-// 'items' is the number of items stored in list.  'maxitems' indicates how  //
-//   many items can be stored in this list. 'expandsize' is the increasing   //
-//   size (items) when the list is full.                                     //
-//                                                                           //
-// The index of list always starts from zero, i.e., for a list L contains    //
-//   n elements, the first element is L[0], and the last element is L[n-1].  //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-class list {
-
-  public:
-
-  char *base;
-  int  itembytes;
-  int  items, maxitems, expandsize;
-
-  void *operator[](int i) { return (void *) (base + i * itembytes); }
-  void *get(int i) {return (void *) (base + i * itembytes); }
-  void clear() { items = 0; }
-  int  len() { return items; }
-  void *append(void* appitem);
-  void *insert(int pos, void* insitem);
-  void del(int pos, int order);
-  
-  list(int itbytes, int mitems = 256, int exsize = 128); 
-  ~list() {free(base);}
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // Arraypool    A dynamic array                                              //
 //                                                                           //
 // Each arraypool contains an array of pointers to a number of blocks.  Each //
@@ -1563,7 +1522,6 @@ int pmark(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
 void print_tetarray(int n, triface *tetarray);
-void print_tetfacelist(list *tetfacelist);
 void print_flipstack();
 
 ///////////////////////////////////////////////////////////////////////////////

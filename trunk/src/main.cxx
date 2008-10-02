@@ -944,26 +944,6 @@ void tetgenmesh::print_tetarray(int n, triface *tetarray)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Print a list of faces (in draw command)
-
-void tetgenmesh::print_tetfacelist(list *tetfacelist)
-{
-  triface *f;
-  int i;
-
-  for (i = 0; i < tetfacelist->len(); i++) {
-    f = (triface *) tetfacelist->get(i);
-    if (f->tet[4] != NULL) {
-      printf("p:draw_subface(%d, %d, %d) -- op (%d), x%lx (%d)\n", 
-        pointmark(org(*f)), pointmark(dest(*f)), pointmark(apex(*f)), 
-        pointmark(oppo(*f)), (unsigned long) f->tet, i+1);
-    } else {
-      printf("!! dead face x%lx (i)\n", (unsigned long) f->tet, i+1);
-    }
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Print current faces in flipstack (in draw command)
 
 void tetgenmesh::print_flipstack()
