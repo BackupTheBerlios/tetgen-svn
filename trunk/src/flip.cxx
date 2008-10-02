@@ -96,6 +96,7 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
   point pa, pb, pc, pd;
   int i;
 
+  memorypool *pool;
   int *iptr;
 
   // Check if the original tet is a hull tet.
@@ -123,22 +124,22 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
   symedge(*splittet, castets[3]); // At face abc.
 
   // Delete the old tet.
-  tetrahedrondealloc(splittet->tet);
+  fasttetrahedrondealloc(splittet->tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
     // Create three new tets for abpd, bcpd, and capd.
-    maketetrahedron(tetrahedronpool, &(fliptets[0]));
-    maketetrahedron(tetrahedronpool, &(fliptets[1]));
-    maketetrahedron(tetrahedronpool, &(fliptets[2]));
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[0]));
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[1]));
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[2]));
   } else {
     // Create three hull tets for abpd, bcpd, and capd.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0]));
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[0]));
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[1]));
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[2]));
   }
   // Create the new tet for abcp.
-  maketetrahedron(tetrahedronpool, &(fliptets[3]));
+  fastmaketetrahedron(tetrahedronpool, &(fliptets[3]));
   // Set the vertices.
   setvertices(fliptets[0], pa, pb, newpt, pd);
   setvertices(fliptets[1], pb, pc, newpt, pd);
@@ -197,6 +198,7 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   point pa, pb, pc, pd, pe;
   int i;
 
+  memorypool *pool;
   int *iptr;
 
   fliptets[0] = *splitface;
@@ -234,22 +236,22 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   }
 
   // Delete the old tets.
-  tetrahedrondealloc(fliptets[0].tet);
-  tetrahedrondealloc(fliptets[1].tet);
+  fasttetrahedrondealloc(fliptets[0].tet);
+  fasttetrahedrondealloc(fliptets[1].tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
-    maketetrahedron(tetrahedronpool, &(fliptets[0])); // abpd
-    maketetrahedron(tetrahedronpool, &(fliptets[1])); // bcpd
-    maketetrahedron(tetrahedronpool, &(fliptets[2])); // capd
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[0])); // abpd
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[1])); // bcpd
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[2])); // capd
   } else {
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // abpd
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // bcpd
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // capd
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[0])); // abpd
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[1])); // bcpd
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[2])); // capd
   }
-  maketetrahedron(tetrahedronpool, &(fliptets[3])); // bape
-  maketetrahedron(tetrahedronpool, &(fliptets[4])); // cbpe
-  maketetrahedron(tetrahedronpool, &(fliptets[5])); // acpe
+  fastmaketetrahedron(tetrahedronpool, &(fliptets[3])); // bape
+  fastmaketetrahedron(tetrahedronpool, &(fliptets[4])); // cbpe
+  fastmaketetrahedron(tetrahedronpool, &(fliptets[5])); // acpe
   // Set new vertices.
   setvertices(fliptets[0], pa, pb, newpt, pd);
   setvertices(fliptets[1], pb, pc, newpt, pd);
@@ -318,6 +320,7 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
   int dummyflag; // 0 or 1.
   int n, i;
 
+  memorypool *pool;
   int *iptr;
 
   n = 0;
@@ -373,24 +376,24 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 
   // Delete the n old tets.
   for (i = 0; i < n; i++) {
-    tetrahedrondealloc(fliptets[i].tet);
+    fasttetrahedrondealloc(fliptets[i].tet);
   }
 
   // Create 2n new tets.
   if (pt[0] != dummypoint) {
-    maketetrahedron(tetrahedronpool, &(fliptets[0])); // app[0]p[1]
-    maketetrahedron(tetrahedronpool, &(fliptets[n - 1])); // app[n-1]p[0]
-    maketetrahedron(tetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
-    maketetrahedron(tetrahedronpool, &(bfliptets[n - 1])); // pbp[n-1]p[0]
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[0])); // app[0]p[1]
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[n - 1])); // app[n-1]p[0]
+    fastmaketetrahedron(tetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
+    fastmaketetrahedron(tetrahedronpool, &(bfliptets[n - 1])); // pbp[n-1]p[0]
     setvertices(fliptets[0], pa, newpt, pt[0], pt[1]);
     setvertices(fliptets[n - 1], pa, newpt, pt[n - 1], pt[0]);
     setvertices(bfliptets[0], newpt, pb, pt[0], pt[1]);
     setvertices(bfliptets[n - 1], newpt, pb, pt[n - 1], pt[0]);
   } else {
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // app[0]p[1]
-    maketetrahedron(hulltetrahedronpool, &(fliptets[n - 1])); // app[n-1]p[0]
-    maketetrahedron(hulltetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
-    maketetrahedron(hulltetrahedronpool, &(bfliptets[n - 1])); // pbp[n-1]p[0]
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[0])); // app[0]p[1]
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[n - 1])); 
+    fastmaketetrahedron(hulltetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
+    fastmaketetrahedron(hulltetrahedronpool, &(bfliptets[n - 1])); 
     // NOTE: the base face must contain no 'dummypoint'.
     setvertices(fliptets[0], newpt, pa, pt[1], pt[0]); 
     setvertices(fliptets[n - 1], pa, newpt, pt[n - 1], pt[0]);
@@ -403,8 +406,8 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     esymself(bfliptets[0]);
   }
   for (i = 1; i < n - 1; i++) {
-    maketetrahedron(tetrahedronpool, &(fliptets[i])); // app[i]p[i+1]
-    maketetrahedron(tetrahedronpool, &(bfliptets[i])); // pbp[i]p[i+1]
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[i])); // app[i]p[i+1]
+    fastmaketetrahedron(tetrahedronpool, &(bfliptets[i])); // pbp[i]p[i+1]
     setvertices(fliptets[i], pa, newpt, pt[i], pt[i + 1]);
     setvertices(bfliptets[i], newpt, pb, pt[i], pt[i + 1]);
   }
@@ -486,6 +489,7 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
   int dummyflag;  // range = {-1, 0, 1, 2}.
   int i;
 
+  memorypool *pool;
   int *iptr;
 
   // Check if e is dummypoint.
@@ -535,21 +539,21 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
   }
 
   // Delete the old tets.
-  tetrahedrondealloc(fliptets[0].tet);
-  tetrahedrondealloc(fliptets[1].tet);
+  fasttetrahedrondealloc(fliptets[0].tet);
+  fasttetrahedrondealloc(fliptets[1].tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
-    maketetrahedron(tetrahedronpool, &(fliptets[0])); // Create edab.
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[0])); // Create edab.
     setvertices(fliptets[0], pe, pd, pa, pb);
     // Check if c is dummypoint.
     if (pc != dummypoint) {
-      maketetrahedron(tetrahedronpool, &(fliptets[1])); // Create edbc.
-      maketetrahedron(tetrahedronpool, &(fliptets[2])); // Create edca.
+      fastmaketetrahedron(tetrahedronpool, &(fliptets[1])); // Create edbc.
+      fastmaketetrahedron(tetrahedronpool, &(fliptets[2])); // Create edca.
       setvertices(fliptets[2], pe, pd, pc, pa);
     } else {
-      maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create edbc.
-      maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create deac.
+      fastmaketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create edbc.
+      fastmaketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create deac.
       setvertices(fliptets[2], pd, pe, pa, pc);
       // Adjust deac->edca
       enext0fnextself(fliptets[2]);
@@ -558,9 +562,9 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
     setvertices(fliptets[1], pe, pd, pb, pc);
   } else {
     // d is dummypoint. Create three new hull tets.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // Create abed.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create bced.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create caed.
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[0])); // Create abed.
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create bced.
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create caed.
     setvertices(fliptets[0], pa, pb, pe, pd);
     setvertices(fliptets[1], pb, pc, pe, pd);
     setvertices(fliptets[2], pc, pa, pe, pd);
@@ -663,6 +667,7 @@ void tetgenmesh::flip32(triface* fliptets, int flipflag)
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
   int i;
 
+  memorypool *pool;
   int *iptr; 
 
   // Check if e is 'dummypoint'.
@@ -721,25 +726,25 @@ void tetgenmesh::flip32(triface* fliptets, int flipflag)
   }
 
   // Delete the old tets.
-  tetrahedrondealloc(fliptets[0].tet);
-  tetrahedrondealloc(fliptets[1].tet);
-  tetrahedrondealloc(fliptets[2].tet);
+  fasttetrahedrondealloc(fliptets[0].tet);
+  fasttetrahedrondealloc(fliptets[1].tet);
+  fasttetrahedrondealloc(fliptets[2].tet);
 
   // Check if c is dummypointc.
   if (pc != dummypoint) {
     // Check if d is dummypoint.
     if (pd != dummypoint) {
-      maketetrahedron(tetrahedronpool, &(fliptets[0])); // abcd
+      fastmaketetrahedron(tetrahedronpool, &(fliptets[0])); // abcd
     } else {
-      maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // a hull tet.
+      fastmaketetrahedron(hulltetrahedronpool, &(fliptets[0])); // a hull tet.
     }
-    maketetrahedron(tetrahedronpool, &(fliptets[1])); // bace
+    fastmaketetrahedron(tetrahedronpool, &(fliptets[1])); // bace
     setvertices(fliptets[0], pa, pb, pc, pd);
     setvertices(fliptets[1], pb, pa, pc, pe);
   } else {
     // c is dummypoint. The two new tets are hull tets.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // badc
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // abec
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[0])); // badc
+    fastmaketetrahedron(hulltetrahedronpool, &(fliptets[1])); // abec
     setvertices(fliptets[0], pb, pa, pd, pc);
     setvertices(fliptets[1], pa, pb, pe, pc);
     // Adjust badc -> abcd.

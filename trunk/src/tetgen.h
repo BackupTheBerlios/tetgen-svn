@@ -1316,6 +1316,24 @@ void makepoint(point*);
 void makeindex2pointmap(point*&);
 void makesubfacemap(int*&, face*&);
 
+// fasttetrahedrondealloc() -- Dealloc a tetrahedron.
+
+#define fasttetrahedrondealloc(dyingtet) \
+  (dyingtet)[4] = (tetrahedron) NULL; \
+  pool = ((point) (dyingtet)[7] != dummypoint) ? \
+    tetrahedronpool : hulltetrahedronpool; \
+  *((void **) (dyingtet)) = pool->deaditemstack; \
+  pool->deaditemstack = (void *) (dyingtet); \
+  pool->items--
+
+// fastmaketetrahedron() -- Allocate a new tetrahedron. Only do the basic
+//   initialization.
+
+#define fastmaketetrahedron(pool, newtet) \
+  (newtet)->tet = (tetrahedron *) (pool)->alloc();\
+  elemmarker((newtet)->tet) = 0;\
+  (newtet)->loc = (newtet)->ver = 0
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Linear algebra operators.                                                 //
