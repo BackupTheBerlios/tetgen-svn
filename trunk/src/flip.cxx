@@ -5,6 +5,25 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// flipshpush()    Push a subface edge into flip stack.                      //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+tetgenmesh::badface* tetgenmesh::flipshpush(badface* flipstack, face* flipedge)
+{
+  badface *newflipface;
+
+  newflipface = (badface *) flippool->alloc();
+  newflipface->ss = *flipedge;
+  newflipface->forg = sorg(*flipedge);
+  newflipface->fdest = sdest(*flipedge);
+  newflipface->nextitem = flipstack;
+
+  return newflipface;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // flip22()    Remove an edge by transforming 2-to-2 subfaces.               //
 //                                                                           //
 // 'flipfaces' contains two faces: abc and bad. This routine removes these 2 //
@@ -74,6 +93,79 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
       futureflip = flipshpush(futureflip, &bdedges[i]);
     }
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// lawsonflip()    Flip non-locally Delaunay edges.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::lawsonflip()
+{
+  face flipfaces[2];
+  face checkseg;
+  point pa, pb, pc, pd;
+  REAL sign;
+  long flipcount;
+
+  if (b->verbose > 1) {
+    printf("    Lawson flip %ld edges.\n", flippool->items);
+  }
+  flipcount = flip22count;
+
+  while (futureflip != (badface *) NULL) {
+    // Pop an edge from the stack.
+    flipfaces[0] = futureflip->ss;
+    pa = futureflip->forg;
+    pb = futureflip->fdest;
+    futureflip = futureflip->nextitem;
+
+    // Skip it if it is dead.
+    if (flipfaces[0].sh[3] == NULL) continue;
+    // Skip it if it is not the same edge as we saved.
+    if ((sorg(flipfaces[0]) != pa) || (sdest(flipfaces[0]) != pb)) continue;
+    // Skip it if it is a subsegment.
+    sspivot(flipfaces[0], checkseg);
+    if (checkseg.sh != NULL) continue;
+
+    // Get the adjacent face.
+    spivot(flipfaces[0], flipfaces[1]);
+    pc = sapex(flipfaces[0]);
+    pd = sapex(flipfaces[1]);
+
+    sign = incircle3d(pa, pb, pc, pd, b->epsilon);
+
+    if (sign < 0) {
+      // It is non-locally Delaunay. Flip it.
+      flip22(flipfaces, 1);
+    }
+  }
+
+  if (b->verbose > 1) {
+    printf("    %ld flips.\n", flip22count - flipcount);
+  }
+
+  flippool->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// flippush()    Push a face (possibly will be flipped) into stack.          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack, 
+  triface* flipface, point pushpt)
+{
+  badface *newflipface;
+
+  newflipface = (badface *) flippool->alloc();
+  newflipface->tt = *flipface;
+  newflipface->foppo = pushpt;
+  newflipface->nextitem = flipstack;
+
+  return newflipface;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -995,5 +1087,151 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
   return success;
 }
 */
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// lawsonflip()    Flip non-locally Delaunay faces by primitive flips.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::lawsonflip3d()
+{ 
+  triface fliptets[5], baktets[2];
+  triface fliptet, neightet;
+  point *pt, pd, pe;
+  REAL sign, ori;
+  long flipcount;
+  int n, i;
+
+  int *iptr;
+
+  if (b->verbose > 1) {
+    printf("    Lawson flip %ld faces.\n", flippool->items);
+    flipcount = flip23count + flip32count;
+  }
+
+  while (futureflip != (badface *) NULL) {
+
+    // Pop a face from the stack.
+    fliptet = futureflip->tt;  // abcd (may be a hull tet)
+    pd = futureflip->foppo;  // The new vertex.
+    futureflip = futureflip->nextitem;
+
+    // Skip it if it is a dead tet.
+    if (fliptet.tet[4] == NULL) continue;
+    // Skip it if it is not the same tet as we saved.
+    if (oppo(fliptet) != pd) continue;
+
+    // Get its opposite tet.
+    fliptet.ver = 4;
+    symedge(fliptet, neightet);
+    if ((point) neightet.tet[7] == dummypoint) {
+      // A hull tet. Check if its base face is visible by d.
+      pt = (point *) neightet.tet;
+      ori = orient3d(pt[4], pt[5], pt[6], pd); orient3dcount++;
+      if (ori < 0) {
+        // Visible! Found a 2-to-3 flip on abc.
+        fliptets[0] = fliptet;
+        fliptets[1] = neightet;
+        flip23(fliptets, 1);
+        recenttet = fliptets[0];
+      } else if (ori == 0) {
+        // Handle degenerate case ori == 0.
+        if (oppo(fliptet) == oppo(neightet)) {
+          // Two hull tets (fliptet and neightet) have the same base face.
+          for (i = 0; i < 3; i++) {
+            fnext(fliptet, fliptets[0]);
+            fnext(neightet, fliptets[1]);
+            bond(fliptets[0], fliptets[1]);
+            if (i == 0) {
+              // apex(fliptets[0]) is the new point. The opposite face may be
+              // not locally Delaunay. Put it in flip stack.
+              // assert(apex(fliptets[0]) == pd); // SELF_CHECK
+              enext0fnextself(fliptets[0]);
+              futureflip = flippush(futureflip, &(fliptets[0]), pd);
+              // assert(apex(fliptets[1]) == pd); // SELF_CHECK
+              enext0fnextself(fliptets[1]);
+              futureflip = flippush(futureflip, &(fliptets[1]), pd);
+            }
+            enextself(fliptet);
+            enext2self(neightet);
+          }
+          // Delete the two tets.
+          tetrahedrondealloc(fliptet.tet);
+          tetrahedrondealloc(neightet.tet);
+        }
+      }
+      continue;
+    }
+
+    pe = oppo(neightet);
+    pt = (point *) fliptet.tet;
+    // assert((point) fliptet.tet[7] != dummypoint); // SELF_CHECK
+
+    sign = insphere_sos(pt[4], pt[5], pt[6], pt[7], pe);
+
+    if (b->verbose > 2) {
+      printf("  Insphere: (%d, %d, %d) %d, %d\n", pointmark(org(fliptet)),
+        pointmark(dest(fliptet)), pointmark(apex(fliptet)),
+        pointmark(oppo(fliptet)), pointmark(pe));
+    }
+
+    // Flip it if it is not locally Delaunay.
+    if (sign < 0) {
+      // Check the convexity of its three edges.
+      fliptet.ver = 0;
+      for (i = 0; i < 3; i++) {
+        ori = orient3d(org(fliptet), dest(fliptet), pd, pe); orient3dcount++;
+        if (ori <= 0) break;
+        enextself(fliptet);
+      }
+      if (i == 3) {
+        // A 2-to-3 flip is found.
+        fliptets[0] = fliptet; // tet abcd, d is the new vertex.
+        symedge(fliptets[0], fliptets[1]); // tet bace.
+        flip23(fliptets, 1);
+        recenttet = fliptets[0]; // for point location.
+      } else {
+        // A 3-to-2 or 4-to-4 may possible.
+        enext0fnext(fliptet, fliptets[0]);
+        esymself(fliptets[0]); // tet badc, d is the new vertex.
+        n = 0;
+        do {
+          fnext(fliptets[n], fliptets[n + 1]);
+          n++;
+        } while ((fliptets[n].tet != fliptet.tet) && (n < 5));
+        if (n == 3) {
+          // Found a 3-to-2 flip.
+          flip32(fliptets, 1);
+          recenttet = fliptets[0]; // for point location.
+        } else if ((n == 4) && (ori == 0)) {
+          // Find a 4-to-4 flip.
+          flipnmcount++;
+          // First do a 2-to-3 flip.
+          fliptets[0] = fliptet; // tet abcd, d is the new vertex.
+          baktets[0] = fliptets[2];
+          baktets[1] = fliptets[3];
+          flip23(fliptets, 1);
+          // Then do a 3-to-2 flip. 
+          enextfnextself(fliptets[0]);  // fliptets[0] is edab.
+          enextself(fliptets[0]);
+          esymself(fliptets[0]);  // tet badc, d is the new vertex.
+          fliptets[1] = baktets[0];
+          fliptets[2] = baktets[1];
+          flip32(fliptets, 1);
+          recenttet = fliptets[0]; // for point location.
+        } else {
+          // An unflipable face. Ignore it. Will be flipped later.
+        }
+      } // if (i == 3)
+    } // if (sign < 0)
+  }
+
+  if (b->verbose > 1) {
+    printf("    %ld flips.\n", flip23count + flip32count - flipcount);
+  }
+
+  flippool->restart();
+}
 
 #endif // #ifndef flipCXX

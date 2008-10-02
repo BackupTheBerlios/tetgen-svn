@@ -1378,13 +1378,18 @@ REAL incircle3d(point pa, point pb, point pc, point pd, REAL tol);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+badface* flipshpush(badface* flipstack, face* flipedge);
 void flip22(face* flipfaces, int flipflag);
+void lawsonflip();
+
+badface* flippush(badface* flipstack, triface* flipface, point pushpt);
 void flip14(point newpt, triface* splittet, int flipflag);
 void flip26(point newpt, triface* splitface, int flipflag);
 void flipn2n(point newpt, triface* splitedge, int flipflag);
 void flip23(triface* fliptets, int flipflag);
 void flip32(triface* fliptets, int flipflag);
 //bool flipnm(int n, triface* fliptets, int flipflag);
+void lawsonflip3d();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1408,11 +1413,9 @@ enum locateresult locate(point searchpt, triface* searchtet);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-badface* flippush(badface* flipstack, triface* flipface, point pushpt);
 void initialDT(point pa, point pb, point pc, point pd);
 void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
 void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
-void lawsonflip3d();
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1421,8 +1424,6 @@ void incrementaldelaunay();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-badface* flipshpush(badface* flipstack, face* flipedge);
-void lawsonflip();
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
 void unifysegments();
 void mergefacets();
