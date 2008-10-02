@@ -1204,12 +1204,19 @@ class arraypool {
   void poolinit(int sizeofobject, int log2objperblk);
   char* getblock(int objectindex);
   void* lookup(int objectindex);
-  void* fastlookup(int objectindex);
   int newindex(void **newptr);
 
   arraypool(int sizeofobject, int log2objperblk);
   ~arraypool();
 };
+
+// fastlookup() -- A fast, unsafe operation. Return the pointer to the object
+//   with a given index.  Note: The object's block must have been allocated,
+//   i.e., by the function newindex().
+
+#define fastlookup(pool, index) \
+  (void *) ((pool)->toparray[(index) >> (pool)->log2objectsperblock] + \
+            ((index) & ((pool)->objectsperblock - 1)) * (pool)->objectbytes)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1437,7 +1444,7 @@ void incrementaldelaunay();
 
 badface* flipshpush(badface* flipstack, face* flipedge);
 void lawsonflip();
-void triangulate(int, list*, list*, int, REAL*);
+void triangulate(int, arraypool*, arraypool*, int, REAL*);
 void unifysegments();
 void mergefacets();
 void meshsurface();

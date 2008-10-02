@@ -315,22 +315,6 @@ void* tetgenmesh::arraypool::lookup(int objectindex)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// fastlookup()    A fast, unsafe operation. Return the pointer to the       //
-//                 object with a given index.                                //
-//                                                                           //
-// The object's block must have been allocated. Use this function only for   //
-// indices that have previously been allocated with newindex().              //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-void* tetgenmesh::arraypool::fastlookup(int objectindex)
-{
-  return (void *) (toparray[(objectindex) >> log2objectsperblock] + 
-            ((objectindex) & (objectsperblock - 1)) * objectbytes);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
 // newindex()    Allocate space for a fresh object from the pool.            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

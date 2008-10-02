@@ -82,26 +82,28 @@ void tetgenmesh::lawsonflip()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
+void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
   int holes, REAL* holelist)
 {
   face newsh, newseg;
-  point *pts;
+  point *ppa, *ppb, *ppc;
   int i;
 
   if (b->verbose > 1) {
-    printf("    %d vertices, %d segments", ptlist->len(), conlist->len());
+    printf("    %ld vertices, %ld segments",ptlist->objects,conlist->objects);
     if (holes > 0) {
       printf(", %d holes", holes);
     }
     printf(", shmark: %d.\n", shmark);
   }
 
-  if ((ptlist->len() == 3) && (conlist->len() == 3)) {
+  if ((ptlist->objects == 3) && (conlist->objects == 3)) {
     // This CDT contains only one triangle.
-    pts = (point *) ptlist->base;
+    ppa = (point *) fastlookup(ptlist, 0);
+    ppb = (point *) fastlookup(ptlist, 1);
+    ppc = (point *) fastlookup(ptlist, 2);
     makeshellface(subfacepool, &newsh);
-    setshvertices(newsh, pts[0], pts[1], pts[2]);
+    setshvertices(newsh, *ppa, *ppb, *ppc);
     shellmark(newsh) = shmark;
     // Create three new segments.
     for (i = 0; i < 3; i++) {
@@ -121,10 +123,9 @@ void tetgenmesh::triangulate(int shmark, list* ptlist, list* conlist,
 
 void tetgenmesh::unifysegments()
 {
-  list *sfacelist;
-  face *facperverlist;
+  badface *facelink, *newlinkitem, *f1, *f2;
+  face *facperverlist, sface;
   face subsegloop, testseg;
-  face sface, sface1, sface2;
   point torg, tdest;
   REAL ori1, ori2, ori3;
   REAL n1[3], n2[3];
@@ -135,9 +136,6 @@ void tetgenmesh::unifysegments()
   if (b->verbose) {
     printf("  Unifying segments.\n");
   }
-
-  // Initialize a list for storing the face link at a segment.
-  sfacelist = new list(sizeof(face)); 
 
   // Create a mapping from vertices to subfaces incident at them.
   makesubfacemap(idx2faclist, facperverlist);
@@ -166,18 +164,19 @@ void tetgenmesh::unifysegments()
         sesymself(sface);
       }
       if (sdest(sface) != tdest) continue;
-      // Save the face f in 'sfacelist'.
-      if (sfacelist->len() >= 2) {
-        for (m = 0; m < sfacelist->len() - 1; m++) {
-          sface1 = * (face *)(* sfacelist)[m];
-          sface2 = * (face *)(* sfacelist)[m + 1];
-          ori1 = orient3d(torg, tdest, sapex(sface1), sapex(sface2));
-          ori2 = orient3d(torg, tdest, sapex(sface1), sapex(sface));
+
+      // Save the face f in facelink.
+      if (flippool->items >= 2) {
+        f1 = facelink;
+        for (m = 0; m < flippool->items - 1; m++) {
+          f2 = f1->nextitem;
+          ori1 = orient3d(torg, tdest, sapex(f1->ss), sapex(f2->ss));
+          ori2 = orient3d(torg, tdest, sapex(f1->ss), sapex(sface));
           if (ori1 > 0) {
             // apex(f2) is below f1.
             if (ori2 > 0) {
               // apex(f) is below f1 (see Fig.1). 
-              ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
+              ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
               if (ori3 > 0) {
                 // apex(f) is below f2, insert it.
                 break; 
@@ -192,7 +191,7 @@ void tetgenmesh::unifysegments()
               break;
             } else { // ori2 == 0;
               // apex(f) is coplanar with f1 (see Fig. 5).
-              ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
+              ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
               if (ori3 > 0) {
                 // apex(f) is below f2, insert it.
                 break; 
@@ -207,7 +206,7 @@ void tetgenmesh::unifysegments()
               // apex(f) is below f1, continue (see Fig. 3).
             } else if (ori2 < 0) {
               // apex(f) is above f1 (see Fig.4).
-              ori3 = orient3d(torg, tdest, sapex(sface2), sapex(sface));
+              ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
               if (ori3 > 0) {
                 // apex(f) is below f2, insert it.
                 break;
@@ -234,76 +233,84 @@ void tetgenmesh::unifysegments()
               assert(0);  // Two more cases need to work out here.
             }
           }
+          // Go to the next item;
+          f1 = f2;
         } // for (m = 0; ...)
-        sfacelist->insert(m + 1, &sface);
-      } else if (sfacelist->len() == 1) {
-        sface1 = * (face *)(* sfacelist)[0];
+        // Insert sface between f1 and f2.
+        newlinkitem = (badface *) flippool->alloc();
+        newlinkitem->ss = sface;
+        newlinkitem->nextitem = f1->nextitem;
+        f1->nextitem = newlinkitem;
+      } else if (flippool->items == 1) {
+        f1 = facelink;
         // Make sure that f is not coplanar and codirection with f1.
-        ori1 = orient3d(torg, tdest, sapex(sface1), sapex(sface));
-        if (ori1 != 0) {
-          sfacelist->append(&sface);
-        } else {
+        ori1 = orient3d(torg, tdest, sapex(f1->ss), sapex(sface));
+        if (ori1 == 0) {
           // f is coplanar with f1 (see Fig. 8).
-          facenormal(torg, tdest, sapex(sface1), n1, 1);
+          facenormal(torg, tdest, sapex(f1->ss), n1, 1);
           facenormal(torg, tdest, sapex(sface), n2, 1);
-          if (DOT(n1, n2) < 0) {
-            sfacelist->append(&sface);
-          } else {
+          if (DOT(n1, n2) > 0) {
             // The two faces are codirectional as well.
-            assert(0); 
+            assert(0);
           }
         }
+        // Add this face into link.
+        newlinkitem = (badface *) flippool->alloc();
+        newlinkitem->ss = sface;
+        newlinkitem->nextitem = NULL;
+        f1->nextitem = newlinkitem;
       } else {
         // The first face.
-        sfacelist->append(&sface);
+        newlinkitem = (badface *) flippool->alloc();
+        newlinkitem->ss = sface;
+        newlinkitem->nextitem = NULL;
+        facelink = newlinkitem;
       }
     } // for (k = idx2faclist[idx]; ...)
 
     if (b->verbose > 1) {
-      printf("    Found %d segments at (%d  %d).\n", sfacelist->len(),
+      printf("    Found %ld segments at (%d  %d).\n", flippool->items,
              pointmark(torg), pointmark(tdest));
     }
 
     // Set the connection between this segment and faces containing it,
     //   at the same time, remove redundant segments.
-    for (k = 0; k < sfacelist->len(); k++) {
-      sface = *(face *)(* sfacelist)[k];
-      sspivot(sface, testseg);
+    f1 = facelink;
+    for (k = 0; k < flippool->items; k++) {
+      sspivot(f1->ss, testseg);
       // If 'testseg' is not 'subsegloop' and is not dead, it is redundant.
       if ((testseg.sh != subsegloop.sh) && (testseg.sh[3] != NULL)) {
         shellfacedealloc(subsegpool, testseg.sh);
       }
       // Bonds the subface and the segment together.
-      ssbond(sface, subsegloop);
+      ssbond(f1->ss, subsegloop);
+      f1 = f1->nextitem;
     }
-    // Set connection between these faces.
-    sface = *(face *)(* sfacelist)[0];
-    for (k = 1; k <= sfacelist->len(); k++) {
-      if (k < sfacelist->len()) {
-        sface1 = *(face *)(* sfacelist)[k];
-      } else {
-        sface1 = *(face *)(* sfacelist)[0];    // Form a face loop.
-      }
+
+    // Create the face ring at the segment.
+    f1 = facelink;
+    for (k = 1; k <= flippool->items; k++) {
+      k < flippool->items ? f2 = f1->nextitem : f2 = facelink;
       if (b->verbose > 2) {
         printf("    Bond subfaces (%d, %d, %d) and (%d, %d, %d).\n",
-               pointmark(torg), pointmark(tdest), pointmark(sapex(sface)),
-               pointmark(torg), pointmark(tdest), pointmark(sapex(sface1)));
+               pointmark(torg), pointmark(tdest), pointmark(sapex(f1->ss)),
+               pointmark(torg), pointmark(tdest), pointmark(sapex(f2->ss)));
       }
-      sbond1(sface, sface1);
-      sface = sface1;
+      sbond1(f1->ss, f2->ss);
+      f1 = f2;
     }
 
     // Set the unique segment marker into the unified segment.
     shellmark(subsegloop) = segmarker;
     segmarker++;
-    sfacelist->clear();
+    // sfacelist->clear();
+    flippool->restart();
 
     subsegloop.sh = shellfacetraverse(subsegpool);
   }
 
   delete [] idx2faclist;
   delete [] facperverlist;
-  delete sfacelist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -406,9 +413,9 @@ void tetgenmesh::mergefacets()
 
 void tetgenmesh::meshsurface()
 {
-  list *ptlist, *conlist;
+  arraypool *ptlist, *conlist;
   point *idx2verlist;
-  point tstart, tend, *cons;
+  point tstart, tend, *pnewpt, *cons;
   tetgenio::facet *f;
   tetgenio::polygon *p;
   int *worklist;
@@ -419,9 +426,9 @@ void tetgenmesh::meshsurface()
     printf("Creating surface mesh.\n");
   }
 
-  // Initialize working lists.
-  ptlist = new list(sizeof(point *));
-  conlist = new list(sizeof(point *) * 2);
+  // Initialize dynamic arrays (length: 2^8 = 256).
+  ptlist = new arraypool(sizeof(point *), 8);
+  conlist = new arraypool(2 * sizeof(point *), 8);
   worklist = new int[pointpool->items + 1];
   for (i = 0; i < pointpool->items + 1; i++) worklist[i] = 0;
 
@@ -472,7 +479,8 @@ void tetgenmesh::meshsurface()
       tstart = idx2verlist[end1];
       // Add tstart to V if it haven't been added yet.
       if (worklist[end1] == 0) {
-        ptlist->append(&tstart);
+        ptlist->newindex((void **) &pnewpt);
+        *pnewpt = tstart;
         worklist[end1] = 1;
       }
       // Loop other vertices of this polygon.
@@ -495,11 +503,12 @@ void tetgenmesh::meshsurface()
             tend = idx2verlist[end2];
             // Add tstart to V if it haven't been added yet.
             if (worklist[end2] == 0) {
-              ptlist->append(&tend);
+              ptlist->newindex((void **) &pnewpt);
+              *pnewpt = tend;
               worklist[end2] = 1;
             }
             // Save the segment in S (conlist).
-            cons = (point *) conlist->append(NULL);
+            conlist->newindex((void **) &cons);
             cons[0] = tstart;
             cons[1] = tend;
             // Set the start for next continuous segment.
@@ -523,9 +532,9 @@ void tetgenmesh::meshsurface()
       }
     }
     // Unmark vertices.
-    for (i = 0; i < ptlist->len(); i++) {
-      tstart = * (point *) ptlist->get(i);
-      end1 = pointmark(tstart);
+    for (i = 0; i < ptlist->objects; i++) {
+      pnewpt = (point *) fastlookup(ptlist, i);
+      end1 = pointmark(*pnewpt);
       worklist[end1] = 0;
     }
 
@@ -533,9 +542,14 @@ void tetgenmesh::meshsurface()
     triangulate(shmark, ptlist, conlist, f->numberofholes, f->holelist);
 
     // Clear working lists.
-    ptlist->clear();
-    conlist->clear();
+    ptlist->restart();
+    conlist->restart();
   }
+
+  delete ptlist;
+  delete conlist;
+  delete [] worklist;
+  delete [] idx2verlist;
 
   // Remove redundant segments and build the face links.
   unifysegments();
@@ -552,11 +566,6 @@ void tetgenmesh::meshsurface()
 
   // The total number of iunput segments.
   insegments = subsegpool->items;
-
-  delete ptlist;
-  delete conlist;
-  delete [] worklist;
-  delete [] idx2verlist;
 }
 
 #endif // #ifndef surfaceCXX

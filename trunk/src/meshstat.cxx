@@ -316,14 +316,15 @@ void tetgenmesh::statistics()
   printf("  Mesh edges: %ld\n", meshedges);
 
   if (b->plc || b->refine) {
-    // printf("  Mesh boundary faces: %ld\n", subfaces->items);
-    // printf("  Mesh boundary edges: %ld\n\n", subsegs->items);
+    printf("  Mesh boundary faces: %ld\n", subfacepool->items);
+    printf("  Mesh boundary edges: %ld\n", subsegpool->items);
   } else {
-    printf("  Convex hull faces: %ld\n\n", hulltetrahedronpool->items);
+    printf("  Convex hull faces: %ld\n", hulltetrahedronpool->items);
   }
+  printf("\n");
+
   if (b->verbose > 0) {
     // qualitystatistics();
-    
     // Report memory usages.
     unsigned long totalmeshbytes;
     printf("Memory allocation statistics:\n\n");
@@ -331,14 +332,14 @@ void tetgenmesh::statistics()
     totalmeshbytes = pointpool->maxitems * pointpool->itembytes;
     printf("  Maximum number of tetrahedra: %ld\n", tetrahedronpool->maxitems);
     totalmeshbytes += tetrahedronpool->maxitems * tetrahedronpool->itembytes;
-    //if (subfaces != (memorypool *) NULL) {
-    //  printf("  Maximum number of subfaces: %ld\n", subfaces->maxitems);
-    //  totalmeshbytes += subfaces->maxitems * subfaces->itembytes;
-    //}
-    //if (subsegs != (memorypool *) NULL) {
-    //  printf("  Maximum number of segments: %ld\n", subsegs->maxitems);
-    //  totalmeshbytes += subsegs->maxitems * subsegs->itembytes;
-    //}
+    if (subfacepool != (memorypool *) NULL) {
+      printf("  Maximum number of subfaces: %ld\n", subfacepool->maxitems);
+      totalmeshbytes += subfacepool->maxitems * subfacepool->itembytes;
+    }
+    if (subsegpool != (memorypool *) NULL) {
+      printf("  Maximum number of segments: %ld\n", subsegpool->maxitems);
+      totalmeshbytes += subsegpool->maxitems * subsegpool->itembytes;
+    }
     printf("  Heap memory used by the mesh (K bytes): %g\n\n",
            ((double) totalmeshbytes) / 1024.0);
 
