@@ -583,6 +583,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
     fasttetrahedrondealloc(searchtet->tet);
     tetcount = 1;
+    flip14count++;
   } else if (loc == ONFACE) {
     // Add six adjacent boundary tets into list.
     for (i = 0; i < 3; i++) {
@@ -599,6 +600,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     fasttetrahedrondealloc(spintet.tet);
     fasttetrahedrondealloc(searchtet->tet);
     tetcount = 2;
+    flip26count++;
   } else if (loc == ONEDGE) {
     // Add all adjacent boundary tets into list.
     spintet = *searchtet;
@@ -620,60 +622,67 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       fasttetrahedrondealloc(spintet.tet);
       spintet = neightet;
     }
+    flipn2ncount++;
   }
 
-  // Form a star-shaped cavity with respect to the inserting point.
+  // Form the cavity by including tets from initial boundary.
   for (i = 0; i < cavetetlist->objects; i++) {
+    // 'cavetet' is actually an adjacent tet to the cavity.
     cavetet = (triface *) fastlookup(cavetetlist, i);
-    for (cavetet->loc = 0; cavetet->loc < 4; cavetet->loc++) {
-      sym(*cavetet, neightet);
-      // Do check if it is not deleted and not infected.
-      if ((neightet.tet[4] != NULL) && !infected(neightet)) {
-        enqflag = false;
-        pts = (point *) neightet.tet;
-        if (pts[7] != dummypoint) {
-          // A volume tet. Operate on it if it has not been tested yet.
-          if (!marktested(neightet)) {
-            if (bowyerwatson) {
-              // Use Bowyer-Watson algorithm, do Delaunay check.
-              sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
-              enqflag = (sign < 0.0);
-            }
-            marktest(neightet); // Only test it once.
+    // Do check if it is not deleted.
+    if (cavetet->tet[4] != NULL) {
+      // Check for two possible cases for this tet: 
+      //   (1) It is a cavity tet, or
+      //   (2) it is a cavity boundary face.
+      // In case (1), the three other faces of this tet are added into
+      //   'cavetetlist' for later checking (we use a bread-first search),
+      //   and this tet gets deleted.
+      enqflag = false;
+      pts = (point *) cavetet->tet;
+      if (pts[7] != dummypoint) {
+        // A volume tet. Operate on it if it has not been tested yet.
+        if (!marktested(*cavetet)) {
+          if (bowyerwatson) {
+            // Use Bowyer-Watson algorithm, do Delaunay check.
+            sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
+            enqflag = (sign < 0.0);
           }
-        } else {
-          // It is a hull tet. Check if its base face is visible by p. 
-          //   This happens when p lies outside the hull face.
-          ori = orient3d(pts[4], pts[5], pts[6], insertpt); orient3dcount++;
-          enqflag = (ori < 0.0);
-          // Check if this face is coplanar with p. This case may create
-          //   a degenerate tet (zero volume). 
-          // Note: for convex domain, it only happen at hull face.
-          if (ori == 0.0) copcount++;
+          marktest(*cavetet); // Only test it once.
         }
-        if (enqflag) {
-          // Found a tet in the cavity.
-          infect(neightet);
+      } else {
+        // It is a hull tet. Check if its base face is visible by p. 
+        //   This happens when p lies outside the hull face.
+        ori = orient3d(pts[4], pts[5], pts[6], insertpt); orient3dcount++;
+        enqflag = (ori < 0.0);
+        // Check if this face is coplanar with p. This case may create
+        //   a degenerate tet (zero volume). 
+        // Note: for convex domain, it only happen at hull face.
+        if (ori == 0.0) copcount++;
+      } // if (pts[7] != dummypoint)
+      if (enqflag) {
+        // Found a tet in the cavity. Put other three faces in check list.
+        for (j = 0; j < 3; j++) {
+          decode(cavetet->tet[locpivot[cavetet->loc][j]], neightet);
           cavetetlist->newindex((void **) &parytet);
           *parytet = neightet;
-        } else {
-          // Found a boundary face of the cavity. It may be a face of a hull
-          //   tet which contains 'dummypoint'. Choose the edge in the face 
-          //   such that its endpoints are not 'dummypoint', while its apex
-          //   may be 'dummypoint' (see Fig. 1.4).
-          neightet.ver = 4;
-          cavebdrylist->newindex((void **) &parytet);
-          *parytet = neightet;
         }
-      } // if (neightet.tet[4] != NULL)
-    } // for (cavetet->loc = 0;
-    // Delete the tet in the cavity.
-    tetrahedrondealloc(cavetet->tet);
-  } // for (i = 0;
+        fasttetrahedrondealloc(cavetet->tet);
+        tetcount++;
+      } else {
+        // Found a boundary face of the cavity. It may be a face of a hull
+        //   tet which contains 'dummypoint'. Choose the edge in the face 
+        //   such that its endpoints are not 'dummypoint', while its apex
+        //   may be 'dummypoint' (see Fig. 1.4).
+        cavetet->ver = 4;
+        cavebdrylist->newindex((void **) &parytet);
+        *parytet = *cavetet;
+      }
+    } // if (cavetet->tet[4] != NULL)
+  }
 
   if (b->verbose > 1) {
-    printf("    Size of the cavity: %d faces %d tets.\n",cavebdrylist->objects,
-           cavetetlist->objects);
+    printf("    Size of the cavity: %d faces %d tets.\n",
+           cavebdrylist->objects, tetcount);
   }
 
   totalbowatcavsize += cavebdrylist->objects;

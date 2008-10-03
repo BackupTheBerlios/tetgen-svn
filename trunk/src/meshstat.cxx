@@ -365,6 +365,9 @@ void tetgenmesh::statistics()
     if (b->bowyerwatson) {
       printf("  Total size of cavities (# tets): %ld\n", totalbowatcavsize);
       printf("  Maximal size of a single cavity: %ld\n", maxbowatcavsize);
+      printf("  Number of 1-to-4 flips: %ld\n", flip14count);
+      printf("  Number of 2-to-6 flips: %ld\n", flip26count);
+      printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
     } else {
       printf("  Number of 1-to-4 flips: %ld\n", flip14count);
       printf("  Number of 2-to-6 flips: %ld\n", flip26count);
