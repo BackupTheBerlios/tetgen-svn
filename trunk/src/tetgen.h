@@ -692,6 +692,13 @@ static int locver2nextf[32];
 static int locver2edge[4][6];
 static int edge2locver[6][2];
 
+// The map from a given face ('loc') to the other three faces in the tet.
+//   and the map from a given face's edge ('loc', 'ver') to other two
+//   faces in the tet opposite to this edge. (used in speeding the Bowyer-
+//   Watson cavity construction).
+static int locpivot[4][3];
+static int locverpivot[4][6][2];
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Mesh manipulation primitives                                              //
@@ -1317,7 +1324,6 @@ void makeindex2pointmap(point*&);
 void makesubfacemap(int*&, face*&);
 
 // fasttetrahedrondealloc() -- Dealloc a tetrahedron.
-
 #define fasttetrahedrondealloc(dyingtet) \
   (dyingtet)[4] = (tetrahedron) NULL; \
   pool = ((point) (dyingtet)[7] != dummypoint) ? \

@@ -510,7 +510,7 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   bool bowyerwatson)
 {
-  triface *cavetet, *parytet, neightet, newtet;
+  triface *cavetet, *parytet, spintet, neightet, newtet;
   point *pts;
   enum locateresult loc;
   REAL sign, ori;
@@ -519,6 +519,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   int copcount;
   int i, j;
 
+  memorypool *pool;
+  tetrahedron ptr;
   int *iptr;
 
   // clock_t loc_start, loc_end;
@@ -566,29 +568,57 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     return;
   }
 
-  // The number of coplanar cavity boundary face.
-  copcount = 0;
+  tetcount = 0l;  // The number of deallocated tets.
+  copcount = 0;  // The number of coplanar cavity boundary face.
 
   // loc_start = clock();
 
-  // Add the searchtet into list.
-  infect(*searchtet);
-  cavetetlist->newindex((void **) &parytet);
-  *parytet = *searchtet;
-  if (loc == ONFACE) {
-    // Add its neighbor tet into list.
-    sym(*searchtet, neightet);
-    infect(neightet);
-    cavetetlist->newindex((void **) &parytet);
-    *parytet = neightet;
-  } else if (loc == ONEDGE) {
-    // Add all tets sharing its edge into list.
-    fnext(*searchtet, neightet);
-    while (neightet.tet != searchtet->tet) {
-      infect(neightet);
+  // Create the initial boundary of the cavity.
+  if (loc == INTET || loc == OUTSIDE) {
+    // Add four adjacent boundary tets into list.
+    for (i = 0; i < 4; i++) {
+      decode(searchtet->tet[i], neightet);
       cavetetlist->newindex((void **) &parytet);
       *parytet = neightet;
-      fnextself(neightet);
+    }
+    fasttetrahedrondealloc(searchtet->tet);
+    tetcount = 1;
+  } else if (loc == ONFACE) {
+    // Add six adjacent boundary tets into list.
+    for (i = 0; i < 3; i++) {
+      decode(searchtet->tet[locpivot[searchtet->loc][i]], neightet);
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = neightet;
+    }
+    decode(searchtet->tet[searchtet->loc], spintet);
+    for (i = 0; i < 3; i++) {
+      decode(spintet.tet[locpivot[spintet.loc][i]], neightet);
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = neightet;
+    }
+    fasttetrahedrondealloc(spintet.tet);
+    fasttetrahedrondealloc(searchtet->tet);
+    tetcount = 2;
+  } else if (loc == ONEDGE) {
+    // Add all adjacent boundary tets into list.
+    spintet = *searchtet;
+    tetcount = 0;
+    do {
+      fnextself(spintet);
+      tetcount++;
+      decode(spintet.tet[locverpivot[spintet.loc][spintet.ver][0]], neightet);
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = neightet;
+      decode(spintet.tet[locverpivot[spintet.loc][spintet.ver][1]], neightet);
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = neightet;
+    } while (spintet.tet != searchtet->tet);
+    // Delete old tets in the cavity.
+    spintet = *searchtet;
+    for (i = 0; i < tetcount; i++) {
+      fnext(spintet, neightet);
+      fasttetrahedrondealloc(spintet.tet);
+      spintet = neightet;
     }
   }
 
