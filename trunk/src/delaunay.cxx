@@ -690,8 +690,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     maxbowatcavsize = cavebdrylist->objects;
   }
   
-  // Create new tetrahedra in the Bowyer-Watson cavity. Connect them to the
-  //   tetrahedra at outside of the cavity.
+  // Create new tetrahedra in the Bowyer-Watson cavity and Connect them.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
     neightet = *cavetet;
@@ -713,13 +712,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       // Note: the cavity boundary face is at the enext0fnext place.
       enext0fnextself(newtet);
     }
-    // Connect newtet <==> neightet, this also disconnect the old bond at
-    //   neightet (while cavetet still holds a pointer to neightet).
+    // Connect newtet <==> neightet, this also disconnect the old bond.
     bond(newtet, neightet);
     // Replace the old boundary face with the new tet in list.
     *cavetet = newtet;
   }
-  
+
   // Connect the set of new tetrahedra together.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);

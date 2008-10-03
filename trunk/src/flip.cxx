@@ -1228,7 +1228,8 @@ void tetgenmesh::lawsonflip3d()
   }
 
   if (b->verbose > 1) {
-    printf("    %ld flips.\n", flip23count + flip32count - flipcount);
+    printf("    %ld stacked faces, %ld flips.\n", flippool->items,
+      flip23count + flip32count - flipcount);
   }
 
   flippool->restart();
