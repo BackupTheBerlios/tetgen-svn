@@ -376,8 +376,7 @@ void tetgenmesh::statistics()
       printf("  Number of n-to-m flips: %ld\n", flipnmcount);
       printf("  Number of 2-to-3 flips: %ld\n", flip23count);
       printf("  Number of 3-to-2 flips: %ld\n", flip32count);
-      printf("  Number of total primitive flips: %ld\n",
-             flip23count + flip32count);
+      printf("  Number of primitive flips: %ld\n", flip23count + flip32count);
     }
     if (b->plc) {
       printf("  Number of 2-to-2 flips: %ld\n", flip22count);

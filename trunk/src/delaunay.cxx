@@ -516,8 +516,10 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   REAL sign, ori;
   long tetcount;
   bool enqflag;
-  int copcount;
   int i, j;
+
+  badface *newflip, *lastflip;  // for bowyerwatson
+  triface fliptets[4];
 
   tetrahedron ptr;
   int *iptr;
@@ -567,10 +569,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     return;
   }
 
-  tetcount = 0l;  // The number of deallocated tets.
-  copcount = 0;  // The number of coplanar cavity boundary face.
-
   // loc_start = clock();
+
+  tetcount = 0l;  // The number of deallocated tets.
 
   // Create the initial boundary of the cavity.
   if (loc == INTET || loc == OUTSIDE) {
@@ -656,7 +657,18 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         // Check if this face is coplanar with p. This case may create
         //   a degenerate tet (zero volume). 
         // Note: for convex domain, it only happen at hull face.
-        if (ori == 0.0) copcount++;
+        if (bowyerwatson && (ori == 0.0)) {
+          newflip = (badface *) flippool->alloc();
+          newflip->tt = *cavetet; // Queue the adjacent tet (not in cavity).
+          newflip->tt.loc = 0; // Must be at the base face.
+          newflip->nextitem = NULL;
+          if (futureflip == NULL) {
+            lastflip = futureflip = newflip;
+          } else {
+            lastflip->nextitem = newflip;
+            lastflip = newflip;
+          }
+        }
       } // if (pts[7] != dummypoint)
       if (enqflag) {
         // Found a tet in the cavity. Put other three faces in check list.
@@ -743,93 +755,67 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   // Set a handle for the point location.
   recenttet = * (triface *) fastlookup(cavebdrylist, 0);
-  
-  // There may exist degenerate tetrahedra. Check and remove them.
-  if (bowyerwatson && (copcount > 0)) {
-    badface *newflip, *lastflip;
-    triface fliptets[4];
-    tetrahedron ptr;
 
-    futureflip = (badface *) NULL;
-    
-    // Queue all degenerate tets.
-    for (i = 0; i < cavebdrylist->objects; i++) {
-      cavetet = (triface *) fastlookup(cavebdrylist, i);
-      pts = (point *) cavetet->tet;
-      if (pts[7] != dummypoint) {
-        // Check if the new tet is degenerate.
-        ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
-        if (ori == 0) {
+  if (bowyerwatson && (futureflip != NULL)) {
+    // There may exist degenerate tets. Check and remove them.
+    while (futureflip != NULL) {
+      // Dequeued an adjacent tet to the cavity.
+      fliptets[0] = futureflip->tt;
+      futureflip = futureflip->nextitem;
+
+      // Skip it if it is dead (by previous flip32s).
+      if (fliptets[0].tet[4] == NULL) continue;
+
+      // The possible degenerate tet, check it.
+      symself(fliptets[0]); 
+      pts = (point *) fliptets[0].tet;
+      ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
+      
+      if (ori == 0) {
+        if (b->verbose > 1) {
+          printf("    Removing tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+            pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
+        }
+        // Find the hull edge in cavetet.
+        fliptets[0].ver = 0;
+        for (j = 0; j < 3; j++) {
+          enext0fnext(fliptets[0], neightet);
+          symself(neightet);
+          if ((point) neightet.tet[7] == dummypoint) break;
+          enextself(fliptets[0]);
+        }
+        // Because of existing multiple degenerate cases. It is possible
+        //   that the other hull face is not pop yet.
+        if (j < 3) {
+          // Collect tets for flipping the edge.
+          for (j = 0; j < 3; j++) {
+            fnext(fliptets[j], fliptets[j + 1]);
+          }
+          if (fliptets[3].tet != fliptets[0].tet) {
+            printf("Internal error in insertvertex(): Unknown flip case.\n");
+            terminatetetgen(1);
+          }
+          // Do a 3-to-2 flip to remove the degenerate tet.
+          flip32(fliptets, 0);
+          // Rememebr the new tet.
+          recenttet = fliptets[0];
+        } else {
+          // Put the face back into queue.
+          symself(fliptets[0]);
+          newflip = (badface *) flippool->alloc();
+          newflip->tt = fliptets[0]; // the adjacent tet (not in cavity).
+          newflip->nextitem = NULL;
           if (futureflip == NULL) {
-            futureflip = (badface *) flippool->alloc();
-            futureflip->tt = *cavetet;
-            futureflip->nextitem = NULL;
-            lastflip = futureflip;
+            lastflip = futureflip = newflip;
           } else {
-            newflip = (badface *) flippool->alloc();
-            newflip->tt = *cavetet;
-            newflip->nextitem = NULL;
             lastflip->nextitem = newflip;
             lastflip = newflip;
           }
-        }
-      }
+        } // if (j < 3)
+      } // if (ori == 0)
     }
-
-    if (b->verbose > 1) {
-      printf("    Found %ld degenerate tets.\n", flippool->items);
-    }
-
-    while (futureflip != NULL) {
-      fliptets[0] = futureflip->tt;
-      futureflip = futureflip->nextitem;
-      if (b->verbose > 1) {
-        pts = (point *) fliptets[0].tet;
-        printf("    Removing tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
-          pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
-      }
-      // Find the hull edge in cavetet.
-      fliptets[0].ver = 0;
-      for (j = 0; j < 3; j++) {
-        enext0fnext(fliptets[0], neightet);
-        symself(neightet);
-        if ((point) neightet.tet[7] == dummypoint) break;
-        enextself(fliptets[0]);
-      }
-      // Because of existing multiple degenerate cases. It is possible
-      //   that the other hull face is not pop yet.
-      if (j < 3) {
-        // Collect tets for flipping the edge.
-        for (j = 0; j < 3; j++) {
-          fnext(fliptets[j], fliptets[j + 1]);
-        }
-        if (fliptets[3].tet != fliptets[0].tet) {
-          printf("Internal error in insertvertex(): Unknown flip case.\n");
-          terminatetetgen(1);
-        }
-        // Do a 3-to-2 flip to remove the degenerate tet.
-        flip32(fliptets, 0);
-        // Rememebr the new tet.
-        recenttet = fliptets[0];
-      } else {
-        // Put the face back into queue.
-        if (futureflip == NULL) {
-          futureflip = (badface *) flippool->alloc();
-          futureflip->tt = fliptets[0];
-          futureflip->nextitem = NULL;
-          lastflip = futureflip;
-        } else {
-          newflip = (badface *) flippool->alloc();
-          newflip->tt = fliptets[0];
-          lastflip->nextitem = newflip;
-          newflip->nextitem = NULL;
-          lastflip = newflip;
-        }
-      } // if (j < 3)
-    }
-
     flippool->restart();
-  } // if (bowyerwatson && (copcount > 0))
+  }
 
   // Set the point type.
   if (pointtype(insertpt) == UNUSEDVERTEX) {
