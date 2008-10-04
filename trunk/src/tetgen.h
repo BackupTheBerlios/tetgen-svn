@@ -1028,6 +1028,8 @@ void bond(triface& t1, triface& t2) {
 
 #define sapex(s) (point) (s).sh[va[(s).shver] + 3]
 
+#define setsdest(s, p) (s).sh[vd[(s).shver] + 3] = (shellface) (p)
+
 #define setsapex(s, p) (s).sh[va[(s).shver] + 3] = (shellface) (p)
 
 #define setshvertices(s, p1, p2, p3) \

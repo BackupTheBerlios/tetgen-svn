@@ -46,8 +46,8 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
   pc = sapex(*splitface);
 
   if (b->verbose > 1) {
-    printf("    flip 1-to-3: (%d, %d, %d)\n", pointmark(pa), pointmark(pb),
-      pointmark(pc));
+    printf("    flip 1-to-3: %d, (%d, %d, %d)\n", pointmark(newpt),
+      pointmark(pa), pointmark(pb), pointmark(pc));
   }
   flip13count++;
 
@@ -100,6 +100,183 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
       futureflip = flipshpush(futureflip, &bdedges[i]);
     }
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// flipn2nf()    Insert a vertex by transforming n-to-2n subfaces.           //
+//                                                                           //
+// The 'newpt'(p) lies on the edge (ab) of 'splitedge'(abc). Let the n faces //
+// containing ab be: abp[0], ..., abp[n-1], use an array 'flipfaces':  flip- //
+// faces[0], ..., flipfaces[n-1], to store them.  This routine removes the n //
+// subfaces and replaces them with 2n new subfaces: app[0], ..., app[n-1] (  //
+// (at top), pbp[0], ..., pbp[n-1] (at bottom), respectively.  On return,    //
+// 'splitedge' is apc.                                                       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
+{
+  face *abdedges, *aoutfaces, *ainfaces;
+  face *bbdedges, *boutfaces, *binfaces;
+  face aseg, bseg, aoutseg, boutseg;
+  face checkface, checkseg;
+  point pa, pb, *pt;
+  int n, i;
+
+  shellface sptr;
+
+  splitedge->shver &= ~1;  // Stay in the 0th edge ring.
+
+  // Count the number of faces at ab.
+  n = 0;
+  checkface = *splitedge;
+  do {
+    spivotself(checkface);
+    n++;
+  } while (checkface.sh != splitedge->sh);
+
+  // Allocate spaces.
+  abdedges = new face[n];
+  aoutfaces = new face[n];
+  ainfaces = new face[n];
+  bbdedges = new face[n];
+  boutfaces = new face[n];
+  binfaces = new face[n];
+  pt = new point[n];
+
+  // Collect the faces, abp[0], ..., abp[n-1].
+  abdedges[0] = *splitedge;
+  pt[0] = sapex(abdedges[0]);
+  for (i = 0; i < n - 1; i++) {
+    spivot(abdedges[i], abdedges[i + 1]);
+    pt[i + 1] = sapex(abdedges[i + 1]);
+  }
+
+  pa = sorg(*splitedge);
+  pb = sdest(*splitedge);
+
+  if (b->verbose > 1) {
+    printf("    flip n-to-2n: %d, (%d, %d) %d %d ... (%d faces) \n", 
+      pointmark(newpt), pointmark(pa), pointmark(pb), pointmark(pt[0]), 
+      pointmark(pt[1]), n);
+  }
+  flipn2nfcount++;
+
+  // Get the old boundary edges: p[i]a, bp[i], i = 0, ..., n-1
+  for (i = 0; i < n; i++) {
+    senext(abdedges[i], bbdedges[i]);
+    senext2self(abdedges[i]);
+  }
+
+  // Collect outer boundary faces.
+  for (i = 0; i < n; i++) {
+    spivot(abdedges[i], aoutfaces[i]);
+    ainfaces[i] = aoutfaces[i];
+    sspivot(abdedges[i], checkseg);
+    if (checkseg.sh != NULL) {
+      spivot(ainfaces[i], checkface);
+      while (checkface.sh != abdedges[i].sh) {
+        ainfaces[i] = checkface;
+        spivot(ainfaces[i], checkface);
+      }
+    }
+  }
+  for (i = 0; i < n; i++) {
+    spivot(bbdedges[i], boutfaces[i]);
+    binfaces[i] = boutfaces[i];
+    sspivot(bbdedges[i], checkseg);
+    if (checkseg.sh != NULL) {
+      spivot(binfaces[i], checkface);
+      while (checkface.sh != bbdedges[i].sh) {
+        binfaces[i] = checkface;
+        spivot(binfaces[i], checkface);
+      }
+    }
+  }
+
+  // We need n new subfaces.
+  for (i = 0; i < n; i++) {
+    makeshellface(subfacepool, &(bbdedges[i]));
+  }
+
+  // Insert the new point p.
+  for (i = 0; i < n; i++) {
+    setsapex(abdedges[i], newpt);  // ap[i]b->ap[i]p.
+  }
+  for (i = 0; i < n; i++) {
+    setshvertices(bbdedges[i], pb, pt[i], newpt); // bp[i]p.
+  }
+
+  // Connect boundary edges to outer boundary faces.
+  for (i = 0; i < n; i++) {
+    sbond1(abdedges[i], aoutfaces[i]);
+    sbond1(ainfaces[i], abdedges[i]);
+    sspivot(aoutfaces[i], checkseg); // checkseg may be NULL.
+    ssbond(abdedges[i], checkseg); // Clear the old bond as well.
+  }
+  for (i = 0; i < n; i++) {
+    sbond1(bbdedges[i], boutfaces[i]);
+    sbond1(binfaces[i], bbdedges[i]);
+    sspivot(boutfaces[i], checkseg); // checkseg may be NULL.
+    ssbond(bbdedges[i], checkseg); // Clear the old bond as well.
+  }
+
+  // Connect new subfaces to updated subfaces. (Reuse aoutfaces, boutfaces).
+  for (i = 0; i < n; i++) {
+    senext2(abdedges[i], aoutfaces[i]);
+    senext(bbdedges[i], boutfaces[i]);
+    sbond2(aoutfaces[i], boutfaces[i]);
+  }
+
+  // Create new subfaces ring at edge pb.
+  for (i = 0; i < n; i++) {
+    senext2(bbdedges[i], boutfaces[i]);
+    senext2(bbdedges[(i + 1) % n], boutfaces[(i + 1) % n]);
+    sbond1(boutfaces[i], boutfaces[(i + 1) % n]);
+  }
+
+  // Check edge ab to see if it is a subsegment.
+  sspivot(*splitedge, aseg);
+  if (aseg.sh != NULL) {
+    // Split a subsegment ab to ap and pb.
+    if (sorg(aseg) != pa) sesymself(aseg);
+    if (b->verbose > 1) {
+      printf("    flip 1-to-2: %d, (%d, %d).\n", pointmark(newpt), 
+        pointmark(pa), pointmark(pb));
+    }
+    // We need a new subsegment.
+    makeshellface(subfacepool, &bseg);
+    // Insert the new point p.
+    setsdest(aseg, newpt);
+    setshvertices(bseg, pb, newpt, NULL);
+    // Connect ap <-> pb.
+    senext(aseg, aoutseg);
+    senext2(bseg, boutseg);
+    sbond2(aoutseg, boutseg);
+    // Connect pb to subfaces (in boutfaces[i]) having it.
+    for (i = 0; i < n; i++) {
+      ssbond(boutfaces[i], bseg);
+    }
+  }
+
+  if (flipflag) {
+    // Put the boundary edges into flip stack.
+    for (i = 0; i < n; i++) {
+      futureflip = flipshpush(futureflip, &abdedges[i]);
+    }
+    for (i = 0; i < n; i++) {
+      futureflip = flipshpush(futureflip, &bbdedges[i]);
+    }
+  }
+
+  delete [] abdedges;
+  delete [] aoutfaces;
+  delete [] ainfaces;
+  delete [] bbdedges;
+  delete [] boutfaces;
+  delete [] binfaces;
+  delete [] pt;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
