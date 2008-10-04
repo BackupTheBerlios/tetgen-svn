@@ -787,19 +787,19 @@ void tetgenmesh::makeshellface(memorypool* pool, face* newsh)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::makepoint(point* pnewpoint)
+void tetgenmesh::makepoint(point* pnewpt)
 {
-  int ptmark, i;
+  int i;
 
-  *pnewpoint = (point) pointpool->alloc();
+  *pnewpt = (point) pointpool->alloc();
   // Initialize the list of coordinates and user-defined attributes.
   for (i = 0; i < 4 + in->numberofpointattributes; i++) {
-    (*pnewpoint)[i] = 0.0;
+    (*pnewpt)[i] = 0.0;
   }
   // Initialize the point marker (starting from in->firstnumber).
-  ptmark = (int) pointpool->items - (in->firstnumber == 1 ? 0 : 1);
-  pointmark(*pnewpoint) = ptmark;
-  pointtype(*pnewpoint) = UNUSEDVERTEX;
+  pointmark(*pnewpt) = (int) pointpool->items - (in->firstnumber ? 0 : 1);
+  point2tet(*pnewpt) = NULL;
+  pointtype(*pnewpt) = UNUSEDVERTEX;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -816,6 +816,10 @@ void tetgenmesh::makeindex2pointmap(point*& idx2ptmap)
 {
   point pt;
   int idx;
+
+  if (b->verbose) {
+    printf("  Making a map from indices to points.\n");
+  }
 
   idx2ptmap = new point[pointpool->items + 1];
   pointpool->traversalinit();
@@ -845,6 +849,10 @@ void tetgenmesh::makesubfacemap(int*& idx2faclist, face*& facperverlist)
 {
   face shloop;
   int i, j, k;
+
+  if (b->verbose) {
+    printf("  Making a map from points to subfaces.\n");
+  }
 
   // Initialize 'idx2faclist'.
   idx2faclist = new int[pointpool->items + 1];
@@ -892,6 +900,38 @@ void tetgenmesh::makesubfacemap(int*& idx2faclist, face*& facperverlist)
     idx2faclist[i + 1] = idx2faclist[i];
   }
   idx2faclist[0] = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// makepoint2tetmap()    Make a map from points to tetrahedra.               //
+//                                                                           //
+// Traverses all the tetrahedra,  provides each corner of each tetrahedron   //
+// with a pointer to that tetrahedera.  Some pointers will be overwritten by //
+// other pointers because each point may be a corner of several tetrahedra,  //
+// but in the end every point will point to a tetrahedron that contains it.  //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::makepoint2tetmap()
+{
+  tetrahedron *tptr;
+  point *pt;
+
+  if (b->verbose) {
+    printf("  Making a map from points to tetrahedra.\n");
+  }
+
+  tetrahedronpool->traversalinit();
+  tptr = tetrahedrontraverse();
+  while (tptr != (tetrahedron *) NULL) {
+    pt  = (point *) tptr;
+    point2tet(pt[4]) = (tetrahedron) tptr;
+    point2tet(pt[5]) = (tetrahedron) tptr;
+    point2tet(pt[6]) = (tetrahedron) tptr;
+    point2tet(pt[7]) = (tetrahedron) tptr;
+    tptr = tetrahedrontraverse();
+  }
 }
 
 #endif // #ifndef memorypoolCXX

@@ -548,8 +548,8 @@ enum wordtype {POINTER, FLOATINGPOINT};
 
 // Labels that signify the type of a vertex. 
 
-enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, NACUTEVERTEX, 
-  ACUTEVERTEX, FREESEGVERTEX, FREESUBVERTEX, FREEVOLVERTEX, DEADVERTEX};
+enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, RIDGEVERTEX, 
+  ACUTEVERTEX, FACETVERTEX, STEINERVERTEX, DEADVERTEX};
 
 // Labels that signify the result of point location.
 
@@ -1301,7 +1301,7 @@ long dupverts, meshedges, insegments;
 int checkconstraints, checksubfaces, checksubsegs, checkpbcs;
 
 // Algorithm statistical counters.
-long ptloc_count, ptloc_max_count;  
+long ptloc_count, ptloc_max_count;
 long orient3dcount;
 long inspherecount, insphere_sos_count;
 long maxbowatcavsize, totalbowatcavsize;
@@ -1309,6 +1309,7 @@ long flip14count, flip26count, flipn2ncount;
 long flip23count, flip32count, flipnmcount;
 long flip13count, flip22count, flipn2nfcount;
 REAL tloctime, tfliptime, tinserttime;
+long force_ptloc_count;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1330,6 +1331,7 @@ void makeshellface(memorypool*, face*);
 void makepoint(point*);
 void makeindex2pointmap(point*&);
 void makesubfacemap(int*&, face*&);
+void makepoint2tetmap();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1434,6 +1436,7 @@ void meshsurface();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+bool insertsegment(face* insseg);
 void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1504,6 +1507,7 @@ void initialize()
   flip23count = flip32count = flipnmcount = 0l;
   flip13count = flip22count = flipn2nfcount = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
+  force_ptloc_count = 0l;
 }
 
 void deinitialize()

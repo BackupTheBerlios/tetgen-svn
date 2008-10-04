@@ -308,12 +308,12 @@ void tetgenmesh::mergefacets()
             j = pointmark(eorg);
             segspernodelist[j]--;
             if (segspernodelist[j] == 0) {
-              pointtype(eorg) = FREESUBVERTEX;
+              pointtype(eorg) = FACETVERTEX;
             }
             j = pointmark(edest);
             segspernodelist[j]--;
             if (segspernodelist[j] == 0) {
-              pointtype(edest) = FREESUBVERTEX;
+              pointtype(edest) = FACETVERTEX;
             }
             // Add the edge to flip stack.
             futureflip = flipshpush(futureflip, &parentsh);
