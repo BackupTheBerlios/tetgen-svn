@@ -1234,7 +1234,7 @@ void bond(triface& t1, triface& t2) {
     
 #define point2tet(pt) ((tetrahedron *) (pt))[point2tetindex]
     
-#define point2ppt(pt) ((point *) (pt))[point2tetindex + 1]
+#define point2ppt(pt) ((point *) (pt))[point2tetindex]
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1264,7 +1264,7 @@ tetgenbehavior *b;
 
 // Pools of tetrahedra, hull tetrahedra, points, etc.
 memorypool *tetrahedronpool, *hulltetrahedronpool;
-memorypool *subfacepool, *subsegpool;
+memorypool *subfacepool, *subsegpool, *tet2subpool;
 memorypool *pointpool;
 memorypool *flippool;
 
@@ -1430,6 +1430,14 @@ void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// Segment recovery routines.                                                //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void delaunizesegments();
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // Mesh input & output functions.                                            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1468,11 +1476,12 @@ void statistics();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-tetgenmesh() {
+void initialize()
+{
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
   tetrahedronpool = hulltetrahedronpool = (memorypool *) NULL;
-  subfacepool = subsegpool = (memorypool *) NULL;
+  subfacepool = subsegpool = tet2subpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
   flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;
@@ -1497,7 +1506,8 @@ tetgenmesh() {
   tloctime = tfliptime = tinserttime = 0.0;
 }
 
-~tetgenmesh() {
+void deinitialize()
+{
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
   if (tetrahedronpool != (memorypool *) NULL) {
@@ -1507,6 +1517,9 @@ tetgenmesh() {
   if (subfacepool != (memorypool *) NULL) {
     delete subfacepool;
     delete subsegpool;
+  }
+  if (tet2subpool != (memorypool *) NULL) {
+    delete tet2subpool;
   }
   if (pointpool != (memorypool *) NULL) {
     delete pointpool;
@@ -1522,6 +1535,16 @@ tetgenmesh() {
     delete cavebdrylist;
   }
   futureflip = (badface *) NULL;
+}
+
+tetgenmesh() 
+{
+  initialize();
+}
+
+~tetgenmesh() 
+{
+  deinitialize();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

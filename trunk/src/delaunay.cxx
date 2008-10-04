@@ -918,7 +918,7 @@ void tetgenmesh::incrementaldelaunay()
   int randindex, i, j;
 
   if (!b->quiet) {
-    printf("Creating Delaunay tetrahedralization.\n");
+    printf("Delaunizing vertices.\n");
   }
 
   // Form a random permuation (uniformly at random) of the set of vertices.
