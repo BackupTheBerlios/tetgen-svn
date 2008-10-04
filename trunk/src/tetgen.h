@@ -1028,6 +1028,8 @@ void bond(triface& t1, triface& t2) {
 
 #define sapex(s) (point) (s).sh[va[(s).shver] + 3]
 
+#define setsapex(s, p) (s).sh[va[(s).shver] + 3] = (shellface) (p)
+
 #define setshvertices(s, p1, p2, p3) \
   (s).sh[vo[(s).shver] + 3] = (shellface) (p1); \
   (s).sh[vd[(s).shver] + 3] = (shellface) (p2); \
@@ -1299,7 +1301,8 @@ long orient3dcount;
 long inspherecount, insphere_sos_count;
 long maxbowatcavsize, totalbowatcavsize;
 long flip14count, flip26count, flipn2ncount;
-long flip23count, flip32count, flipnmcount, flip22count;
+long flip23count, flip32count, flipnmcount;
+long flip13count, flip22count, flipn2nfcount;
 REAL tloctime, tfliptime, tinserttime;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1377,6 +1380,8 @@ REAL incircle3d(point pa, point pb, point pc, point pd, REAL tol);
 ///////////////////////////////////////////////////////////////////////////////
 
 badface* flipshpush(badface* flipstack, face* flipedge);
+void flip13(point newpt, face* splitface, int flipflag);
+void flipn2nf(point newpt, face* splitedge, int flipflag);
 void flip22(face* flipfaces, int flipflag);
 void lawsonflip();
 
@@ -1491,7 +1496,8 @@ tetgenmesh() {
   inspherecount = insphere_sos_count = 0l;
   maxbowatcavsize = totalbowatcavsize = 0l;
   flip14count = flip26count = flipn2ncount = 0l;
-  flip23count = flip32count = flipnmcount = flip22count = 0l;
+  flip23count = flip32count = flipnmcount = 0l;
+  flip13count = flip22count = flipn2nfcount = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
 }
 

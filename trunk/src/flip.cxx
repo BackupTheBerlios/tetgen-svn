@@ -24,6 +24,86 @@ tetgenmesh::badface* tetgenmesh::flipshpush(badface* flipstack, face* flipedge)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// flip13()    Insert a vertex by transforming 1-to-3 subfaces.              //
+//                                                                           //
+// 'newpt' (p) lies in the interior of 'splitface' (abc).  This routine del- //
+// ete abc and replaces it by three subfaces: abp, bcp, and cap, respective- //
+// ly.  Return abp in 'splitface'.                                           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
+{
+  face bdedges[3], outfaces[3], infaces[3];
+  face checkface, checkseg;
+  point pa, pb, pc;
+  int i;
+
+  splitface->shver &= ~1;  // Stay in the 0th edge ring.
+
+  pa = sorg(*splitface);
+  pb = sdest(*splitface);
+  pc = sapex(*splitface);
+
+  if (b->verbose > 1) {
+    printf("    flip 1-to-3: (%d, %d, %d)\n", pointmark(pa), pointmark(pb),
+      pointmark(pc));
+  }
+  flip13count++;
+
+  // Get the old boundary edges: ab, bc, and ca.
+  bdedges[0] = *splitface;
+  senext(*splitface, bdedges[1]);
+  senext2(*splitface, bdedges[2]);
+
+  // Collect outer boundary faces.
+  for (i = 0; i < 3; i++) {
+    spivot(bdedges[i], outfaces[i]);
+    infaces[i] = outfaces[i];
+    sspivot(bdedges[i], checkseg);
+    if (checkseg.sh != NULL) {
+      spivot(infaces[i], checkface);
+      while (checkface.sh != bdedges[i].sh) {
+        infaces[i] = checkface;
+        spivot(infaces[i], checkface);
+      }
+    }
+  }
+
+  // We need two new subfaces.
+  makeshellface(subfacepool, &(bdedges[1]));
+  makeshellface(subfacepool, &(bdedges[2]));
+
+  // Insert the new point p.
+  setsapex(bdedges[0], newpt);  // abc->abp.
+  setshvertices(bdedges[1], pb, pc, newpt); // bcp.
+  setshvertices(bdedges[2], pc, pa, newpt); // cap.
+
+  // Connect boundary edges to outer boundary faces.
+  for (i = 0; i < 3; i++) {
+    sbond1(bdedges[i], outfaces[i]);
+    sbond1(infaces[i], bdedges[i]);
+    sspivot(outfaces[i], checkseg); // checkseg may be NULL.
+    ssbond(bdedges[i], checkseg); // Clear the old bond as well.
+  }
+
+  // Connect the three subfaces together. (Re-use outfaces[i]).
+  for (i = 0; i < 3; i++) {
+    senext(bdedges[i], outfaces[i]);
+    senext2(bdedges[(i + 1) % 3], outfaces[(i + 1) % 3]);
+    sbond2(outfaces[i], outfaces[(i + 1) % 3]);
+  }
+
+  if (flipflag) {
+    // Put the boundary edges into flip stack.
+    for (i = 0; i < 3; i++) {
+      futureflip = flipshpush(futureflip, &bdedges[i]);
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // flip22()    Remove an edge by transforming 2-to-2 subfaces.               //
 //                                                                           //
 // 'flipfaces' contains two faces: abc and bad. This routine removes these 2 //
