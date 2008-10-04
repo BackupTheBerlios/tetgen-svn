@@ -570,15 +570,12 @@ enum locateresult {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 ///////////////////////////////////////////////////////////////////////////////
 
 // The tetrahedron data structure.  
-
 typedef REAL **tetrahedron;
 
 // The shellface data structure. 
-
 typedef REAL **shellface;
 
 // The point data structure.  
-
 typedef REAL *point;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -643,6 +640,137 @@ class face {
   }
   bool operator==(face& s) {return (sh == s.sh) && (shver == s.shver);}
   bool operator!=(face& s) {return (sh != s.sh) || (shver != s.shver);}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Arraypool    A dynamic array                                              //
+//                                                                           //
+// Each arraypool contains an array of pointers to a number of blocks.  Each //
+// block contains the same fixed number of objects.  Each index of the array //
+// addesses a particular object in the pool.  The most significant bits add- //
+// ress the index of the block containing the object. The less significant   //
+// bits address this object within the block.                                //
+//                                                                           //
+// 'objectbytes' is the size of one object in blocks; 'log2objectsperblock'  //
+// is the base-2 logarithm of 'objectsperblock'; 'objects' counts the number //
+// of allocated objects; 'totalmemory' is the totoal memorypool in bytes.    //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+class arraypool {
+
+  public:
+
+  int objectbytes;
+  int objectsperblock;
+  int log2objectsperblock; 
+  int toparraylen;
+  char **toparray;
+  unsigned long objects;
+  unsigned long totalmemory;
+
+  void restart();
+  void poolinit(int sizeofobject, int log2objperblk);
+  char* getblock(int objectindex);
+  void* lookup(int objectindex);
+  int newindex(void **newptr);
+
+  arraypool(int sizeofobject, int log2objperblk);
+  ~arraypool();
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Memorypool    A dynamic pool of memory                                    //
+//                                                                           //
+// A type used to allocate memory written by J. Shewchuk.                    //
+//                                                                           //
+// firstblock is the first block of items. nowblock is the block from which  //
+//   items are currently being allocated. nextitem points to the next slab   //
+//   of free memory for an item. deaditemstack is the head of a linked list  //
+//   (stack) of deallocated items that can be recycled.  unallocateditems is //
+//   the number of items that remain to be allocated from nowblock.          //
+//                                                                           //
+// Traversal is the process of walking through the entire list of items, and //
+//   is separate from allocation.  Note that a traversal will visit items on //
+//   the "deaditemstack" stack as well as live items.  pathblock points to   //
+//   the block currently being traversed.  pathitem points to the next item  //
+//   to be traversed.  pathitemsleft is the number of items that remain to   //
+//   be traversed in pathblock.                                              //
+//                                                                           //
+// itemwordtype is set to POINTER or FLOATINGPOINT, and is used to suggest   //
+//   what sort of word the record is primarily made up of.  alignbytes       //
+//   determines how new records should be aligned in memory.  itembytes and  //
+//   itemwords are the length of a record in bytes (after rounding up) and   //
+//   words.  itemsperblock is the number of items allocated at once in a     //
+//   single block.  items is the number of currently allocated items.        //
+//   maxitems is the maximum number of items that have been allocated at     //
+//   once; it is the current number of items plus the number of records kept //
+//   on deaditemstack.                                                       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+class memorypool {
+
+  public:
+
+  void **firstblock, **nowblock;
+  void *nextitem;
+  void *deaditemstack;
+  void **pathblock;
+  void *pathitem;
+  wordtype itemwordtype;
+  int  alignbytes;
+  int  itembytes, itemwords;
+  int  itemsperblock;
+  long items, maxitems;
+  int  unallocateditems;
+  int  pathitemsleft;
+
+  void poolinit(int, int, enum wordtype, int);
+  void restart();
+  void *alloc();
+  void dealloc(void*);
+  void traversalinit();
+  void *traverse();
+
+  memorypool() {}
+  memorypool(int, int, enum wordtype, int);
+  ~memorypool();
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// The badface structure                                                     //
+//                                                                           //
+// A multiple usages structure. Despite of its name, a 'badface' can be used //
+// to represent the following objects:                                       //
+//   - a face of a tetrahedron which is (possibly) non-Delaunay;             //
+//   - an encroached subsegment or subface;                                  //
+//   - a bad-quality tetrahedron, i.e, has too large radius-edge ratio;      //
+//   - a sliver, i.e., has good radius-edge ratio but nearly zero volume;    //
+//   - a degenerate tetrahedron (see routine checkdegetet()).                //
+//   - a recently flipped face (saved for undoing the flip later).           //
+//                                                                           //
+// It has the following fields:  'tt' holds a tetrahedron; 'ss' holds a sub- //
+// segment or subface; 'cent' is the circumcent of 'tt' or 'ss', 'key' is a  //
+// special value depending on the use, it can be either the square of the    //
+// radius-edge ratio of 'tt' or the flipped type of 'tt';  'forg', 'fdest',  //
+// 'fapex', and 'foppo' are vertices saved for checking the object in 'tt'   //
+// or 'ss' is still the same when it was stored; 'noppo' is the fifth vertex //
+// of a degenerate point set.  'previtem' and 'nextitem' implement a double  //
+// link for managing many basfaces.                                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+struct badface {
+  triface tt; 
+  face ss; 
+  REAL key;
+  REAL cent[3];
+  point forg, fdest, fapex, foppo, noppo;
+  struct badface *previtem, *nextitem; 
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1110,74 +1238,9 @@ void bond(triface& t1, triface& t2) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// The badface structure                                                     //
-//                                                                           //
-// A multiple usages structure. Despite of its name, a 'badface' can be used //
-// to represent the following objects:                                       //
-//   - a face of a tetrahedron which is (possibly) non-Delaunay;             //
-//   - an encroached subsegment or subface;                                  //
-//   - a bad-quality tetrahedron, i.e, has too large radius-edge ratio;      //
-//   - a sliver, i.e., has good radius-edge ratio but nearly zero volume;    //
-//   - a degenerate tetrahedron (see routine checkdegetet()).                //
-//   - a recently flipped face (saved for undoing the flip later).           //
-//                                                                           //
-// It has the following fields:  'tt' holds a tetrahedron; 'ss' holds a sub- //
-// segment or subface; 'cent' is the circumcent of 'tt' or 'ss', 'key' is a  //
-// special value depending on the use, it can be either the square of the    //
-// radius-edge ratio of 'tt' or the flipped type of 'tt';  'forg', 'fdest',  //
-// 'fapex', and 'foppo' are vertices saved for checking the object in 'tt'   //
-// or 'ss' is still the same when it was stored; 'noppo' is the fifth vertex //
-// of a degenerate point set.  'previtem' and 'nextitem' implement a double  //
-// link for managing many basfaces.                                          //
+// Primitives for arraypools.                                                //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
-
-struct badface {
-  triface tt; 
-  face ss; 
-  REAL key;
-  REAL cent[3];
-  point forg, fdest, fapex, foppo, noppo;
-  struct badface *previtem, *nextitem; 
-};
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// Arraypool    A dynamic array                                              //
-//                                                                           //
-// Each arraypool contains an array of pointers to a number of blocks.  Each //
-// block contains the same fixed number of objects.  Each index of the array //
-// addesses a particular object in the pool.  The most significant bits add- //
-// ress the index of the block containing the object. The less significant   //
-// bits address this object within the block.                                //
-//                                                                           //
-// 'objectbytes' is the size of one object in blocks; 'log2objectsperblock'  //
-// is the base-2 logarithm of 'objectsperblock'; 'objects' counts the number //
-// of allocated objects; 'totalmemory' is the totoal memorypool in bytes.    //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-class arraypool {
-
-  public:
-
-  int objectbytes;
-  int objectsperblock;
-  int log2objectsperblock; 
-  int toparraylen;
-  char **toparray;
-  unsigned long objects;
-  unsigned long totalmemory;
-
-  void restart();
-  void poolinit(int sizeofobject, int log2objperblk);
-  char* getblock(int objectindex);
-  void* lookup(int objectindex);
-  int newindex(void **newptr);
-
-  arraypool(int sizeofobject, int log2objperblk);
-  ~arraypool();
-};
 
 // fastlookup() -- A fast, unsafe operation. Return the pointer to the object
 //   with a given index.  Note: The object's block must have been allocated,
@@ -1186,66 +1249,6 @@ class arraypool {
 #define fastlookup(pool, index) \
   (void *) ((pool)->toparray[(index) >> (pool)->log2objectsperblock] + \
             ((index) & ((pool)->objectsperblock - 1)) * (pool)->objectbytes)
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// Memorypool    A dynamic pool of memory                                    //
-//                                                                           //
-// A type used to allocate memory written by J. Shewchuk.                    //
-//                                                                           //
-// firstblock is the first block of items. nowblock is the block from which  //
-//   items are currently being allocated. nextitem points to the next slab   //
-//   of free memory for an item. deaditemstack is the head of a linked list  //
-//   (stack) of deallocated items that can be recycled.  unallocateditems is //
-//   the number of items that remain to be allocated from nowblock.          //
-//                                                                           //
-// Traversal is the process of walking through the entire list of items, and //
-//   is separate from allocation.  Note that a traversal will visit items on //
-//   the "deaditemstack" stack as well as live items.  pathblock points to   //
-//   the block currently being traversed.  pathitem points to the next item  //
-//   to be traversed.  pathitemsleft is the number of items that remain to   //
-//   be traversed in pathblock.                                              //
-//                                                                           //
-// itemwordtype is set to POINTER or FLOATINGPOINT, and is used to suggest   //
-//   what sort of word the record is primarily made up of.  alignbytes       //
-//   determines how new records should be aligned in memory.  itembytes and  //
-//   itemwords are the length of a record in bytes (after rounding up) and   //
-//   words.  itemsperblock is the number of items allocated at once in a     //
-//   single block.  items is the number of currently allocated items.        //
-//   maxitems is the maximum number of items that have been allocated at     //
-//   once; it is the current number of items plus the number of records kept //
-//   on deaditemstack.                                                       //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-class memorypool {
-
-  public:
-
-  void **firstblock, **nowblock;
-  void *nextitem;
-  void *deaditemstack;
-  void **pathblock;
-  void *pathitem;
-  wordtype itemwordtype;
-  int  alignbytes;
-  int  itembytes, itemwords;
-  int  itemsperblock;
-  long items, maxitems;
-  int  unallocateditems;
-  int  pathitemsleft;
-
-  void poolinit(int, int, enum wordtype, int);
-  void restart();
-  void *alloc();
-  void dealloc(void*);
-  void traversalinit();
-  void *traverse();
-
-  memorypool() {}
-  memorypool(int, int, enum wordtype, int);
-  ~memorypool();
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1294,8 +1297,8 @@ REAL xmax, xmin, ymax, ymin, zmax, zmin;
 // The number of duplicated vertices, mesh edges, and input segments.
 long dupverts, meshedges, insegments;
 
-// Flags to check imposed constraints, subfaces, pbc conditions.
-int checkconstraints, checksubfaces, checkpbcs;
+// Flags to check imposed constraints, subfaces, subsegs.
+int checkconstraints, checksubfaces, checksubsegs, checkpbcs;
 
 // Algorithm statistical counters.
 long ptloc_count, ptloc_max_count;  
@@ -1327,15 +1330,6 @@ void makeshellface(memorypool*, face*);
 void makepoint(point*);
 void makeindex2pointmap(point*&);
 void makesubfacemap(int*&, face*&);
-
-// fasttetrahedrondealloc() -- Dealloc a tetrahedron.
-#define fasttetrahedrondealloc(dyingtet) \
-  (dyingtet)[4] = (tetrahedron) NULL; \
-  pool = ((point) (dyingtet)[7] != dummypoint) ? \
-    tetrahedronpool : hulltetrahedronpool; \
-  *((void **) (dyingtet)) = pool->deaditemstack; \
-  pool->deaditemstack = (void *) (dyingtet); \
-  pool->items--
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1492,7 +1486,7 @@ tetgenmesh() {
   recenttet.loc = recenttet.ver = 0;
   xmax = xmin = ymax = ymin = zmax = zmin = 0.0;
   dupverts = meshedges = insegments = 0l;
-  checkconstraints = checksubfaces = checkpbcs = 0;
+  checkconstraints = checksubfaces = checksubsegs = checkpbcs = 0;
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;

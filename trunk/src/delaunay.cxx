@@ -519,7 +519,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   int copcount;
   int i, j;
 
-  memorypool *pool;
   tetrahedron ptr;
   int *iptr;
 
@@ -581,7 +580,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       cavetetlist->newindex((void **) &parytet);
       *parytet = neightet;
     }
-    fasttetrahedrondealloc(searchtet->tet);
+    tetrahedrondealloc(searchtet->tet);
     tetcount = 1;
     flip14count++;
   } else if (loc == ONFACE) {
@@ -597,8 +596,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       cavetetlist->newindex((void **) &parytet);
       *parytet = neightet;
     }
-    fasttetrahedrondealloc(spintet.tet);
-    fasttetrahedrondealloc(searchtet->tet);
+    tetrahedrondealloc(spintet.tet);
+    tetrahedrondealloc(searchtet->tet);
     tetcount = 2;
     flip26count++;
   } else if (loc == ONEDGE) {
@@ -619,7 +618,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     spintet = *searchtet;
     for (i = 0; i < tetcount; i++) {
       fnext(spintet, neightet);
-      fasttetrahedrondealloc(spintet.tet);
+      tetrahedrondealloc(spintet.tet);
       spintet = neightet;
     }
     flipn2ncount++;
@@ -666,7 +665,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           cavetetlist->newindex((void **) &parytet);
           *parytet = neightet;
         }
-        fasttetrahedrondealloc(cavetet->tet);
+        tetrahedrondealloc(cavetet->tet);
         tetcount++;
       } else {
         // Found a boundary face of the cavity. It may be a face of a hull

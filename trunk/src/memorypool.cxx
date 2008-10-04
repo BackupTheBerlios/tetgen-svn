@@ -592,12 +592,23 @@ void tetgenmesh::initializepools()
 
 void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
 {
+  memorypool *pool;
+
+  // Mark it as a dead tet.
   dyingtet[4] = (tetrahedron) NULL;
-  if ((point) dyingtet[7] != dummypoint) {
-    tetrahedronpool->dealloc((void *) dyingtet);
-  } else {
-    hulltetrahedronpool->dealloc((void *) dyingtet);
+
+  if (b->useshelles) {
+    // Dealloc the occupied space to subfaces/subsegments.
+    // if (dyingtet[8] != NULL) subpool->dealloc((shellface *) dyingtet[8]);
   }
+
+  // Choose the right pool.
+  pool = ((point) dyingtet[7] != dummypoint) ? tetrahedronpool : 
+    hulltetrahedronpool;
+  // Actually pool->dealloc();
+  *((void **) (dyingtet)) = pool->deaditemstack;
+  pool->deaditemstack = (void *) (dyingtet);
+  pool->items--;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

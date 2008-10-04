@@ -270,6 +270,8 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     }
   }
 
+  // Return apc = app[0] = *splitedge.
+
   delete [] abdedges;
   delete [] aoutfaces;
   delete [] ainfaces;
@@ -400,7 +402,8 @@ void tetgenmesh::lawsonflip()
   }
 
   if (b->verbose > 1) {
-    printf("    %ld flips.\n", flip22count - flipcount);
+    printf("    %ld edges stacked, %ld flips.\n", flippool->items,
+      flip22count - flipcount);
   }
 
   flippool->restart();
@@ -445,7 +448,6 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
   point pa, pb, pc, pd;
   int i;
 
-  memorypool *pool;
   int *iptr;
 
   // Check if the original tet is a hull tet.
@@ -473,7 +475,7 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
   symedge(*splittet, castets[3]); // At face abc.
 
   // Delete the old tet.
-  fasttetrahedrondealloc(splittet->tet);
+  tetrahedrondealloc(splittet->tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
@@ -547,7 +549,6 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   point pa, pb, pc, pd, pe;
   int i;
 
-  memorypool *pool;
   int *iptr;
 
   fliptets[0] = *splitface;
@@ -585,8 +586,8 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   }
 
   // Delete the old tets.
-  fasttetrahedrondealloc(fliptets[0].tet);
-  fasttetrahedrondealloc(fliptets[1].tet);
+  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(fliptets[1].tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
@@ -669,7 +670,6 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
   int dummyflag; // 0 or 1.
   int n, i;
 
-  memorypool *pool;
   int *iptr;
 
   n = 0;
@@ -725,7 +725,7 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 
   // Delete the n old tets.
   for (i = 0; i < n; i++) {
-    fasttetrahedrondealloc(fliptets[i].tet);
+    tetrahedrondealloc(fliptets[i].tet);
   }
 
   // Create 2n new tets.
@@ -838,7 +838,6 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
   int dummyflag;  // range = {-1, 0, 1, 2}.
   int i;
 
-  memorypool *pool;
   int *iptr;
 
   // Check if e is dummypoint.
@@ -888,8 +887,8 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
   }
 
   // Delete the old tets.
-  fasttetrahedrondealloc(fliptets[0].tet);
-  fasttetrahedrondealloc(fliptets[1].tet);
+  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(fliptets[1].tet);
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
@@ -1016,7 +1015,6 @@ void tetgenmesh::flip32(triface* fliptets, int flipflag)
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
   int i;
 
-  memorypool *pool;
   int *iptr; 
 
   // Check if e is 'dummypoint'.
@@ -1075,9 +1073,9 @@ void tetgenmesh::flip32(triface* fliptets, int flipflag)
   }
 
   // Delete the old tets.
-  fasttetrahedrondealloc(fliptets[0].tet);
-  fasttetrahedrondealloc(fliptets[1].tet);
-  fasttetrahedrondealloc(fliptets[2].tet);
+  tetrahedrondealloc(fliptets[0].tet);
+  tetrahedrondealloc(fliptets[1].tet);
+  tetrahedrondealloc(fliptets[2].tet);
 
   // Check if c is dummypointc.
   if (pc != dummypoint) {
@@ -1485,7 +1483,7 @@ void tetgenmesh::lawsonflip3d()
   }
 
   if (b->verbose > 1) {
-    printf("    %ld stacked faces, %ld flips.\n", flippool->items,
+    printf("    %ld faces stacked, %ld flips.\n", flippool->items,
       flip23count + flip32count - flipcount);
   }
 
