@@ -923,14 +923,14 @@ void tetgenmesh::makepoint2tetmap()
   }
 
   tetrahedronpool->traversalinit();
-  tptr = tetrahedrontraverse();
+  tptr = tetrahedrontraverse(tetrahedronpool);
   while (tptr != (tetrahedron *) NULL) {
     pt  = (point *) tptr;
     point2tet(pt[4]) = (tetrahedron) tptr;
     point2tet(pt[5]) = (tetrahedron) tptr;
     point2tet(pt[6]) = (tetrahedron) tptr;
     point2tet(pt[7]) = (tetrahedron) tptr;
-    tptr = tetrahedrontraverse();
+    tptr = tetrahedrontraverse(tetrahedronpool);
   }
 }
 

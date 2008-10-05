@@ -553,7 +553,11 @@ enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, RIDGEVERTEX,
 
 // Labels that signify the result of point location.
 
-enum locateresult {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
+enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
+
+// Labels that signify the result of edge search.
+
+enum direction {COLLINEAR, ACROSSEDGE, ACROSSFACE};
     
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1403,7 +1407,7 @@ void lawsonflip3d();
 
 unsigned long randomnation(unsigned long choices);
 void randomsample(point searchpt, triface* searchtet);
-enum locateresult locate(point searchpt, triface* searchtet);
+enum location locate(point searchpt, triface* searchtet);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1436,8 +1440,9 @@ void meshsurface();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool insertsegment(face* insseg);
-void delaunizesegments();
+enum direction finddirection(triface* searchtet, point endpt);
+bool scoutsegment(face* insseg);
+//void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

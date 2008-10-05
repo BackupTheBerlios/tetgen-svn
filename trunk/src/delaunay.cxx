@@ -149,8 +149,7 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::locateresult tetgenmesh::locate(point searchpt,
-  triface* searchtet)
+enum tetgenmesh::location tetgenmesh::locate(point searchpt,triface* searchtet)
 {
   tetrahedron ptr;
   triface neightet;
@@ -512,7 +511,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 {
   triface *cavetet, *parytet, spintet, neightet, newtet;
   point *pts;
-  enum locateresult loc;
+  enum location loc;
   REAL sign, ori;
   long tetcount;
   bool enqflag;
@@ -835,7 +834,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet, 
   int flipflag)
 {
-  enum locateresult loc;
+  enum location loc;
   long tetcount;
 
   if (b->verbose > 1) {
