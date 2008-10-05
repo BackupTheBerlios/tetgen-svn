@@ -38,11 +38,6 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
   pb = dest(*searchtet);
   pc = apex(*searchtet);
 
-  if (b->verbose > 1) {
-     printf("    Search direction from (%d, %d, %d) to %d.\n", 
-       pointmark(pa), pointmark(pb), pointmark(pc), pointmark(endpt));
-  }
-
   // Check whether the destination or apex is 'endpt'.
   if (pb == endpt) {
     // pa->pb is the search edge.
@@ -275,56 +270,87 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
 // ment. Return TRUE if such edge exists, and the segment is attached to the //
 // surrounding tets. Otherwise return FALSE.                                 //
 //                                                                           //
+// If 'searchtet' != NULL, it's origin must be the origin of 'searchseg'. It //
+// can be used as the starting tet for searching the edge. If such edge does //
+// not found (return FALSE), 'searchtet' contains the tet whose edge or face //
+// is crossed by the segment.                                                //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::scoutsegment(face* insseg)
+bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
 {
-  triface searchtet;
-  point pa, pb;
+  point startpt, endpt;
   enum location loc;
-  bool searchflag;
-  int m, i;
+  enum direction dir;
+  bool orgflag;
+  int shver, i;
+
+  int *iptr;
 
   if (b->verbose > 1) {
-    printf("    Scout segment (%d, %d).\n", pointmark(insseg->sh[3]), 
-      pointmark(insseg->sh[4]));
+    printf("    Scout segment (%d, %d).\n", pointmark(sorg(*searchseg)), 
+      pointmark(sdest(*searchseg)));
   }
 
-  searchflag = false;
-
-  // Search a tet containing an endpoint of this segment as origin.
-  for (m = 0; m < 2 && !searchflag; m++) {
-    pa = (point) insseg->sh[m + 3];
-    decode(point2tet(pa), searchtet);
-    if (searchtet.tet[4] != NULL) {
-      // Check if this tet contains pa.
-      for (i = 4; i < 8 && !searchflag; i++) {
-        if ((point) searchtet.tet[i] == pa) {
-          searchflag = true;
-          // Found. Set pa as its origin.
-          switch (i) {
-            case 4: searchtet.loc = 0; searchtet.ver = 0; break;
-            case 5: searchtet.loc = 0; searchtet.ver = 2; break;
-            case 6: searchtet.loc = 0; searchtet.ver = 4; break;
-            case 7: searchtet.loc = 1; searchtet.ver = 2; break;
+  // Is 'searchtet' a valid handle?
+  if (searchtet->tet == NULL) {
+    orgflag = false;
+    // Search a tet whose origin is one of the endpoints of 'searchseg'.
+    for (shver = 0; shver < 2 && !orgflag; shver++) {
+      startpt = (point) searchseg->sh[shver + 3];
+      decode(point2tet(startpt), *searchtet);
+      if (searchtet->tet[4] != NULL) {
+        // Check if this tet contains pa.
+        for (i = 4; i < 8 && !orgflag; i++) {
+          if ((point) searchtet->tet[i] == startpt) {
+            orgflag = true;
+            // Found. Set pa as its origin.
+            switch (i) {
+              case 4: searchtet->loc = 0; searchtet->ver = 0; break;
+              case 5: searchtet->loc = 0; searchtet->ver = 2; break;
+              case 6: searchtet->loc = 0; searchtet->ver = 4; break;
+              case 7: searchtet->loc = 1; searchtet->ver = 2; break;
+            }
+            searchseg->shver = shver;
           }
-          pb = (point) insseg->sh[(m + 1) % 2 + 3];
         }
       }
     }
+    if (!orgflag) {
+      // Locate pa in tetrahedralization.
+      startpt = sorg(*searchseg);
+      randomsample(startpt, searchtet);
+      loc = locate(startpt, searchtet);
+      assert(loc == ONVERTEX);  // SELF_CHECK
+      force_ptloc_count++;
+    }
   }
 
-  if (!searchflag) {
-    // Locate pa in tetrahedralization.
-    pa = (point) insseg->sh[3];
-    randomsample(pa, &searchtet);
-    loc = locate(pa, &searchtet);
-    assert(loc == ONVERTEX);  // SELF_CHECK
-    pb = (point) insseg->sh[4];
-    force_ptloc_count++;
+  // Search the tet on which the segment passes.
+  endpt = sdest(*searchseg);
+  dir = finddirection(searchtet, endpt);
+
+  if (dir == COLLINEAR) {
+    if (dest(*searchtet) != endpt) {
+      // The segment can be split.
+      
+      // Search the rest part of the segment.
+      enextself(*searchtet);
+      return scoutsegment(searchseg, searchtet);
+    } else {
+      // Found! Insert the segment.
+      
+      return true;
+    }
+  }
+  
+  if (dir == ACROSSEDGE) {
+    // Check whether two segments are intersecting.
   }
 
-
+  // Go to the edge (or face) crossed by the segment.
+  enextfnextself(*searchtet);
+  return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
