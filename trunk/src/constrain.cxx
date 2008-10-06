@@ -220,6 +220,7 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
               return COLLINEAR;
             }
             // pa->'endpt' crosses the edge pb->pc.
+            enextself(*searchtet);
             return ACROSSEDGE;
           }
           if (rori == 0) {
@@ -279,6 +280,8 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
 
 bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
 {
+  triface neightet;
+  face checkseg;
   point startpt, endpt;
   enum location loc;
   enum direction dir;
@@ -333,23 +336,33 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
   if (dir == COLLINEAR) {
     if (dest(*searchtet) != endpt) {
       // The segment can be split.
-      
+      assert(0);  // Not handled yet.
       // Search the rest part of the segment.
       enextself(*searchtet);
       return scoutsegment(searchseg, searchtet);
     } else {
       // Found! Insert the segment.
-      
+      neightet = *searchtet;
+      do {
+        // tssbond1(neightet, *searchseg);
+        fnextself(neightet);
+      } while (neightet.tet != searchtet->tet);
       return true;
     }
   }
   
   if (dir == ACROSSEDGE) {
     // Check whether two segments are intersecting.
+    // tsspivot1(*searchtet, checkseg);
+    if (checkseg.sh != NULL) {
+      printf("  Invalid PLS!  Two segments are intersecting each other.\n");
+      printf("    1st: (%d, %d), 2nd: (%d, %d).\n", 
+        pointmark(sorg(*searchseg)), pointmark(sdest(*searchseg)), 
+        pointmark(org(*searchtet)), pointmark(dest(*searchtet)));
+      terminatetetgen(1);
+    }
   }
 
-  // Go to the edge (or face) crossed by the segment.
-  enextfnextself(*searchtet);
   return false;
 }
 
