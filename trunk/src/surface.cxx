@@ -295,7 +295,7 @@ void tetgenmesh::mergefacets()
         // Test if they are coplanar wrt the tolerance.
         ori = orient3d(eorg, edest, sapex(parentsh), sapex(neighsh));
         if ((ori == 0) || iscoplanar(eorg, edest, sapex(parentsh),
-          sapex(neighsh), ori, b->epsilon)) {
+          sapex(neighsh), ori)) {
           // Found two adjacent coplanar facets.
           mergeflag = ((in->facetmarkerlist == NULL) || 
             (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));

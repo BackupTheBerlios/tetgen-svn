@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet, 
-  point endpt, REAL tol)
+  point endpt)
 {
   triface neightet;
   point pa, pb, pc, pd, pn;
@@ -272,16 +272,16 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
   } // while (1)
 
   // Either case ACROSSEDGE or ACROSSFACE.
-  if (tol > 0) {
+  if (b->epsilon > 0) {
     // Use tolerance to re-evaluate the orientations.
     if (cop != HCOPLANE) {
-      if (iscoplanar(pa, pb, pc, endpt, hori, tol)) hori = 0;
+      if (iscoplanar(pa, pb, pc, endpt, hori)) hori = 0;
     }
     if (cop != RCOPLANE) {
-      if (iscoplanar(pb, pa, pd, endpt, rori, tol)) rori = 0;
+      if (iscoplanar(pb, pa, pd, endpt, rori)) rori = 0;
     }
     if (cop != LCOPLANE) {
-      if (iscoplanar(pa, pc, pd, endpt, lori, tol)) lori = 0;
+      if (iscoplanar(pa, pc, pd, endpt, lori)) lori = 0;
     }
     // It is not possible that all orientations are zero.
     assert(!((hori == 0) && (rori == 0) && (lori == 0))); // SELF_CHECK
@@ -335,14 +335,14 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
 // ment. Return TRUE if such edge exists, and the segment is attached to the //
 // surrounding tets. Otherwise return FALSE.                                 //
 //                                                                           //
-// If 'searchtet' != NULL, it's origin must be the origin of 'searchseg'. It //
+// If 'searchtet' != NULL, it's origin must be the origin of 'sseg'. It //
 // can be used as the starting tet for searching the edge. If such edge does //
 // not found (return FALSE), 'searchtet' contains the tet whose edge or face //
 // is crossed by the segment.                                                //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
+bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
 {
   triface neightet;
   face checkseg;
@@ -355,17 +355,12 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
   shellface sptr;
   int *iptr;
 
-  if (b->verbose > 1) {
-    printf("    Scout segment (%d, %d).\n", pointmark(sorg(*searchseg)), 
-      pointmark(sdest(*searchseg)));
-  }
-
   // Is 'searchtet' a valid handle?
   if (searchtet->tet == NULL) {
     orgflag = false;
-    // Search a tet whose origin is one of the endpoints of 'searchseg'.
+    // Search a tet whose origin is one of the endpoints of 'sseg'.
     for (shver = 0; shver < 2 && !orgflag; shver++) {
-      startpt = (point) searchseg->sh[shver + 3];
+      startpt = (point) sseg->sh[shver + 3];
       decode(point2tet(startpt), *searchtet);
       if (searchtet->tet[4] != NULL) {
         // Check if this tet contains pa.
@@ -379,46 +374,52 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
               case 6: searchtet->loc = 0; searchtet->ver = 4; break;
               case 7: searchtet->loc = 1; searchtet->ver = 2; break;
             }
-            searchseg->shver = shver;
+            sseg->shver = shver;
           }
         }
       }
     }
     if (!orgflag) {
       // Locate startpt in tetrahedralization.
-      startpt = sorg(*searchseg);
+      startpt = sorg(*sseg);
       randomsample(startpt, searchtet);
       loc = locate(startpt, searchtet);
       assert(loc == ONVERTEX);  // SELF_CHECK
       force_ptloc_count++;
     }
+  } else {
+    startpt = sorg(*sseg);
+    assert(org(*searchtet) == startpt); // SELF_CHECK
+  }
+  endpt = sdest(*sseg);
+
+  if (b->verbose > 1) {
+    printf("    Scout seg (%d, %d).\n", pointmark(startpt), pointmark(endpt));
   }
 
-  // Search the tet on which the segment passes.
-  endpt = sdest(*searchseg);
-  dir = finddirection(searchtet, endpt, b->epsilon);
+  dir = finddirection(searchtet, endpt);
 
   if (dir == COLLINEAR) {
     destpt = dest(*searchtet);
     if (destpt != endpt) {
       // Split the segment.
-      flipn2nf(destpt, searchseg, 1);
+      flipn2nf(destpt, sseg, 1);
       lawsonflip();
     }
     // Found! Insert (the first part of) the segment.
     neightet = *searchtet;
     do {
-      tssbond1(neightet, *searchseg);
+      tssbond1(neightet, *sseg);
       fnextself(neightet);
     } while (neightet.tet != searchtet->tet);
     if (destpt != endpt) {
       // Search the scond part of the segment.
-      senext2self(*searchseg);
-      spivotself(*searchseg);
-      searchseg->shver = 0;
-      if (sorg(*searchseg) != destpt) sesymself(*searchseg);
+      senext2self(*sseg);
+      spivotself(*sseg);
+      sseg->shver = 0;
+      if (sorg(*sseg) != destpt) sesymself(*sseg);
       enextself(*searchtet);
-      return scoutsegment(searchseg, searchtet);
+      return scoutsegment(sseg, searchtet, refpt);
     } else {
       // The job is done.
       return true;
@@ -431,27 +432,13 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
     if (checkseg.sh != NULL) {
       printf("  Invalid PLC!  Two segments are intersecting each other.\n");
       printf("    1st: (%d, %d), 2nd: (%d, %d).\n", 
-        pointmark(sorg(*searchseg)), pointmark(sdest(*searchseg)), 
+        pointmark(sorg(*sseg)), pointmark(sdest(*sseg)), 
         pointmark(org(*searchtet)), pointmark(dest(*searchtet)));
       terminatetetgen(1);
     }
   }
 
   return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// scoutrefpoint()    Search a reference point for a given segment.          //
-//                                                                           //
-// The segment is defined by 'searchtet''s origin and 'endpt'.  'searchtet'  //
-// holds the face (or edge) crossed by the segment.                          //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-void tetgenmesh::scoutrefpoint(triface* searchtet, point endpt, point* refpt)
-{
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////

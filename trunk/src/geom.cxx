@@ -83,8 +83,7 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL ori,
-  REAL tol)
+bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL ori)
 {
   REAL L, q;
 
@@ -99,7 +98,7 @@ bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL ori,
 
   q = fabs(ori) / (L * L * L);
 
-  return q <= tol;
+  return q <= b->epsilon;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -226,7 +225,7 @@ void tetgenmesh::circumsphere(point pa, point pb, point pc, point pd,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
+REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
 {
   point pk, pl, pm, pn;
   REAL area2[4], n[3], c[3];
@@ -272,7 +271,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
   l += DIST(pm, pk);
   l /= 3.0;
 
-  if (sqrt(amax) > (l * l * tol)) {
+  if (sqrt(amax) > (l * l * b->epsilon)) {
     // Calculate the circumcenter and radius.
     circumsphere(pk, pl, pm, NULL, c, &r);
     l = DIST(c, pn);
@@ -283,7 +282,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd, REAL tol)
     q = 0;
   }
 
-  if (q > tol) {
+  if (q > b->epsilon) {
     return (l - r) * sign;  // Adjust the sign.
   } else {
     return 0;  // Round to zero.

@@ -393,7 +393,7 @@ void tetgenmesh::lawsonflip()
     pc = sapex(flipfaces[0]);
     pd = sapex(flipfaces[1]);
 
-    sign = incircle3d(pa, pb, pc, pd, b->epsilon);
+    sign = incircle3d(pa, pb, pc, pd);
 
     if (sign < 0) {
       // It is non-locally Delaunay. Flip it.

@@ -1395,10 +1395,10 @@ void lu_solve(REAL lu[4][4], int n, int* ps, REAL* b, int N);
 ///////////////////////////////////////////////////////////////////////////////
 
 REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
-bool iscoplanar(point k, point l, point m, point n, REAL ori, REAL tol);
+bool iscoplanar(point k, point l, point m, point n, REAL ori);
 void facenormal(point, point, point, REAL *n, int pivot);
 void circumsphere(point, point, point, point, REAL* cent, REAL* radius);
-REAL incircle3d(point pa, point pb, point pc, point pd, REAL tol);
+REAL incircle3d(point pa, point pb, point pc, point pd);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1469,9 +1469,8 @@ void meshsurface();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum direction finddirection(triface* searchtet, point endpt, REAL tol);
-bool scoutsegment(face* searchseg, triface* searchtet);
-void scoutrefpoint(triface* searchtet, point endpt, point* refpt);
+enum direction finddirection(triface* searchtet, point endpt);
+bool scoutsegment(face* sseg, triface* searchtet, point* refpt);
 //void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////
