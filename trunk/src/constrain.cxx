@@ -283,6 +283,8 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
     if (cop != LCOPLANE) {
       if (iscoplanar(pa, pc, pd, endpt, lori, tol)) lori = 0;
     }
+    // It is not possible that all orientations are zero.
+    assert(!((hori == 0) && (rori == 0) && (lori == 0))); // SELF_CHECK
   }
   
   // Now decide the degenerate cases.
@@ -436,6 +438,20 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
   }
 
   return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// scoutrefpoint()    Search a reference point for a given segment.          //
+//                                                                           //
+// The segment is defined by 'searchtet''s origin and 'endpt'.  'searchtet'  //
+// holds the face (or edge) crossed by the segment.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::scoutrefpoint(triface* searchtet, point endpt, point* refpt)
+{
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
