@@ -344,7 +344,7 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
     // Found! Insert (the first part of) the segment.
     neightet = *searchtet;
     do {
-      // tssbond1(neightet, *searchseg);
+      tssbond1(neightet, *searchseg);
       fnextself(neightet);
     } while (neightet.tet != searchtet->tet);
     if (destpt != endpt) {
@@ -362,7 +362,7 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
   
   if (dir == ACROSSEDGE) {
     // Check whether two segments are intersecting.
-    // tsspivot1(*searchtet, checkseg);
+    tsspivot1(*searchtet, checkseg);
     if (checkseg.sh != NULL) {
       printf("  Invalid PLC!  Two segments are intersecting each other.\n");
       printf("    1st: (%d, %d), 2nd: (%d, %d).\n", 

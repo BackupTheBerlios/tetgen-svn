@@ -1211,8 +1211,13 @@ void bond(triface& t1, triface& t2) {
 // tspivot(), stpivot -- given a tet's face t (or a subface s), find the
 //   abutting subface (or tet).
 
-#define tspivot(t, s) (t).tet[8] != NULL ? \
-  sdecode(((shellface *) (t).tet[8])[(t).loc], s) : (s).sh = NULL
+void tspivot(triface& t, face& s) {
+  if ((t).tet[8] != NULL) {
+    sdecode(((shellface *) (t).tet[8])[(t).loc], s);
+  } else {
+    (s).sh = NULL;
+  }
+}
 
 #define stpivot(s, t) decode((tetrahedron) (s).sh[9], t)
 
@@ -1224,7 +1229,31 @@ void bond(triface& t1, triface& t2) {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+// tsspivot1() -- given a tet's edge t, return a subsegment s at this edge.
+//   t and s is bonded through tssbond1(). if s.sh == NULL, the edge is
+//   not a subsegment.
 
+void tsspivot1(triface& t, face& s) {
+  if ((t).tet[8] != NULL) {
+    sdecode(((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]], s);
+  } else {
+    (s).sh = NULL;
+  }
+}
+
+// tssbond1() -- bond a tet edge and a segment (only at tet's edge).
+
+void tssbond1(triface& t, face& s) {
+  if ((t).tet[8] == NULL) {
+    // Allocate space for this tet.
+    (t).tet[8] = (tetrahedron) tet2subpool->alloc();
+    // NULL all fields in this space.
+    for (int i = 0; i < 6; i++) {
+      ((shellface *) (t).tet[8])[i] = NULL;
+    }
+  }
+  ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = sencode((s));
+} 
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
