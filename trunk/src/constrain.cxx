@@ -321,7 +321,7 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
       }
     }
     if (!orgflag) {
-      // Locate pa in tetrahedralization.
+      // Locate startpt in tetrahedralization.
       startpt = sorg(*searchseg);
       randomsample(startpt, searchtet);
       loc = locate(startpt, searchtet);
@@ -337,12 +337,18 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
   if (dir == COLLINEAR) {
     destpt = dest(*searchtet);
     if (destpt != endpt) {
-      // The segment can be split.
+      // Split the segment.
       flipn2nf(destpt, searchseg, 1);
       lawsonflip();
-      // Insert the first part of the segment.
-      // tsspivot1(*searchtet, *searchseg);
-      // Search the rest part of the segment.
+    }
+    // Found! Insert (the first part of) the segment.
+    neightet = *searchtet;
+    do {
+      // tssbond1(neightet, *searchseg);
+      fnextself(neightet);
+    } while (neightet.tet != searchtet->tet);
+    if (destpt != endpt) {
+      // Search the scond part of the segment.
       senext2self(*searchseg);
       spivotself(*searchseg);
       searchseg->shver = 0;
@@ -350,12 +356,6 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
       enextself(*searchtet);
       return scoutsegment(searchseg, searchtet);
     } else {
-      // Found! Insert the segment.
-      neightet = *searchtet;
-      do {
-        // tssbond1(neightet, *searchseg);
-        fnextself(neightet);
-      } while (neightet.tet != searchtet->tet);
       return true;
     }
   }
