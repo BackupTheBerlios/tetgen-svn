@@ -282,12 +282,13 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
 {
   triface neightet;
   face checkseg;
-  point startpt, endpt;
+  point startpt, endpt, destpt;
   enum location loc;
   enum direction dir;
   bool orgflag;
   int shver, i;
 
+  shellface sptr;
   int *iptr;
 
   if (b->verbose > 1) {
@@ -334,10 +335,18 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
   dir = finddirection(searchtet, endpt);
 
   if (dir == COLLINEAR) {
-    if (dest(*searchtet) != endpt) {
+    destpt = dest(*searchtet);
+    if (destpt != endpt) {
       // The segment can be split.
-      assert(0);  // Not handled yet.
+      flipn2nf(destpt, searchseg, 1);
+      lawsonflip();
+      // Insert the first part of the segment.
+      // tsspivot1(*searchtet, *searchseg);
       // Search the rest part of the segment.
+      senext2self(*searchseg);
+      spivotself(*searchseg);
+      searchseg->shver = 0;
+      if (sorg(*searchseg) != destpt) sesymself(*searchseg);
       enextself(*searchtet);
       return scoutsegment(searchseg, searchtet);
     } else {
@@ -355,7 +364,7 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
     // Check whether two segments are intersecting.
     // tsspivot1(*searchtet, checkseg);
     if (checkseg.sh != NULL) {
-      printf("  Invalid PLS!  Two segments are intersecting each other.\n");
+      printf("  Invalid PLC!  Two segments are intersecting each other.\n");
       printf("    1st: (%d, %d), 2nd: (%d, %d).\n", 
         pointmark(sorg(*searchseg)), pointmark(sdest(*searchseg)), 
         pointmark(org(*searchtet)), pointmark(dest(*searchtet)));
