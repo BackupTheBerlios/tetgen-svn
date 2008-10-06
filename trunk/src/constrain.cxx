@@ -17,12 +17,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet, 
-  point endpt)
+  point endpt, REAL tol)
 {
   triface neightet;
   point pa, pb, pc, pd, pn;
-  REAL hori, rori, lori;
   enum {HMOVE, RMOVE, LMOVE} nextmove;
+  enum {HCOPLANE, RCOPLANE, LCOPLANE, NCOPLANE} cop;
+  REAL hori, rori, lori;
   REAL dmin, dist;
 
   tetrahedron ptr;
@@ -220,8 +221,10 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
               return COLLINEAR;
             }
             // pa->'endpt' crosses the edge pb->pc.
-            enextself(*searchtet);
-            return ACROSSEDGE;
+            // enextself(*searchtet);
+            // return ACROSSEDGE;
+            cop = HCOPLANE;
+            break;
           }
           if (rori == 0) {
             if (lori == 0) {
@@ -232,19 +235,25 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
               return COLLINEAR;
             }
             // pa->'endpt' crosses the edge pb->pd.
-            enext0fnextself(*searchtet); // face abd.
-            enextself(*searchtet);
-            return ACROSSEDGE;
+            // enext0fnextself(*searchtet); // face abd.
+            // enextself(*searchtet);
+            // return ACROSSEDGE;
+            cop = RCOPLANE;
+            break;
           }
           if (lori == 0) {
             // pa->'endpt' crosses the edge pc->pd.
-            enext2fnextself(*searchtet);  // face cad
-            enext2self(*searchtet);
-            return ACROSSEDGE;
+            // enext2fnextself(*searchtet);  // face cad
+            // enext2self(*searchtet);
+            // return ACROSSEDGE;
+            cop = LCOPLANE;
+            break;
           }
           // pa->'endpt' crosses the face bcd.
-          enextfnextself(*searchtet);
-          return ACROSSFACE;
+          // enextfnextself(*searchtet);
+          // return ACROSSFACE;
+          cop = NCOPLANE;
+          break;
         }
       }
     }
@@ -261,6 +270,59 @@ enum tetgenmesh::direction tetgenmesh::finddirection(triface* searchtet,
     pc = apex(*searchtet);
 
   } // while (1)
+
+  // Either case ACROSSEDGE or ACROSSFACE.
+  if (tol > 0) {
+    // Use tolerance to re-evaluate the orientations.
+    if (cop != HCOPLANE) {
+      if (iscoplanar(pa, pb, pc, endpt, hori, tol)) hori = 0;
+    }
+    if (cop != RCOPLANE) {
+      if (iscoplanar(pb, pa, pd, endpt, rori, tol)) rori = 0;
+    }
+    if (cop != LCOPLANE) {
+      if (iscoplanar(pa, pc, pd, endpt, lori, tol)) lori = 0;
+    }
+  }
+  
+  // Now decide the degenerate cases.
+  if (hori == 0) {
+    if (rori == 0) {
+      // pa->'endpt' is collinear with pa->pb.
+      return COLLINEAR;
+    }
+    if (lori == 0) {
+      // pa->'endpt' is collinear with pa->pc.
+      enext2self(*searchtet);
+      esymself(*searchtet);
+      return COLLINEAR;
+    }
+    // pa->'endpt' crosses the edge pb->pc.
+    enextself(*searchtet);
+    return ACROSSEDGE;
+  }
+  if (rori == 0) {
+    if (lori == 0) {
+      // pa->'endpt' is collinear with pa->pd.
+      enext0fnextself(*searchtet); // face abd.
+      enext2self(*searchtet);
+      esymself(*searchtet);
+      return COLLINEAR;
+    }
+    // pa->'endpt' crosses the edge pb->pd.
+    enext0fnextself(*searchtet); // face abd.
+    enextself(*searchtet);
+    return ACROSSEDGE;
+  }
+  if (lori == 0) {
+    // pa->'endpt' crosses the edge pc->pd.
+    enext2fnextself(*searchtet);  // face cad
+    enext2self(*searchtet);
+    return ACROSSEDGE;
+  }
+  // pa->'endpt' crosses the face bcd.
+  enextfnextself(*searchtet);
+  return ACROSSFACE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -332,7 +394,7 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
 
   // Search the tet on which the segment passes.
   endpt = sdest(*searchseg);
-  dir = finddirection(searchtet, endpt);
+  dir = finddirection(searchtet, endpt, b->epsilon);
 
   if (dir == COLLINEAR) {
     destpt = dest(*searchtet);
@@ -356,6 +418,7 @@ bool tetgenmesh::scoutsegment(face* searchseg, triface* searchtet)
       enextself(*searchtet);
       return scoutsegment(searchseg, searchtet);
     } else {
+      // The job is done.
       return true;
     }
   }

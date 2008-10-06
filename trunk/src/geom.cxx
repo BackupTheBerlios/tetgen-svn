@@ -83,12 +83,10 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
+bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL ori,
+  REAL tol)
 {
-  REAL ori, L, q;
-
-  ori = orient3d(k, l, m, n);
-  if (ori == 0.0) return true;
+  REAL L, q;
 
   L = DIST(k, l);
   L += DIST(l, m);
@@ -98,7 +96,9 @@ bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL tol)
   L += DIST(m, n);
   assert(L > 0.0);  // SELF_CHECK
   L /= 6.0;
+
   q = fabs(ori) / (L * L * L);
+
   return q <= tol;
 }
 

@@ -251,6 +251,7 @@ void tetgenmesh::mergefacets()
   face parentsh, neighsh, neineighsh;
   face segloop;
   point eorg, edest;
+  REAL ori;
   bool mergeflag;
   int* segspernodelist;
   int fidx1, fidx2;
@@ -292,8 +293,9 @@ void tetgenmesh::mergefacets()
       // Possible to merge them if they are not in the same facet.
       if (fidx1 != fidx2) {
         // Test if they are coplanar wrt the tolerance.
-        if (iscoplanar(eorg, edest, sapex(parentsh), sapex(neighsh),
-                       b->epsilon)) {
+        ori = orient3d(eorg, edest, sapex(parentsh), sapex(neighsh));
+        if ((ori == 0) || iscoplanar(eorg, edest, sapex(parentsh),
+          sapex(neighsh), ori, b->epsilon)) {
           // Found two adjacent coplanar facets.
           mergeflag = ((in->facetmarkerlist == NULL) || 
             (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));
