@@ -3,6 +3,227 @@
 
 #include "tetgen.h"
 
+REAL tetgenmesh::PI = 3.14159265358979323846264338327950288419716939937510582;
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tri_edge_inter_tail()    Test whether a triangle (ABC) and an edge (PQ)   //
+//                          intersect or not.                                //
+//                                                                           //
+// ABC and PQ are nott degenerate. We know that P lies above ABC, i.e., ABCP //
+// is a valid tetrahedron, and Q lies below ABC.                             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
+  point C, point P, point Q, int *pos)
+{
+  REAL s3, s4, s5;
+
+  s3 = orient3d(A, B, P, Q);
+  s4 = orient3d(B, C, P, Q);
+  s5 = orient3d(C, A, P, Q);
+
+  if (b->epsilon) {
+    // Re-evaluate the sign with respect to the tolerance.
+    if ((s3 != 0) && iscoplanar(A, B, P, Q, s3)) s3 = 0;
+    if ((s4 != 0) && iscoplanar(B, C, P, Q, s4)) s4 = 0;
+    if ((s5 != 0) && iscoplanar(C, A, P, Q, s5)) s5 = 0;
+  }
+
+  // Use the signs to decide whether PQ intersects ABC (see Fig. tri_edge).
+  //   There are total 3^3 = 27 cases, some are impossible (by assumptions).
+  if (s3 > 0) {
+    if (s4 > 0) {
+      if (s5 > 0) {
+        // (+++) PQ intersects ABC in its interior.
+        return ACROSSFACE;
+      } else {
+        if (s5 < 0) {
+          // (++-) PQ lies outside of CAP.
+          return DISJOINT;
+        } else {
+          // (++0) PQ intersects wih edge CA.
+          *pos = 2;
+          return ACROSSEDGE;
+        }
+      }
+    } else {
+      if (s4 < 0) {
+        if (s5 > 0) {
+          // (+-+) PQ lies outside of BCP.
+          return DISJOINT;
+        } else {
+          if (s5 < 0) {
+            // (+--) PQ lies both outsides of BCP and CAP.
+            return DISJOINT;
+          } else {
+            // (+-0) PQ lies both outsides of BCP, and coplanar with CAP.
+            return DISJOINT;
+          }
+        }
+      } else {
+        if (s5 > 0) {
+          // (+0+) PQ intersects edge BC.
+          *pos = 1;
+          return ACROSSEDGE;
+        } else {
+          if (s5 < 0) {
+            // (+0-) PQ lies both outsides of BCP and CAP.
+            return DISJOINT;
+          } else {
+            // (+00) PQ is collinear with PC.
+            *pos = 2;
+            return ACROSSVERT;
+          }
+        }
+      }
+    }
+  } else {
+    if (s3 < 0) {
+      if (s4 > 0) {
+        if (s5 > 0) {
+          // (-++) PQ lies outside ABP.
+          return DISJOINT;
+        } else {
+          if (s5 < 0) {
+            // (-+-) PQ lies both outsides of ABP and CAP.
+            return DISJOINT;
+          } else {
+            // (-+0) PQ lies outside of ABP, and coplanar with CAP.
+            return DISJOINT;
+          }
+        }
+      } else {
+        if (s4 < 0) {
+          if (s5 > 0) {
+            // (--+) PQ lies both outsides of ABP and BCP.
+            return DISJOINT;
+          } else {
+            if (s5 < 0) {
+              // (---) PQ lies both outsides of ABP, BCP, and CAP.
+              assert(0);  // Impossible by assumption.
+            } else {
+              // (--0) PQ lies both outsides of ABP, BCP, and cop. with CAP.
+              assert(0);  // Impossible by assumption.
+            }
+          }
+        } else {
+          if (s5 > 0) {
+            // (-0+) PQ lies outsides of ABP, and coplanar with BCP.
+            return DISJOINT;
+          } else {
+            if (s5 < 0) {
+              // (-0-) PQ lies both outsides of ABP, CAP, and cop with BCP.
+              assert(0);  // Impossible by assumption.
+            } else {
+              // (-00) PQ lies collinear with CP, and Q lies above ABC.
+              assert(0);  // Impossible by assumption.
+            }
+          }
+        }
+      }
+    } else {
+      if (s4 > 0) {
+        if (s5 > 0) {
+          // (0++) PQ intersects edge AB.
+          *pos = 0;
+          return ACROSSEDGE;
+        } else {
+          if (s5 < 0) {
+            // (0+-) PQ lies outside ACP.
+            return DISJOINT;
+          } else {
+            // (0+0) PQ is coincident with edge PA.
+            *pos = 0;
+            return ACROSSVERT;
+          }
+        }
+      } else {
+        if (s4 < 0) {
+          if (s5 > 0) {
+            // (0-+) PQ lies outside of BCP.
+            return DISJOINT;
+          } else {
+            if (s5 < 0) {
+              // (0--) Q must lie above ABC.
+              assert(0);  // Impossible by assumption.
+            } else {
+              // (0-0) Q must lie above ABC. Q is collinaer with AP.
+              assert(0);  // Impossible by assumption.
+            }
+          }
+        } else {
+          if (s5 > 0) {
+            // (00+) PQ is collinear with edge PB.
+            *pos = 1;
+            return ACROSSVERT;
+          } else {
+            if (s5 < 0) {
+              // (00-) Q must lies above ABC.
+              assert(0);  // Impossible by assumption.
+            } else {
+              // (000) Q must lies above ABC. Q = P.
+              assert(0);  // Impossible by assumption.
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tri_edge_inter()    Test whether a triangle (ABC) and an edge (PQ)        //
+//                     intersect or not.                                     //
+//                                                                           //
+// R is a reference point which is non-coplanar with ABC.                    //
+//                                                                           //
+// Returned DISJOINT if they don't intersect. Otherwise, they intersect, and //
+// 'pos' indicates the intersection position.                                //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
+  point C, point P, point Q, point R, int *pos)
+{
+  REAL s1, s2, s1s2;
+
+  // Test the locations of P and Q with respect to ABC.
+  s1 = orient3d(A, B, C, P);
+  s2 = orient3d(A, B, C, Q);
+
+  if (b->epsilon > 0) {
+    if ((s1 != 0) && iscoplanar(A, B, C, P, s1)) s1 = 0;
+    if ((s2 != 0) && iscoplanar(A, B, C, Q, s2)) s2 = 0;
+  }
+
+  // Classify the 3 x 3 = 9 cases.
+  if (s1s2 > 0) {
+    // Both P and Q lie at the same side of ABC.
+    return DISJOINT;  // (++) or (--)
+  } else {
+    if (s1s2 < 0) {
+      if (s1 < 0) {
+        return tri_edge_inter_tail(A, B, C, P, Q, pos);  // (-+)
+      } else {
+        return tri_edge_inter_tail(A, B, C, Q, P, pos);  // (+-)
+      }
+    } else {
+      if (s1 == 0) {
+        if (s2 == 0) {
+          return tri_edge_inter_cop(A, B, C, P, Q, R, pos); // (00)
+        }
+        return tri_vert_inter(A, B, C, P, R, pos); // (0+) or (0-) 
+      }
+      if (s2 == 0) {
+        return tri_vert_inter(A, B, C, Q, R, pos); // (+0) or (-0)
+      }
+    }
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // insphere_sos()    Insphere test with symbolic perturbation.               //
@@ -75,6 +296,76 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// isincircle()    Test if d lies inside the circumcircle of abc.            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
+{
+  point pk, pl, pm, pn;
+  REAL area2[4], n[3], c[3];
+  REAL amax, sign, r, l, q;
+  int imax;
+
+  // Calculate the areas of the four triangles in a, b, c, and d.
+  //   Get the base triangle which has the largest area.
+  facenormal(pa, pb, pc, n, 1);
+  area2[0] = DOT(n, n); 
+  facenormal(pb, pa, pd, n, 1);
+  area2[1] = DOT(n, n);
+  if (area2[0] < area2[1]) {
+    amax = area2[1]; imax = 1;
+  } else {
+    amax = area2[0]; imax = 0;
+  }
+  facenormal(pc, pd, pb, n, 1);
+  area2[2] = DOT(n, n);
+  if (amax < area2[2]) {
+    amax = area2[2]; imax = 2;
+  }
+  facenormal(pd, pc, pa, n, 1);
+  area2[3] = DOT(n, n);
+  if (amax < area2[3]) {
+    amax = area2[3]; imax = 3;
+  }
+
+  // Permute the vertices s. t. the base triangle is (pk, pl, pm).
+  if (imax == 0) {
+    pk = pa; pl = pb; pm = pc; pn = pd; sign = 1.0;
+  } else if (imax == 1) {
+    pk = pb; pl = pa; pm = pd; pn = pc; sign = 1.0;
+  } else if (imax == 2) {
+    pk = pc; pl = pd; pm = pb; pn = pa; sign = -1.0;
+  } else {
+    pk = pd; pl = pc; pm = pa; pn = pb; sign = -1.0;
+  }
+
+  // Make sure that the base triangle is not degenerate.
+  l = DIST(pk, pl);
+  l += DIST(pl, pm);
+  l += DIST(pm, pk);
+  l /= 3.0;
+
+  if (sqrt(amax) > (l * l * b->epsilon)) {
+    // Calculate the circumcenter and radius.
+    circumsphere(pk, pl, pm, NULL, c, &r);
+    l = DIST(c, pn);
+    q = fabs((l - r) / r);
+  } else {
+    // A (nearly) degenerate base triangle.
+    assert(0);  // Not handle yet.
+    q = 0;
+  }
+
+  if (q > b->epsilon) {
+    return (l - r) * sign;  // Adjust the sign.
+  } else {
+    return 0;  // Round to zero.
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // iscoplanar()    Check if four points are approximately coplanar.          //
 //                                                                           //
 // 'tol' is the relative error tolerance.  The coplanarity is determined by  //
@@ -99,6 +390,58 @@ bool tetgenmesh::iscoplanar(point k, point l, point m, point n, REAL ori)
   q = fabs(ori) / (L * L * L);
 
   return q <= b->epsilon;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// interiorangle()    Return the interior angle (0 - 2 * PI) between vectors //
+//                    o->p1 and o->p2.                                       //
+//                                                                           //
+// 'n' is the normal of the plane containing face (o, p1, p2).  The interior //
+// angle is the total angle rotating from o->p1 around n to o->p2.  Exchange //
+// the position of p1 and p2 will get the complement angle of the other one. //
+// i.e., interiorangle(o, p1, p2) = 2 * PI - interiorangle(o, p2, p1).  Set  //
+// 'n' be NULL if you only want the interior angle between 0 - PI.           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+REAL tetgenmesh::interiorangle(point o, point p1, point p2, REAL* n)
+{
+  REAL v1[3], v2[3], np[3];
+  REAL theta, costheta, lenlen;
+  REAL ori, len1, len2;
+
+  // Get the interior angle (0 - PI) between o->p1, and o->p2.
+  v1[0] = p1[0] - o[0];
+  v1[1] = p1[1] - o[1];
+  v1[2] = p1[2] - o[2];
+  v2[0] = p2[0] - o[0];
+  v2[1] = p2[1] - o[1];
+  v2[2] = p2[2] - o[2];
+  len1 = sqrt(DOT(v1, v1));
+  len2 = sqrt(DOT(v2, v2));
+  lenlen = len1 * len2;
+  assert(lenlen != 0.0);  // SELF_CHECK
+  costheta = DOT(v1, v2) / lenlen;
+  if (costheta > 1.0) {
+    costheta = 1.0; // Roundoff. 
+  } else if (costheta < -1.0) {
+    costheta = -1.0; // Roundoff. 
+  }
+  theta = acos(costheta);
+  if (n != NULL) {
+    // Get a point above the face (o, p1, p2);
+    np[0] = o[0] + n[0];
+    np[1] = o[1] + n[1];
+    np[2] = o[2] + n[2];
+    // Adjust theta (0 - 2 * PI).
+    ori = orient3d(p1, o, np, p2);
+    if (ori > 0.0) {
+      theta = 2 * PI - theta;
+    }
+  }
+
+  return theta;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -216,76 +559,6 @@ void tetgenmesh::circumsphere(point pa, point pb, point pc, point pd,
   }
   if (radius != (REAL *) NULL) {
     *radius = sqrt(rhs[0] * rhs[0] + rhs[1] * rhs[1] + rhs[2] * rhs[2]);
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// isincircle()    Test if d lies inside the circumcircle of abc.            //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
-{
-  point pk, pl, pm, pn;
-  REAL area2[4], n[3], c[3];
-  REAL amax, sign, r, l, q;
-  int imax;
-
-  // Calculate the areas of the four triangles in a, b, c, and d.
-  //   Get the base triangle which has the largest area.
-  facenormal(pa, pb, pc, n, 1);
-  area2[0] = DOT(n, n); 
-  facenormal(pb, pa, pd, n, 1);
-  area2[1] = DOT(n, n);
-  if (area2[0] < area2[1]) {
-    amax = area2[1]; imax = 1;
-  } else {
-    amax = area2[0]; imax = 0;
-  }
-  facenormal(pc, pd, pb, n, 1);
-  area2[2] = DOT(n, n);
-  if (amax < area2[2]) {
-    amax = area2[2]; imax = 2;
-  }
-  facenormal(pd, pc, pa, n, 1);
-  area2[3] = DOT(n, n);
-  if (amax < area2[3]) {
-    amax = area2[3]; imax = 3;
-  }
-
-  // Permute the vertices s. t. the base triangle is (pk, pl, pm).
-  if (imax == 0) {
-    pk = pa; pl = pb; pm = pc; pn = pd; sign = 1.0;
-  } else if (imax == 1) {
-    pk = pb; pl = pa; pm = pd; pn = pc; sign = 1.0;
-  } else if (imax == 2) {
-    pk = pc; pl = pd; pm = pb; pn = pa; sign = -1.0;
-  } else {
-    pk = pd; pl = pc; pm = pa; pn = pb; sign = -1.0;
-  }
-
-  // Make sure that the base triangle is not degenerate.
-  l = DIST(pk, pl);
-  l += DIST(pl, pm);
-  l += DIST(pm, pk);
-  l /= 3.0;
-
-  if (sqrt(amax) > (l * l * b->epsilon)) {
-    // Calculate the circumcenter and radius.
-    circumsphere(pk, pl, pm, NULL, c, &r);
-    l = DIST(c, pn);
-    q = fabs((l - r) / r);
-  } else {
-    // A (nearly) degenerate base triangle.
-    assert(0);  // Not handle yet.
-    q = 0;
-  }
-
-  if (q > b->epsilon) {
-    return (l - r) * sign;  // Adjust the sign.
-  } else {
-    return 0;  // Round to zero.
   }
 }
 

@@ -555,10 +555,10 @@ enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, RIDGEVERTEX,
 
 enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 
-// Labels that signify the result of edge search.
+// Labels that signify the result of intersection tests.
 
-enum direction {COLLINEAR, ACROSSEDGE, ACROSSFACE};
-    
+enum intersection {DISJOINT, COLLINEAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE};
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Mesh data structures                                                      //
@@ -1394,11 +1394,20 @@ void lu_solve(REAL lu[4][4], int n, int* ps, REAL* b, int N);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
-bool iscoplanar(point k, point l, point m, point n, REAL ori);
+static REAL PI;
+
+REAL interiorangle(point o, point p1, point p2, REAL* n);
 void facenormal(point, point, point, REAL *n, int pivot);
 void circumsphere(point, point, point, point, REAL* cent, REAL* radius);
+
+REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 REAL incircle3d(point pa, point pb, point pc, point pd);
+bool iscoplanar(point k, point l, point m, point n, REAL ori);
+
+enum intersection tri_vert_inter(point,point,point,point,point,int*);
+enum intersection tri_edge_inter_cop(point,point,point,point,point,point,int*);
+enum intersection tri_edge_inter_tail(point,point,point,point,point,int*);
+enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1469,7 +1478,7 @@ void meshsurface();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum direction finddirection(triface* searchtet, point endpt);
+enum intersection finddirection(triface* searchtet, point endpt);
 bool scoutsegment(face* sseg, triface* searchtet, point* refpt);
 //void delaunizesegments();
 
