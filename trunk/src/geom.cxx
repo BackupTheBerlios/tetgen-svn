@@ -7,11 +7,99 @@ REAL tetgenmesh::PI = 3.14159265358979323846264338327950288419716939937510582;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// tri_vert_inter()    Test whether a triangle (ABC) and a coplanar vertex   //
+//                     (P) intersect or not.                                 //
+//                                                                           //
+// ABC is not degenerate.  We know that R lies above ABC, i.e., ABCR is a    //
+// valid tetrahedron.                                                        //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
+  point C, point P, point R, int* pos)
+{
+  REAL s3, s4, s5;
+
+  // Test P's orientations wrt edges AB, BC, CA. 
+  s3 = orient3d(A, B, R, P);
+  s4 = orient3d(B, C, R, P);
+  s5 = orient3d(C, A, R, P);
+  orient3dcount+=3;
+
+  if (b->epsilon) {
+    // Re-evaluate the sign with respect to the tolerance.
+    if ((s3 != 0) && iscoplanar(A, B, R, P, s3)) s3 = 0;
+    if ((s4 != 0) && iscoplanar(B, C, R, P, s4)) s4 = 0;
+    if ((s5 != 0) && iscoplanar(C, A, R, P, s5)) s5 = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-vert cop (%d %d %d)-(%d)-%d, s3=%g, s4=%g, s5=%g.\n",
+      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(R),
+      s3, s4, s5);
+  }
+
+  if (s3 < 0) {
+    return DISJOINT;
+  } else {
+    if (s4 < 0) {
+      return DISJOINT;
+    } else {
+      if (s5 < 0) {
+        return DISJOINT;
+      }
+    }
+  }
+
+  // P lies eother inside or on the boundary of ABC.
+  if (s3 == 0) {
+    if (s4 == 0) {
+      if (s5 == 0) {
+        assert(0); // Not possible.
+      }
+      // P = B.
+      *pos = 1;
+      return ACROSSVERT;
+    }
+    if (s5 == 0) {
+      // P = A.
+      *pos = 0;
+      return ACROSSVERT;
+    }
+    // P lies on AB.
+    *pos = 0;
+    return ACROSSEDGE;
+  }
+  if (s4 == 0) {
+    if (s5 == 0) {
+      // P = C.
+      *pos = 2;
+      return ACROSSVERT;
+    }
+    // P lies on BC.
+    *pos = 1;
+    return ACROSSEDGE;
+  }
+  if (s5 == 0) {
+    // P lies on CA.
+    *pos = 1;
+    return ACROSSEDGE;
+  }
+
+  // P lies inside ABC.
+  return ACROSSFACE;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // tri_edge_inter_cop()    Test whether a triangle (ABC) and a coplanar edge //
 //                         (PQ) intersect or not.                            //
 //                                                                           //
 // ABC and PQ are not degenerate.  We know that R lies above ABC, i.e., ABCR //
 // is a valid tetrahedron.                                                   //
+//                                                                           //
+// In addition, we assume that both P and Q locate outside the triangle ABC. //
+// This is the case which we search intersecting faces along a missing seg.  //  
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -34,6 +122,12 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
     if ((s3 != 0) && iscoplanar(P, Q, R, A, s3)) s3 = 0;
     if ((s4 != 0) && iscoplanar(P, Q, R, B, s4)) s4 = 0;
     if ((s5 != 0) && iscoplanar(P, Q, R, C, s5)) s5 = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-edge cop (%d %d %d)-(%d, %d)-%d, s3=%g, s4=%g, s5=%g.\n",
+      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
+      pointmark(R), s3, s4, s5);
   }
 
   s3s4 = s3 * s4;
@@ -70,6 +164,11 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
     if ((q_ca != 0) && iscoplanar(C, A, R, Q, q_ca)) q_ca = 0;
   }
 
+  if (b->verbose > 2) {
+    printf("        p_ab=%g, p_bc=%g, p_ca=%g.\n", p_ab, p_bc, p_ca);
+    printf("        q_ab=%g, q_bc=%g, q_ca=%g.\n", q_ab, q_bc, q_ca);
+  }
+
   // Check the DISJOINT cases (see Fig. 1).
   if (p_ab < 0) {
     if (q_ab < 0) {
@@ -90,12 +189,8 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
     }
   }
 
-  // Denote Lab, Lbc, Lca be the lines containing AB, BC, CA, respectively.
-  // Denote Lpq be the line containing PQ.
-
   if (p_ab < 0) {
     if (q_ab > 0) {
-      // (-+####) PQ intersect AB (see Fig. 3).
       if (s3 == 0) {
         if (s4 == 0) {
           // PQ is collinear with AB. Impossible for p_ab < 0.
@@ -104,7 +199,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
         if (s5 == 0) {
           // PQ is collinear with CA.
         }
-        // PQ intersects A.
+        // PQ intersects A (see Fig. 4 top).
         *pos = 0;
         return ACROSSVERT;
       }
@@ -112,28 +207,86 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
         if (s5 == 0) {
           // PQ is collinear with BC.
         }
+        // PQ intersects B (see Fig. 4 top).
+        *pos = 1;
+        return ACROSSVERT;
+      }
+      // (-+####) PQ intersect AB (see Fig. 4 top).
+      *pos = 0;
+      return ACROSSEDGE;
+    } else {
+      // q_ab = 0. This case has been ruled out by our assumption.
+      assert(0);
+    }
+  } else {
+    if (p_ab == 0) {
+      // This case has been ruled out by our assumption.
+      assert(0);
+    }
+  }
+
+  if (p_bc < 0) {
+    if (q_bc > 0) {
+      if (s4 == 0) {
+        if (s5 == 0) {
+          // PQ is collinear with BC. Impossible by p_bc < 0.
+          assert(0);
+        }
+        if (s3 == 0) {
+          // PQ is collinear with AB.
+        }
         // PQ intersects B.
         *pos = 1;
         return ACROSSVERT;
       }
-      *pos = 0;
-      return ACROSSEDGE;
-    } else {
-      // (-0####) Q lies on AB.
-      if (s3 == 0) {
-        // Q = A. 
-        *pos = 0;
+      if (s5 == 0) {
+        if (s3 == 0) {
+          // PQ is collinear with CA.
+        }
+        // PQ intersects C.
+        *pos = 2;
         return ACROSSVERT;
       }
-      if (s4 == 0) {
-        // Q = B.
-        *pos = 1;
-        return ACROSSVERT;
-      }
-      *pos = 0;
+      // PQ intersects BC.
+      *pos = 1;
       return ACROSSEDGE;
+    } else { 
+      // q_bc == 0; Not possible by our assumption.
+      assert(0);
+    }
+  } else {
+    if (p_bc == 0) {
+      // Not possible by our assumption.
+      assert(0);
     }
   }
+
+  assert(p_ca < 0);
+  assert(q_ca > 0);
+
+  if (s5 == 0) {
+    if (s3 == 0) {
+      // PQ is collinear with CA. Impossible by p_ca < 0.
+      assert(0);
+    }
+    if (s4 == 0) {
+      // PQ is collinear with BC.
+    }
+    // PQ intersects C.
+    *pos = 2;
+    return ACROSSVERT;
+  }
+  if (s3 == 0) {
+    if (s4 == 0) {
+      // PQ is collinear with AB.
+    }
+    // PQ intersects A.
+    *pos = 0;
+    return ACROSSVERT;
+  }
+  // PQ intersects CA.
+  *pos = 2;
+  return ACROSSEDGE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,6 +314,12 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
     if ((s3 != 0) && iscoplanar(A, B, P, Q, s3)) s3 = 0;
     if ((s4 != 0) && iscoplanar(B, C, P, Q, s4)) s4 = 0;
     if ((s5 != 0) && iscoplanar(C, A, P, Q, s5)) s5 = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-edge tail (%d %d %d)-(%d, %d), s3=%g, s4=%g, s5=%g.\n",
+      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
+      s3, s4, s5);
   }
 
   // Use the signs to decide whether PQ intersects ABC (see Fig. tri_edge).
@@ -332,7 +491,13 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
     if ((s2 != 0) && iscoplanar(A, B, C, Q, s2)) s2 = 0;
   }
 
-  // Classify the 3 x 3 = 9 cases.
+  if (b->verbose > 2) {
+    printf("      Tri-edge test (%d %d %d)-(%d, %d), s1=%g, s2=%g.\n",
+      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
+      s1, s2);
+  }
+
+  // Classify the 3^2 = 9 cases.
   if (s1s2 > 0) {
     // Both P and Q lie at the same side of ABC.
     return DISJOINT;  // (++) or (--)
