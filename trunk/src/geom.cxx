@@ -7,10 +7,141 @@ REAL tetgenmesh::PI = 3.14159265358979323846264338327950288419716939937510582;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// tri_edge_inter_tail()    Test whether a triangle (ABC) and an edge (PQ)   //
-//                          intersect or not.                                //
+// tri_edge_inter_cop()    Test whether a triangle (ABC) and a coplanar edge //
+//                         (PQ) intersect or not.                            //
 //                                                                           //
-// ABC and PQ are nott degenerate. We know that P lies above ABC, i.e., ABCP //
+// ABC and PQ are not degenerate.  We know that R lies above ABC, i.e., ABCR //
+// is a valid tetrahedron.                                                   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
+  point C, point P, point Q, point R, int *pos)
+{
+  REAL s3, s4, s5;
+  REAL s3s4, s4s5, s5s3;
+  REAL p_ab, p_bc, p_ca;
+  REAL q_ab, q_bc, q_ca;
+
+  // Test A's, B's, and C's orientations wrt plane PQR. 
+  s3 = orient3d(P, Q, R, A);
+  s4 = orient3d(P, Q, R, B);
+  s5 = orient3d(P, Q, R, C);
+  orient3dcount+=3;
+
+  if (b->epsilon) {
+    // Re-evaluate the sign with respect to the tolerance.
+    if ((s3 != 0) && iscoplanar(P, Q, R, A, s3)) s3 = 0;
+    if ((s4 != 0) && iscoplanar(P, Q, R, B, s4)) s4 = 0;
+    if ((s5 != 0) && iscoplanar(P, Q, R, C, s5)) s5 = 0;
+  }
+
+  s3s4 = s3 * s4;
+  s4s5 = s4 * s5;
+  s5s3 = s5 * s3;
+
+  // Check DISJOINT cases (see Fig. 2).
+  if (s3s4 > 0) {
+    if (s4s5 > 0) {
+      if (!(s5s3 > 0)) {
+        assert(0); // Impossible case.
+      }
+      return DISJOINT;  // (+++) (---).
+    }
+  }
+
+  // Test the orientations of P wrt ABR, BCR, and CAR.
+  p_ab = orient3d(A, B, R, P);
+  p_bc = orient3d(B, C, R, P);
+  p_ca = orient3d(C, A, R, P);
+  orient3dcount+=3;
+  // Test the orientations of Q wrt ABR, BCR, and CAR.
+  q_ab = orient3d(A, B, R, Q);
+  q_bc = orient3d(B, C, R, Q);
+  q_ca = orient3d(C, A, R, Q);
+  orient3dcount+=3;
+
+  if (b->epsilon) {
+    if ((p_ab != 0) && iscoplanar(A, B, R, P, p_ab)) p_ab = 0;
+    if ((p_bc != 0) && iscoplanar(B, C, R, P, p_bc)) p_bc = 0;
+    if ((p_ca != 0) && iscoplanar(C, A, R, P, p_ca)) p_ca = 0;
+    if ((q_ab != 0) && iscoplanar(A, B, R, Q, q_ab)) q_ab = 0;
+    if ((q_bc != 0) && iscoplanar(B, C, R, Q, q_bc)) q_bc = 0;
+    if ((q_ca != 0) && iscoplanar(C, A, R, Q, q_ca)) q_ca = 0;
+  }
+
+  // Check the DISJOINT cases (see Fig. 1).
+  if (p_ab < 0) {
+    if (q_ab < 0) {
+      // PQ lies above ABR.
+      return DISJOINT;  // (--####)
+    }
+  }
+  if (p_bc < 0) {
+    if (q_bc < 0) {
+      // PQ lies above BCR.
+      return DISJOINT; // (##--##)
+    }
+  }
+  if (p_ca < 0) {
+    if (q_ca < 0) {
+      // PQ lies above CAR.
+      return DISJOINT; // (####--)
+    }
+  }
+
+  // Denote Lab, Lbc, Lca be the lines containing AB, BC, CA, respectively.
+  // Denote Lpq be the line containing PQ.
+
+  if (p_ab < 0) {
+    if (q_ab > 0) {
+      // (-+####) PQ intersect AB (see Fig. 3).
+      if (s3 == 0) {
+        if (s4 == 0) {
+          // PQ is collinear with AB. Impossible for p_ab < 0.
+          assert(0);
+        }
+        if (s5 == 0) {
+          // PQ is collinear with CA.
+        }
+        // PQ intersects A.
+        *pos = 0;
+        return ACROSSVERT;
+      }
+      if (s4 == 0) {
+        if (s5 == 0) {
+          // PQ is collinear with BC.
+        }
+        // PQ intersects B.
+        *pos = 1;
+        return ACROSSVERT;
+      }
+      *pos = 0;
+      return ACROSSEDGE;
+    } else {
+      // (-0####) Q lies on AB.
+      if (s3 == 0) {
+        // Q = A. 
+        *pos = 0;
+        return ACROSSVERT;
+      }
+      if (s4 == 0) {
+        // Q = B.
+        *pos = 1;
+        return ACROSSVERT;
+      }
+      *pos = 0;
+      return ACROSSEDGE;
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tri_edge_inter_tail()    Test whether a triangle (ABC) and a non-coplanar //
+//                          edge (PQ) intersect or not.                      //
+//                                                                           //
+// ABC and PQ are not degenerate.  We know that P lies above ABC, i.e., ABCP //
 // is a valid tetrahedron, and Q lies below ABC.                             //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,6 +154,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
   s3 = orient3d(A, B, P, Q);
   s4 = orient3d(B, C, P, Q);
   s5 = orient3d(C, A, P, Q);
+  orient3dcount+=3;
 
   if (b->epsilon) {
     // Re-evaluate the sign with respect to the tolerance.
@@ -163,7 +295,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
               // (00-) Q must lies above ABC.
               assert(0);  // Impossible by assumption.
             } else {
-              // (000) Q must lies above ABC. Q = P.
+              // (000) Q = P.
               assert(0);  // Impossible by assumption.
             }
           }
@@ -178,7 +310,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
 // tri_edge_inter()    Test whether a triangle (ABC) and an edge (PQ)        //
 //                     intersect or not.                                     //
 //                                                                           //
-// R is a reference point which is non-coplanar with ABC.                    //
+// R is a reference point which lies (strictly) above ABC.                   //
 //                                                                           //
 // Returned DISJOINT if they don't intersect. Otherwise, they intersect, and //
 // 'pos' indicates the intersection position.                                //
@@ -193,6 +325,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
   // Test the locations of P and Q with respect to ABC.
   s1 = orient3d(A, B, C, P);
   s2 = orient3d(A, B, C, Q);
+  orient3dcount+=2;
 
   if (b->epsilon > 0) {
     if ((s1 != 0) && iscoplanar(A, B, C, P, s1)) s1 = 0;
@@ -214,8 +347,9 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
       if (s1 == 0) {
         if (s2 == 0) {
           return tri_edge_inter_cop(A, B, C, P, Q, R, pos); // (00)
+        } else {
+          return tri_vert_inter(A, B, C, P, R, pos); // (0+) or (0-) 
         }
-        return tri_vert_inter(A, B, C, P, R, pos); // (0+) or (0-) 
       }
       if (s2 == 0) {
         return tri_vert_inter(A, B, C, Q, R, pos); // (+0) or (-0)
