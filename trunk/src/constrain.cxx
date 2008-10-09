@@ -42,13 +42,13 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   // Check whether the destination or apex is 'endpt'.
   if (pb == endpt) {
     // pa->pb is the search edge.
-    return ACROSSVERT;
+    return COLLINEAR;
   }
   if (pc == endpt) {
     // pa->pc is the search edge.
     enext2self(*searchtet);
     esymself(*searchtet);
-    return ACROSSVERT;
+    return COLLINEAR;
   }
 
   // Walk through tets at pa until the right one is found.
@@ -67,7 +67,7 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
       enext0fnextself(*searchtet);
       enext2self(*searchtet);
       esymself(*searchtet);
-      return ACROSSVERT;
+      return COLLINEAR;
     }
     // Check if we have entered outside of the domain.
     if (pd == dummypoint) {
@@ -211,14 +211,14 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
           // 'endpt' lies either on the plane(s) or across face bcd.
           if (hori == 0) {
             if (rori == 0) {
-              // pa->'endpt' is ACROSSVERT with pa->pb.
-              return ACROSSVERT;
+              // pa->'endpt' is COLLINEAR with pa->pb.
+              return COLLINEAR;
             }
             if (lori == 0) {
-              // pa->'endpt' is ACROSSVERT with pa->pc.
+              // pa->'endpt' is COLLINEAR with pa->pc.
               enext2self(*searchtet);
               esymself(*searchtet);
-              return ACROSSVERT;
+              return COLLINEAR;
             }
             // pa->'endpt' crosses the edge pb->pc.
             // enextself(*searchtet);
@@ -228,11 +228,11 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
           }
           if (rori == 0) {
             if (lori == 0) {
-              // pa->'endpt' is ACROSSVERT with pa->pd.
+              // pa->'endpt' is COLLINEAR with pa->pd.
               enext0fnextself(*searchtet); // face abd.
               enext2self(*searchtet);
               esymself(*searchtet);
-              return ACROSSVERT;
+              return COLLINEAR;
             }
             // pa->'endpt' crosses the edge pb->pd.
             // enext0fnextself(*searchtet); // face abd.
@@ -290,14 +290,14 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   // Now decide the degenerate cases.
   if (hori == 0) {
     if (rori == 0) {
-      // pa->'endpt' is ACROSSVERT with pa->pb.
-      return ACROSSVERT;
+      // pa->'endpt' is COLLINEAR with pa->pb.
+      return COLLINEAR;
     }
     if (lori == 0) {
-      // pa->'endpt' is ACROSSVERT with pa->pc.
+      // pa->'endpt' is COLLINEAR with pa->pc.
       enext2self(*searchtet);
       esymself(*searchtet);
-      return ACROSSVERT;
+      return COLLINEAR;
     }
     // pa->'endpt' crosses the edge pb->pc.
     enextself(*searchtet);
@@ -305,11 +305,11 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   }
   if (rori == 0) {
     if (lori == 0) {
-      // pa->'endpt' is ACROSSVERT with pa->pd.
+      // pa->'endpt' is COLLINEAR with pa->pd.
       enext0fnextself(*searchtet); // face abd.
       enext2self(*searchtet);
       esymself(*searchtet);
-      return ACROSSVERT;
+      return COLLINEAR;
     }
     // pa->'endpt' crosses the edge pb->pd.
     enext0fnextself(*searchtet); // face abd.
@@ -342,7 +342,8 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
+enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
+  triface* searchtet, point* refpt)
 {
   triface neightet;
   face checkseg;
@@ -403,7 +404,7 @@ bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
 
   dir = finddirection(searchtet, endpt);
 
-  if (dir == ACROSSVERT) {
+  if (dir == COLLINEAR) {
     pd = dest(*searchtet);
     if (pd != endpt) {
       // Split the segment.
@@ -424,10 +425,9 @@ bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
       if (sorg(*sseg) != pd) sesymself(*sseg);
       enextself(*searchtet);
       return scoutsegment(sseg, searchtet, refpt);
-    } else {
-      // The job is done.
-      return true;
     }
+    // The job is done.
+    return dir;
   }
 
   if (b->verbose > 1) {
@@ -460,6 +460,11 @@ bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
 
     pd = oppo(*searchtet);
     assert(pd != dummypoint);  // SELF_CHECK
+
+    if (b->verbose > 2) {
+      printf("      Passing face (%d, %d, %d, %d), dir(%d).\n", pointmark(pa),
+        pointmark(pb), pointmark(pc), pointmark(pd), (int) dir);
+    }
 
     // Stop if we meet 'endpt'.
     if (pd == endpt) break;
@@ -499,7 +504,7 @@ bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
       ori1 = orient3d(pa, pb, pc, endpt);
       assert(ori1 != 0);  // SELF_CHECK
       neightet = *searchtet;
-      do {
+      while (1) {
         fnextself(neightet);
         pc = apex(neightet);
         if (pc != dummypoint) {
@@ -512,7 +517,8 @@ bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
         // Check if this face intersects the segment.
         ori2 = orient3d(pa, pb, pc, endpt);
         if ((ori2 == 0) || (ori1 * ori2 < 0)) break;
-      } while (neightet.tet != searchtet->tet);
+        ori1 = ori2;
+      }
       assert(neightet.tet != searchtet->tet); // SELF_CHECK
       // One of the two side faces in 'searchtet' intersects the segment.
       *searchtet = neightet;
@@ -529,9 +535,35 @@ bool tetgenmesh::scoutsegment(face* sseg, triface* searchtet, point* refpt)
       assert(i < 2);  // SELF_CHECK
     }
 
+    if (dir == ACROSSVERT) {
+      // This segment passing a vertex. Choose it and return.
+      for (i = 0; i < pos; i++) {
+        enextself(neightet);
+      }
+      pd = org(neightet);
+      if (b->verbose > 2) {
+        angmax =  interiorangle(pc, startpt, endpt, NULL);
+      }
+      *refpt = pd;
+      break;
+    }
+    if (dir == ACROSSEDGE) {
+      // Get the edge intersects with the segment.
+      for (i = 0; i < pos; i++) {
+        enextself(neightet);
+      }
+    }
+    // Go to the next tet.
+    symedge(neightet, *searchtet);
+
   } // while (1)
 
-  return false;
+  // dir is either ACROSSVERT, or ACROSSEDGE, or ACROSSFACE.
+  if (b->verbose > 2) {
+    printf("      Choose refpoint %d, ang(%g), dir(%d).\n", pointmark(*refpt),
+      angmax / PI * 180.0, (int) dir);
+  }
+  return dir;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

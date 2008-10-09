@@ -557,7 +557,7 @@ enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 
 // Labels that signify the result of intersection tests.
 
-enum intersection {DISJOINT, ACROSSVERT, ACROSSEDGE, ACROSSFACE};
+enum intersection {DISJOINT, COLLINEAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1479,7 +1479,7 @@ void meshsurface();
 ///////////////////////////////////////////////////////////////////////////////
 
 enum intersection finddirection(triface* searchtet, point endpt);
-bool scoutsegment(face* sseg, triface* searchtet, point* refpt);
+enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 //void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////
