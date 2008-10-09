@@ -557,7 +557,7 @@ enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 
 // Labels that signify the result of intersection tests.
 
-enum intersection {DISJOINT, COLLINEAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE};
+enum intersection {DISJOINT, ACROSSVERT, ACROSSEDGE, ACROSSFACE};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
