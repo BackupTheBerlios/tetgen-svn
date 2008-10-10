@@ -571,21 +571,48 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
 // delaunizesegments()    Recover segments in a Delaunay tetrahedralization. //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
-/*
-void tetgenmesh::delaunizesegments()
-{
 
+void tetgenmesh::delaunizesegments()
+{ /*
+  arraypool *seglist;
+  face sseg, *psseg;
+  int s, i;
 
   if (!b->quiet) {
     printf("Delaunizing segments.\n");
   }
 
-  // Segments will be attached to tets. Initialize the connection pool.
+  // Segments will be introduced.
+  checksubsegs = 1;
+  // Construct a map from points to tets for speeding point location.
+  makepoint2tetmap();
+  // Mark acutes vertices.
+  // markacutevertices();
+  // Initialize the pool for tets<->subsegs.
   tet2subpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
 
+  // Calculate the log-2 of the number of segments.
+  s = i = 1;
+  while ((s =<< 1) < subsegpool->items) {
+    i++;
+  }
+  // Initialize the list of segments to be recovered.
+  seglist = new arraypool(sizeof(face), i + 1);
+  // Put all segments into the list.
+  subsegpool->traversalinit();
+  for (i = 0; i < subsegpool->items; i++) {
+    sseg.sh = shellfacetraverse(subsegpool);
+    seglist->newindex(&pseeg);
+    *psseg = sseg;
+  }
 
+  // Loop until 'seglist' is empty.
+  while (seglist->objects > 0l) {
+  
+  }
 
-  delete tet2subpool;
-}*/
+  delete seglist;
+  delete tet2subpool;*/
+}
 
 #endif // #ifndef constrainCXX

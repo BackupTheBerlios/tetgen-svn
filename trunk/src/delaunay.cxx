@@ -515,6 +515,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   REAL sign, ori;
   long tetcount;
   bool enqflag;
+  int n, k1, k2, s;
   int i, j;
 
   badface *newflip, *lastflip;  // for bowyerwatson
@@ -699,6 +700,10 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   if (maxbowatcavsize < cavebdrylist->objects) {
     maxbowatcavsize = cavebdrylist->objects;
   }
+
+  triface *checktet;
+  n = in->numberofpoints + 2; // The length of edgellist;
+  pointmark(dummypoint) = n - 1;
   
   // Create new tetrahedra in the Bowyer-Watson cavity and Connect them.
   for (i = 0; i < cavebdrylist->objects; i++) {
@@ -724,11 +729,30 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
     // Connect newtet <==> neightet, this also disconnect the old bond.
     bond(newtet, neightet);
+    // Connect three side faces.
+    newtet.ver = 0;
+    for (j = 0; j < 3; j++) {
+      enext0fnext(newtet, neightet);
+      k1 = pointmark(org(newtet));
+      k2 = pointmark(dest(newtet));
+      // Let k1 < k2;
+      if (k1 > k2) {s = k1; k1 = k2; k2 = s;}
+      checktet = &(edgellist[k1 * n + k2]);
+      if (checktet->tet != NULL) {
+        bond(neightet, *checktet);
+        checktet->tet = NULL;
+      } else {
+        *checktet = neightet;
+      }
+      enextself(newtet);
+    }
     // Replace the old boundary face with the new tet in list.
     *cavetet = newtet;
   }
 
-  // Connect the set of new tetrahedra together.
+  pointmark(dummypoint) = - 1;
+
+  /*// Connect the set of new tetrahedra together.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
     cavetet->ver = 0;
@@ -741,13 +765,13 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         //   Stop the rotate at a face which is open.
         esym(*cavetet, neightet); // Set the rotate dir.
         do {
-          fnextself(neightet); // Go to the face in the adjacent tet. 
+          fnextself(neightet); // Go to the face in the adjacent tet.
         } while (neightet.tet[neightet.loc] != NULL);
         bond(newtet, neightet); // Connect newtet <==> neightet.
       }
       enextself(*cavetet);
     }
-  }
+  }*/
 
   // loc_end = clock();
   // tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
@@ -1021,6 +1045,15 @@ void tetgenmesh::incrementaldelaunay()
   }
 
   if (b->bowyerwatson) {
+    // Allocate space for edge-edge search.
+    int n = in->numberofpoints + 2;
+    edgellist = new triface[n * n];
+    randindex = 0;
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        edgellist[randindex++].tet = NULL;
+      }
+    }
     // Use incremental Bowyer-Watson algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);

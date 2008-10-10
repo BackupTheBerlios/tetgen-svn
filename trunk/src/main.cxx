@@ -1081,7 +1081,7 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     if (!b->quiet) {
       printf("NOT writing an .ele file.\n");
     }
-    m.numberedges();
+    // m.numberedges();
   } else {
     m.outelements(out);
   }
