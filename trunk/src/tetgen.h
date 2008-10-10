@@ -1311,9 +1311,6 @@ badface *futureflip;
 // Two dynmaic arrays used by Bowyer-Watson algorithm.
 arraypool *cavetetlist, *cavebdrylist;
 
-// A (n + 1) x (n + 1) connection matrix (for Bowyer-Watson algorithm).
-triface *edgellist;
-
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
 int elemmarkerindex;
@@ -1536,7 +1533,6 @@ void initialize()
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = (arraypool *) NULL;
-  edgellist = (triface *) NULL;
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
   elemattribindex = volumeboundindex = highorderindex = 0;
@@ -1584,7 +1580,6 @@ void deinitialize()
   if (cavetetlist != (arraypool *) NULL) {
     delete cavetetlist;
     delete cavebdrylist;
-    delete [] edgellist;
   }
   futureflip = (badface *) NULL;
 }
