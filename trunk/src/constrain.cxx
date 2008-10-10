@@ -409,6 +409,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     if (pd != endpt) {
       // Split the segment.
       flipn2nf(pd, sseg, 1);
+      // Reset the type for the point.
+      pointtype(pd) = RIDGEVERTEX;
+      // Some subfaces may be non-Delaunay.
       lawsonflip();
     }
     // Found! Insert (the first part of) the segment.
@@ -564,6 +567,82 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       angmax / PI * 180.0, (int) dir);
   }
   return dir;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// markacutevertices()    Classify vertices as ACUTEVERTEXs or RIDGEVERTEXs. //
+//                                                                           //
+// Initially, all segment vertices are marked as VOLVERTEX (after calling    //
+// incrementaldelaunay()).                                                   //
+//                                                                           //
+// A segment vertex is ACUTEVERTEX if it two segments incident it form an    //
+// interior angle less than 60 degree, otherwise, it is a RIDGEVERTEX.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::markacutevertices()
+{
+  face parentsh, spinsh, nextsh;
+  face sseg, checkseg;
+  point pa, pb;
+  REAL anglimit, ang;
+  bool acuteflag;
+  int acutecount;
+
+  shellface sptr;
+
+  if (b->verbose) {
+    printf("  Marking acute vertices.\n");
+  }
+
+  anglimit = PI / 3.0;  // 60 degree.
+  acutecount = 0;
+
+  subsegpool->traversalinit();
+  sseg.sh = shellfacetraverse(subsegpool);
+  while (sseg.sh != NULL) {
+    for (sseg.shver = 0; sseg.shver < 2; sseg.shver++) {
+      pa = sorg(sseg);
+      if (pointtype(pa) == VOLVERTEX) {
+        acuteflag = false;
+        pb = sdest(sseg);
+        spivot(sseg, parentsh);
+        spinsh = parentsh;
+        do {
+          // Rotate edges around pa until a segment is found.
+          nextsh = spinsh;
+          while (1) {
+            if (sorg(nextsh) != pa) sesymself(nextsh);
+            // Go to the next edge.
+            senext2self(nextsh);
+            sspivot(nextsh, checkseg);
+            if (checkseg.sh != NULL) break;
+            // Get the adjacent coplanar subface.
+            spivotself(nextsh);
+          }
+          if (sorg(checkseg) != pa) sesymself(checkseg);
+          // Calculate the angle if it is not calulcated yet.
+          ang = interiorangle(pa, pb, sdest(checkseg), NULL);
+          acuteflag = ang > anglimit;
+          if (acuteflag) break;
+          spivotself(spinsh);
+        } while (spinsh.sh != parentsh.sh);
+        // Now mark the vertex.
+        if (b->verbose > 1) {
+          printf("    Mark %d as %s.\n", pointmark(pa), acuteflag ?
+            "ACUTEVERTEX" : "RIDGEVERTEX");
+        }
+        pointtype(pa) = acuteflag ? ACUTEVERTEX : RIDGEVERTEX;
+        acutecount += (acuteflag ? 1 : 0);
+      }
+    }
+    sseg.sh = shellfacetraverse(subsegpool);
+  }
+
+  if (b->verbose) {
+    printf("  %d acute vertices.\n", acutecount);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
