@@ -637,38 +637,38 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       //   'cavetetlist' for later checking (we use a bread-first search),
       //   and this tet gets deleted.
       enqflag = false;
-      pts = (point *) cavetet->tet;
-      if (pts[7] != dummypoint) {
-        // A volume tet. Operate on it if it has not been tested yet.
-        if (!marktested(*cavetet)) {
+      if (!marktested(*cavetet)) {
+        pts = (point *) cavetet->tet;
+        if (pts[7] != dummypoint) {
+          // A volume tet. Operate on it if it has not been tested yet.
           if (bowyerwatson) {
             // Use Bowyer-Watson algorithm, do Delaunay check.
             sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
             enqflag = (sign < 0.0);
           }
-          marktest(*cavetet); // Only test it once.
-        }
-      } else {
-        // It is a hull tet. Check if its base face is visible by p. 
-        //   This happens when p lies outside the hull face.
-        ori = orient3d(pts[4], pts[5], pts[6], insertpt); orient3dcount++;
-        enqflag = (ori < 0.0);
-        // Check if this face is coplanar with p. This case may create
-        //   a degenerate tet (zero volume). 
-        // Note: for convex domain, it only happen at hull face.
-        if (bowyerwatson && (ori == 0.0)) {
-          newflip = (badface *) flippool->alloc();
-          newflip->tt = *cavetet; // Queue the adjacent tet (not in cavity).
-          newflip->tt.loc = 0; // Must be at the base face.
-          newflip->nextitem = NULL;
-          if (futureflip == NULL) {
-            lastflip = futureflip = newflip;
-          } else {
-            lastflip->nextitem = newflip;
-            lastflip = newflip;
+        } else {
+          // It is a hull tet. Check if its base face is visible by p. 
+          //   This happens when p lies outside the hull face.
+          ori = orient3d(pts[4], pts[5], pts[6], insertpt); orient3dcount++;
+          enqflag = (ori < 0.0);
+          // Check if this face is coplanar with p. This case may create
+          //   a degenerate tet (zero volume). 
+          // Note: for convex domain, it only happen at hull face.
+          if (bowyerwatson && (ori == 0.0)) {
+            newflip = (badface *) flippool->alloc();
+            newflip->tt = *cavetet; // Queue the adjacent tet (not in cavity).
+            newflip->tt.loc = 0; // Must be at the base face.
+            newflip->nextitem = NULL;
+            if (futureflip == NULL) {
+              lastflip = futureflip = newflip;
+            } else {
+              lastflip->nextitem = newflip;
+              lastflip = newflip;
+            }
           }
-        }
-      } // if (pts[7] != dummypoint)
+        } // if (pts[7] != dummypoint)
+        marktest(*cavetet); // Only test it once.
+      }
       if (enqflag) {
         // Found a tet in the cavity. Put other three faces in check list.
         for (j = 0; j < 3; j++) {
@@ -704,9 +704,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
     neightet = *cavetet;
+    unmarktest(neightet); // Unmark it.
     if (apex(neightet) != dummypoint) {
       // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
-      unmarktest(neightet); // Unmark it.
       maketetrahedron(tetrahedronpool, &newtet);
       setorg(newtet, dest(neightet));
       setdest(newtet, org(neightet));
@@ -887,17 +887,18 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
     flip14(insertpt, searchtet, flipflag);
   }
 
+  recenttet = *searchtet; // Remember a handle.
+
   // Set the point type.
   if (pointtype(insertpt) == UNUSEDVERTEX) {
     pointtype(insertpt) = VOLVERTEX;
   }
 
-  // Remember a new tet for point location.
-  recenttet = *searchtet;
-
   // If flipflag == 1, do Delaunay flip.
   if (flipflag > 0) {
     lawsonflip3d();
+  } else if (b->bowyerwatson) {
+    bowyerwatsonflip(insertpt);
   }
 }
 
@@ -1020,19 +1021,19 @@ void tetgenmesh::incrementaldelaunay()
     printf("  Incremental inserting vertices.\n");
   }
 
-  if (b->bowyerwatson) {
+  if (b->bowyerwatson > 1) { // -bb
     // Use incremental Bowyer-Watson algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
       insertvertex(permutarray[i], &searchtet, true);    
     }
-  } else {
+  } else { // -b
     // Use incremental flip algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
-      flipinsertvertex(permutarray[i], &searchtet, 1);    
+      flipinsertvertex(permutarray[i], &searchtet, 1 - b->bowyerwatson);    
     }
   }
 

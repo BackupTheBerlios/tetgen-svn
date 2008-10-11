@@ -444,7 +444,7 @@ tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack,
 void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
 {
   triface fliptets[4], castets[4];
-  triface newface, casface;
+  triface newface, casface, *parytet;
   point pa, pb, pc, pd;
   int i;
 
@@ -524,6 +524,14 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
     futureflip = flippush(futureflip, &(fliptets[3]), newpt);
   }
 
+  if (b->bowyerwatson) {
+    // Put outer boundary faces into array.
+    for (i = 0; i < 4; i++) {
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = castets[i];
+    }
+  }
+
   *splittet = fliptets[0]; // Return abcp.
 }
 
@@ -545,7 +553,7 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
 void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 {
   triface fliptets[6], topcastets[3], botcastets[3];
-  triface newface, casface;
+  triface newface, casface, *parytet;
   point pa, pb, pc, pd, pe;
   int i;
 
@@ -642,6 +650,18 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
     }
   }
 
+  if (b->bowyerwatson) {
+    // Put outer boundary faces into array.
+    for (i = 0; i < 3; i++) {
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = topcastets[i];
+    }
+    for (i = 0; i < 3; i++) {
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = botcastets[i];
+    }
+  }
+
   *splitface = fliptets[0]; // Return abpd.
 }
 
@@ -665,7 +685,7 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 {
   triface *fliptets, *bfliptets, *topcastets, *botcastets;
-  triface newface, casface;
+  triface newface, casface, *parytet;
   point pa, pb, *pt;
   int dummyflag; // 0 or 1.
   int n, i;
@@ -794,6 +814,18 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     for (i = 0; i < n; i++) {
       enextfnext(bfliptets[i], newface);
       futureflip = flippush(futureflip, &newface, newpt);
+    }
+  }
+
+  if (b->bowyerwatson) {
+    // Put outer boundary faces into array.
+    for (i = 0; i < n; i++) {
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = topcastets[i];
+    }
+    for (i = 0; i < n; i++) {
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = botcastets[i];
     }
   }
 
@@ -1488,6 +1520,247 @@ void tetgenmesh::lawsonflip3d()
   }
 
   flippool->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// bowyerwatsonflip()    Remove non-Delaunay tets by Bowyer-Watson method.   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::bowyerwatsonflip(point newpt)
+{
+  triface *cavetet, *parytet, neightet, neineightet, newtet;
+  point *pts;
+  REAL sign, ori;
+  bool enqflag;
+  int i, j;
+
+  badface *newflip, *lastflip;
+  triface fliptets[4];
+
+  tetrahedron ptr;
+  int *iptr;
+
+  if (b->verbose > 1) {
+    printf("    Initial cavity size: %ld faces.\n", cavetetlist->objects);
+  }
+
+  // Form the cavity by including tets from initial boundary.
+  for (i = 0; i < cavetetlist->objects; i++) {
+    // 'cavetet' is actually an adjacent tet to the cavity.
+    cavetet = (triface *) fastlookup(cavetetlist, i);
+    // Do check if it is not deleted.
+    if (cavetet->tet[4] != NULL) {
+      // Check for two possible cases for this tet: 
+      //   (1) It is a cavity tet, or
+      //   (2) it is a cavity boundary face.
+      // In case (1), the cavity gets enlarged by removing this tet, the 
+      //   three side faces of this tet are added into 'cavetetlist'.
+      //   for later checking (we use a bread-first search).
+      enqflag = false;
+      if (!marktested(*cavetet)) {
+        pts = (point *) cavetet->tet;
+        if (pts[7] != dummypoint) {
+          // A volume tet. Operate on it if it has not been tested yet.
+          sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], newpt);
+          enqflag = (sign < 0.0);
+        } else {
+          // It is a hull tet. Check if its base face is visible by p. 
+          //   This happens when p lies outside the hull face.
+          ori = orient3d(pts[4], pts[5], pts[6], newpt); orient3dcount++;
+          enqflag = (ori < 0.0);
+          // Check if this face is coplanar with p. This case may create
+          //   a degenerate tet (zero volume). 
+          // Note: for convex domain, it only happen at hull face.
+          if (ori == 0.0) {
+            newflip = (badface *) flippool->alloc();
+            newflip->tt = *cavetet; // Queue the adjacent tet (not in cavity).
+            newflip->tt.loc = 0; // Must be at the base face.
+            newflip->nextitem = NULL;
+            if (futureflip == NULL) {
+              lastflip = futureflip = newflip;
+            } else {
+              lastflip->nextitem = newflip;
+              lastflip = newflip;
+            }
+          }
+        } // if (pts[7] != dummypoint)
+        marktest(*cavetet); // Only test it once.
+      }
+      if (enqflag) {
+        // Found a tet in the cavity. Enlarge the cavity.
+        sym(*cavetet, neightet);
+        if (neightet.tet != NULL) {
+          // This tet is created by flip14() ..., it is inside the cavity.
+          // Now it is dead, clear the connections at its side faces.
+          for (j = 0; j < 3; j++) {
+            decode(neightet.tet[locpivot[neightet.loc][j]], neineightet);
+            if (neineightet.tet != NULL) {
+              neineightet.tet[neineightet.loc] = NULL;
+            }
+          }
+          tetrahedrondealloc(neightet.tet);
+        }
+        // Put other three side faces to check later.
+        for (j = 0; j < 3; j++) {
+          decode(cavetet->tet[locpivot[cavetet->loc][j]], neightet);
+          if (neightet.tet != NULL) {
+            neightet.tet[neightet.loc] = NULL;
+            cavetetlist->newindex((void **) &parytet);
+            *parytet = neightet;
+          }
+        }
+        tetrahedrondealloc(cavetet->tet);
+      } else {
+        // Found a boundary face of the cavity. It may be a face of a hull
+        //   tet which contains 'dummypoint'. Choose the edge in the face 
+        //   such that its endpoints are not 'dummypoint', while its apex
+        //   may be 'dummypoint' (see Fig. 1.4).
+        cavetet->ver = 4;
+        cavebdrylist->newindex((void **) &parytet);
+        *parytet = *cavetet;
+      }
+    } // if (cavetet->tet[4] != NULL)
+  }
+
+  if (b->verbose > 1) {
+    printf("    Final cavity size: %ld faces.\n", cavebdrylist->objects);
+  }
+
+  totalbowatcavsize += cavebdrylist->objects;
+  if (maxbowatcavsize < cavebdrylist->objects) {
+    maxbowatcavsize = cavebdrylist->objects;
+  }
+
+  cavetetlist->restart();  // Reuse cavetetlist.
+
+  // Create new tetrahedra in the Bowyer-Watson cavity.
+  for (i = 0; i < cavebdrylist->objects; i++) {
+    cavetet = (triface *) fastlookup(cavebdrylist, i);
+    unmarktest(*cavetet); // Unmark it.
+    sym(*cavetet, neightet);
+    // Only open boundary faces will be filled by new tets.
+    if (neightet.tet == NULL) {
+      neightet = *cavetet;
+      if (apex(neightet) != dummypoint) {
+        // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
+        maketetrahedron(tetrahedronpool, &newtet);
+        setorg(newtet, dest(neightet));
+        setdest(newtet, org(neightet));
+        setapex(newtet, apex(neightet));
+        setoppo(newtet, newpt);
+      } else {
+        // Create a new hull tet (see Fig. bowyerwatson 2).
+        maketetrahedron(hulltetrahedronpool, &newtet);
+        setorg(newtet, org(neightet));
+        setdest(newtet, dest(neightet));
+        setapex(newtet, newpt);
+        setoppo(newtet, dummypoint);
+        // Note: the cavity boundary face is at the enext0fnext place.
+        enext0fnextself(newtet);
+      }
+      // Connect newtet <==> neightet, this also disconnect the old bond.
+      bond(newtet, neightet);
+      // Replace the old boundary face with the new tet in list.
+      *cavetet = newtet;
+      // Put this new tet in list (its sides are still open).
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = newtet;
+    }
+  }
+
+  if (b->verbose > 1) {
+    printf("    Number of new tets: %ld.\n", cavetetlist->objects);
+  }
+
+  // Connect the new tetrahedra together.
+  for (i = 0; i < cavetetlist->objects; i++) {
+    cavetet = (triface *) fastlookup(cavetetlist, i);
+    cavetet->ver = 0;
+    for (j = 0; j < 3; j++) {
+      enext0fnext(*cavetet, newtet); // Go to the face.
+      // Operate on it if it is open.
+      if (newtet.tet[newtet.loc] == NULL) {
+        // Find its adjacent face by rotating faces around the edge of
+        //   cavetet. The rotating direction is opposite to newtet.
+        //   Stop the rotate at a face which is open.
+        esym(*cavetet, neightet); // Set the rotate dir.
+        do {
+          fnextself(neightet); // Go to the face in the adjacent tet.
+        } while (neightet.tet[neightet.loc] != NULL);
+        bond(newtet, neightet); // Connect newtet <==> neightet.
+      }
+      enextself(*cavetet);
+    }
+  }
+
+  // Set a handle for the point location.
+  recenttet = * (triface *) fastlookup(cavebdrylist, 0);
+
+  if (futureflip != NULL) {
+    // There may exist degenerate tets. Check and remove them.
+    while (futureflip != NULL) {
+      // Dequeued an adjacent tet to the cavity.
+      fliptets[0] = futureflip->tt;
+      futureflip = futureflip->nextitem;
+
+      // Skip it if it is dead (by previous flip32s).
+      if (fliptets[0].tet[4] == NULL) continue;
+
+      // The possible degenerate tet, check it.
+      symself(fliptets[0]); 
+      pts = (point *) fliptets[0].tet;
+      ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
+      
+      if (ori == 0) {
+        if (b->verbose > 1) {
+          printf("    Removing tet (%d, %d, %d, %d).\n", pointmark(pts[4]),
+            pointmark(pts[5]), pointmark(pts[6]), pointmark(pts[7]));
+        }
+        // Find the hull edge in cavetet.
+        fliptets[0].ver = 0;
+        for (j = 0; j < 3; j++) {
+          enext0fnext(fliptets[0], neightet);
+          symself(neightet);
+          if ((point) neightet.tet[7] == dummypoint) break;
+          enextself(fliptets[0]);
+        }
+        // Because of existing multiple degenerate cases. It is possible
+        //   that the other hull face is not pop yet.
+        if (j < 3) {
+          // Collect tets for flipping the edge.
+          for (j = 0; j < 3; j++) {
+            fnext(fliptets[j], fliptets[j + 1]);
+          }
+          if (fliptets[3].tet != fliptets[0].tet) {
+            printf("Internal error in insertvertex(): Unknown flip case.\n");
+            terminatetetgen(1);
+          }
+          // Do a 3-to-2 flip to remove the degenerate tet.
+          flip32(fliptets, 0);
+          // Rememebr the new tet.
+          recenttet = fliptets[0];
+        } else {
+          // Put the face back into queue.
+          symself(fliptets[0]);
+          newflip = (badface *) flippool->alloc();
+          newflip->tt = fliptets[0]; // the adjacent tet (not in cavity).
+          newflip->nextitem = NULL;
+          if (futureflip == NULL) {
+            lastflip = futureflip = newflip;
+          } else {
+            lastflip->nextitem = newflip;
+            lastflip = newflip;
+          }
+        } // if (j < 3)
+      } // if (ori == 0)
+    }
+    flippool->restart();
+  }
+
+  cavetetlist->restart();
+  cavebdrylist->restart();
 }
 
 #endif // #ifndef flipCXX

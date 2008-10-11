@@ -293,7 +293,7 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
       } else if (argv[i][j] == 'A') {
         regionattrib++;
       } else if (argv[i][j] == 'b') {
-        bowyerwatson = 1;
+        bowyerwatson++;
       } else if (argv[i][j] == 'i') {
         insertaddpoints = 1;
       } else if (argv[i][j] == 'd') {
