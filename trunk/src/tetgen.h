@@ -1432,7 +1432,6 @@ void flipn2n(point newpt, triface* splitedge, int flipflag);
 void flip23(triface* fliptets, int flipflag);
 void flip32(triface* fliptets, int flipflag);
 //bool flipnm(int n, triface* fliptets, int flipflag);
-void bowyerwatsonflip(point newpt);
 void lawsonflip3d();
 
 ///////////////////////////////////////////////////////////////////////////////

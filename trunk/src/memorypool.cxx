@@ -577,7 +577,7 @@ void tetgenmesh::initializepools()
   if (b->bowyerwatson) {
     // Initialize the arraypools for Bowyer-Watson algorithm.
     cavetetlist = new arraypool(sizeof(triface), 8);
-    cavebdrylist = new arraypool(sizeof(triface), 8); 
+    cavebdrylist = new arraypool(sizeof(triface), 8);
   }
 }
 
