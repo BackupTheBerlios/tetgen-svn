@@ -409,8 +409,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     if (pd != endpt) {
       // Split the segment.
       flipn2nf(pd, sseg, 1);
-      // Reset the type for the point.
-      pointtype(pd) = RIDGEVERTEX;
+      if ((pointtype(pd) == VOLVERTEX) || (pointtype(pd) == FACETVERTEX)) {
+        // Reset the type for the point.
+        pointtype(pd) = RIDGEVERTEX;
+      }
       // Some subfaces may be non-Delaunay.
       lawsonflip();
     }
@@ -671,9 +673,9 @@ void tetgenmesh::delaunizesegments()
   tet2subpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
 
   // Calculate the log-2 of the number of segments.
-  s = i = 1;
-  while ((s =<< 1) < subsegpool->items) {
-    i++;
+  s = 1; i = 0;
+  while (s < subsegpool->items) {
+    s =<< 1; i++;
   }
   // Initialize the list of segments to be recovered.
   seglist = new arraypool(sizeof(face), i + 1);
