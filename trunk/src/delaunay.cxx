@@ -897,8 +897,6 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
   // If flipflag == 1, do Delaunay flip.
   if (flipflag > 0) {
     lawsonflip3d();
-  } else if (b->bowyerwatson) {
-    bowyerwatsonflip(insertpt);
   }
 }
 
@@ -1021,19 +1019,19 @@ void tetgenmesh::incrementaldelaunay()
     printf("  Incremental inserting vertices.\n");
   }
 
-  if (b->bowyerwatson > 1) { // -bb
+  if (b->bowyerwatson) {
     // Use incremental Bowyer-Watson algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
       insertvertex(permutarray[i], &searchtet, true);    
     }
-  } else { // -b
+  } else {
     // Use incremental flip algorithm.
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
-      flipinsertvertex(permutarray[i], &searchtet, 1 - b->bowyerwatson);    
+      flipinsertvertex(permutarray[i], &searchtet, 1);    
     }
   }
 

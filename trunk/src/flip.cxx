@@ -524,7 +524,7 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
     futureflip = flippush(futureflip, &(fliptets[3]), newpt);
   }
 
-  if (b->bowyerwatson) {
+  if (b->bowyerwatson > 1) {
     // Put outer boundary faces into array.
     for (i = 0; i < 4; i++) {
       cavetetlist->newindex((void **) &parytet);
@@ -650,7 +650,7 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
     }
   }
 
-  if (b->bowyerwatson) {
+  if (b->bowyerwatson > 1) {
     // Put outer boundary faces into array.
     for (i = 0; i < 3; i++) {
       cavetetlist->newindex((void **) &parytet);
@@ -817,7 +817,7 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     }
   }
 
-  if (b->bowyerwatson) {
+  if (b->bowyerwatson > 1) {
     // Put outer boundary faces into array.
     for (i = 0; i < n; i++) {
       cavetetlist->newindex((void **) &parytet);
