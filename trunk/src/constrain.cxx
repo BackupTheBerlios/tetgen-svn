@@ -486,8 +486,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     if (pd != endpt) {
       // Split the segment.
       flipn2nf(pd, sseg, 1);
-      if ((pointtype(pd) == VOLVERTEX) || (pointtype(pd) == FACETVERTEX)) {
-        // Reset the type for the point.
+      // Reset the type for the point.
+      if (pointtype(pd) != ACUTEVERTEX) {
         pointtype(pd) = RIDGEVERTEX;
       }
       // Some subfaces may be non-Delaunay.
@@ -798,12 +798,13 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
 
 void tetgenmesh::delaunizesegments()
 {
-  arraypool *seglist;
   triface searchtet;
   face sseg, *psseg, splitsh;
   point refpt, newpt;
   enum intersection dir;
   int s, i;
+
+  shellface sptr;
 
   if (!b->quiet) {
     printf("Delaunizing segments.\n");
@@ -823,21 +824,21 @@ void tetgenmesh::delaunizesegments()
   while (s < subsegpool->items) {
     s <<= 1; i++;
   }
-  // Initialize the list of segments to be recovered.
-  seglist = new arraypool(sizeof(face), i + 1);
+  // Initialize the stack of segments to be recovered.
+  subsegstack = new arraypool(sizeof(face), i + 1);
   // Put all segments into the list.
   subsegpool->traversalinit();
   for (i = 0; i < subsegpool->items; i++) {
     sseg.sh = shellfacetraverse(subsegpool);
-    seglist->newindex((void **) &psseg);
+    subsegstack->newindex((void **) &psseg);
     *psseg = sseg;
   }
 
-  // Loop until 'seglist' is empty.
-  while (seglist->objects > 0l) {
+  // Loop until 'subsegstack' is empty.
+  while (subsegstack->objects > 0l) {
     // Default seglist is used as a stack.
-    seglist->objects--;
-    psseg = (face *) fastlookup(seglist, seglist->objects);
+    subsegstack->objects--;
+    psseg = (face *) fastlookup(subsegstack, subsegstack->objects);
     sseg = *psseg;
 
     // Insert the segment.
@@ -850,7 +851,6 @@ void tetgenmesh::delaunizesegments()
       if (dir != ACROSSVERT) {
         // Create the new point.
         makepoint(&newpt);
-        // Calulcate the splitting point.
         getsegmentsplitpoint(&sseg, refpt, newpt);
         // Split the segment by newpt.
         flipn2nf(newpt, &splitsh, 1);
@@ -862,16 +862,18 @@ void tetgenmesh::delaunizesegments()
       } else {
         // Split the segment by refpt.
         flipn2nf(refpt, &splitsh, 1);
-        pointtype(refpt) = RIDGEVERTEX;
+        if (pointtype(refpt) != ACUTEVERTEX) {
+          pointtype(refpt) = RIDGEVERTEX;
+        }
         lawsonflip();
       }
-      // Add two subsegments into seglist.
-      seglist->newindex((void **) &psseg);
+      // Add two subsegments into the stack.
+      subsegstack->newindex((void **) &psseg);
       *psseg = sseg;
       senextself(sseg);
       spivotself(sseg);
       sseg.shver = 0;
-      seglist->newindex((void **) &psseg);
+      subsegstack->newindex((void **) &psseg);
       *psseg = sseg;
     }
   }
@@ -880,7 +882,7 @@ void tetgenmesh::delaunizesegments()
     printf("  %d protecting points.\n", r1count + r2count + r3count);
   }
 
-  delete seglist;
+  delete subsegstack;
   delete tet2subpool;
 }
 

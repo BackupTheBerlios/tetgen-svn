@@ -510,6 +510,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   bool bowyerwatson)
 {
   triface *cavetet, *parytet, spintet, neightet, newtet;
+  face *psseg, sseg;
   point *pts;
   enum location loc;
   REAL sign, ori;
@@ -676,6 +677,26 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           cavetetlist->newindex((void **) &parytet);
           *parytet = neightet;
         }
+        if (checksubsegs) {
+          // Check if some segments lie inside the cavity.
+          cavetet->ver = 0;
+          for (j = 0; j < 3; j++) {
+            tsspivot1(*cavetet, sseg);
+            if (sseg.sh != NULL) {
+              enext0fnext(*cavetet, neightet);
+              symself(neightet);
+              if (neightet.tet[4] == NULL) {
+                if (b->verbose > 1) {
+                  printf("    Queue encroached segment (%d, %d).\n",
+                    pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+                }
+                subsegstack->newindex((void **) &psseg);
+                *psseg = sseg;
+              }
+            }
+            enextself(*cavetet);
+          }
+        }
         tetrahedrondealloc(cavetet->tet);
         tetcount++;
       } else {
@@ -724,6 +745,17 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
     // Connect newtet <==> neightet, this also disconnect the old bond.
     bond(newtet, neightet);
+    if (checksubsegs) {
+      newtet.ver &= ~1;  // Keep in 0th edge ring.
+      for (j = 0; j < 3; j++) {
+        tsspivot1(neightet, sseg);
+        if (sseg.sh != NULL) {
+          tssbond1(newtet, sseg);
+        }
+        enextself(neightet);
+        enext2self(newtet);
+      }
+    }
     // Replace the old boundary face with the new tet in list.
     *cavetet = newtet;
   }

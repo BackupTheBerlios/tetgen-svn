@@ -1277,6 +1277,7 @@ void tssbond1(triface& t, face& s) {
       ((shellface *) (t).tet[8])[i] = NULL;
     }
   }
+  // Bond the segment.
   ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = sencode((s));
 } 
 
@@ -1335,6 +1336,9 @@ badface *futureflip;
 
 // Two dynmaic arrays used by Bowyer-Watson algorithm.
 arraypool *cavetetlist, *cavebdrylist;
+
+// A stack used by the segment recovery algorithm.
+arraypool *subsegstack;
 
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
@@ -1561,6 +1565,7 @@ void initialize()
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = (arraypool *) NULL;
+  subsegstack = (arraypool *) NULL;
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
   elemattribindex = volumeboundindex = highorderindex = 0;
@@ -1609,6 +1614,9 @@ void deinitialize()
   if (cavetetlist != (arraypool *) NULL) {
     delete cavetetlist;
     delete cavebdrylist;
+  }
+  if (subsegstack != (arraypool *) NULL) {
+    delete subsegstack;
   }
   futureflip = (badface *) NULL;
 }
