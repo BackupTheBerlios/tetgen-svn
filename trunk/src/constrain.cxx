@@ -659,10 +659,12 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, point *newpt)
+void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
 {
   point ei, ej, ek;
+  REAL split, L, d, d1, d2;
   int stype, sign;
+  int i;
 
   // Decide the type of this segment.
   sign = 1;
@@ -683,6 +685,7 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, point *newpt)
         stype = 1; sign = -1;
       } else {
         if (pointtype(ej) == RIDGEVERTEX) {
+          // Both ei and ej are non-acute.
           stype = 0;
         } else {
           // ej is a STEINERVETEX.
@@ -723,17 +726,69 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, point *newpt)
     }
   }
 
-  // Get the needed endpoints, ei, ej, and ek.
+  // Adjust the endpoints: ei, ej.
   if (sign == -1) {
     sesymself(*sseg);
     ei = sorg(*sseg);
     ej = sdest(*sseg);
   }
-  ek = farsorg(*sseg);
+  if (stype) {
+    ek = farsorg(*sseg);
+  }
 
   if (b->verbose > 1) {
-    printf("    Get split point in seg(%d, %d) ek(%d), ref(%d), ty(%d).\n",
-      pointmark(ek), pointmark(ei), pointmark(ei), pointmark(refpt), stype);
+    printf("    Split a type-%d seg(%d, %d) ref(%d)", stype,
+      pointmark(ei), pointmark(ej), pointmark(refpt));
+    if (stype) {
+      printf(" ek(%d)", pointmark(ek));
+    }
+    printf(".\n");
+  }
+
+  // Calculate the split point.
+  if (stype == 0) {
+    // Use rule-1.
+    L = DIST(ei, ej);
+    d = DIST(ei, refpt);
+    if (d < 0.5 * L) {
+      // Choose ei as center.
+      split = d / L;
+      for (i = 0; i < 3; i++) {
+        vt[i] = ei[i] + split * (ej[i] - ei[i]);
+      }
+    } else {
+      // Choose ej as center.
+      d = DIST(ej, refpt);
+      split = d / L;
+      for (i = 0; i < 3; i++) {
+        vt[i] = ej[i] + split * (ei[i] - ej[i]);
+      }
+    }
+    r1count++;
+  } else {
+    // Use rule-2.
+    ek = farsorg(*sseg);
+    L = DIST(ek, ej);
+    d = DIST(ek, refpt);
+    split = d / L;
+    for (i = 0; i < 3; i++) {
+      vt[i] = ek[i] + split * (ej[i] - ek[i]);
+    }
+    d1 = DIST(vt, refpt);
+    d2 = DIST(vt, ej);
+    if (d1 > d2) {
+      // Use rule-3.
+      d -= d1;
+      split = d / L;
+      for (i = 0; i < 3; i++) {
+        vt[i] = ek[i] + split * (ej[i] - ek[i]);
+      }
+    }
+    d1 > d2 ? r3count++ : r2count++;
+  }
+
+  if (b->verbose > 1) {
+    printf("    split = %g.\n", split);
   }
 }
 
@@ -750,6 +805,7 @@ void tetgenmesh::delaunizesegments()
   face sseg, *psseg;
   point refpt, newpt;
   enum intersection dir;
+  REAL vt[3];
   int s, i;
 
   if (!b->quiet) {
@@ -795,7 +851,7 @@ void tetgenmesh::delaunizesegments()
       // The segment is missing, recover it.
       if (dir != ACROSSVERT) {
         // Calulcate the new point (using rule 1, 2, 3).
-        // getsegmentsplitpoint(&sseg, refpt, &newpt);
+        getsegmentsplitpoint(&sseg, refpt, vt);
       } else {
         newpt = refpt;
       }

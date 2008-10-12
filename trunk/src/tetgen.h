@@ -1196,6 +1196,8 @@ void bond(triface& t1, triface& t2) {
 
 // farsorg(), farsdest() -- s is a subsegment, return the origin or
 //   destination of the segment containing s.
+// Note: here we assume that two subsegment (a->p) and (p->b) bonded
+//   at p as: (p->nil->a) and (nil->p->b), in flipn2nf().
 
 point farsorg(face& s) {
   face travesh, neighsh;
@@ -1366,6 +1368,7 @@ long flip23count, flip32count, flipnmcount;
 long flip13count, flip22count, flipn2nfcount;
 REAL tloctime, tfliptime, tinserttime;
 long force_ptloc_count;
+long r1count, r2count, r3count;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1504,7 +1507,7 @@ void meshsurface();
 void markacutevertices();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
-void getsegmentsplitpoint(face* sseg, point refpt, point *newpt);
+void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1576,6 +1579,7 @@ void initialize()
   flip13count = flip22count = flipn2nfcount = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
   force_ptloc_count = 0l;
+  r1count = r2count = r3count = 0l;
 }
 
 void deinitialize()
