@@ -732,14 +732,12 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
     ei = sorg(*sseg);
     ej = sdest(*sseg);
   }
-  if (stype) {
-    ek = farsorg(*sseg);
-  }
 
   if (b->verbose > 1) {
     printf("    Split a type-%d seg(%d, %d) ref(%d)", stype,
       pointmark(ei), pointmark(ej), pointmark(refpt));
     if (stype) {
+      ek = farsorg(*sseg);
       printf(" ek(%d)", pointmark(ek));
     }
     printf(".\n");
@@ -802,10 +800,9 @@ void tetgenmesh::delaunizesegments()
 {
   arraypool *seglist;
   triface searchtet;
-  face sseg, *psseg;
+  face sseg, *psseg, splitsh;
   point refpt, newpt;
   enum intersection dir;
-  REAL vt[3];
   int s, i;
 
   if (!b->quiet) {
@@ -824,7 +821,7 @@ void tetgenmesh::delaunizesegments()
   // Calculate the log-2 of the number of segments.
   s = 1; i = 0;
   while (s < subsegpool->items) {
-    s = s << 1; i++;
+    s <<= 1; i++;
   }
   // Initialize the list of segments to be recovered.
   seglist = new arraypool(sizeof(face), i + 1);
@@ -848,14 +845,39 @@ void tetgenmesh::delaunizesegments()
     dir = scoutsegment(&sseg, &searchtet, &refpt);
 
     if (dir != COLLINEAR) {
-      // The segment is missing, recover it.
+      // The segment is missing, split it.
+      spivot(sseg, splitsh);
       if (dir != ACROSSVERT) {
-        // Calulcate the new point (using rule 1, 2, 3).
-        getsegmentsplitpoint(&sseg, refpt, vt);
+        // Create the new point.
+        makepoint(&newpt);
+        // Calulcate the splitting point.
+        getsegmentsplitpoint(&sseg, refpt, newpt);
+        // Split the segment by newpt.
+        flipn2nf(newpt, &splitsh, 1);
+        pointtype(newpt) = STEINERVERTEX;
+        // Some subfaces may be non-Delaunay.
+        lawsonflip();
+        // Insert newpt into the DT.
+        insertvertex(newpt, &searchtet, true);
       } else {
-        newpt = refpt;
+        // Split the segment by refpt.
+        flipn2nf(refpt, &splitsh, 1);
+        pointtype(refpt) = RIDGEVERTEX;
+        lawsonflip();
       }
+      // Add two subsegments into seglist.
+      seglist->newindex((void **) &psseg);
+      *psseg = sseg;
+      senextself(sseg);
+      spivotself(sseg);
+      sseg.shver = 0;
+      seglist->newindex((void **) &psseg);
+      *psseg = sseg;
     }
+  }
+
+  if (b->verbose) {
+    printf("  %d protecting points.\n", r1count + r2count + r3count);
   }
 
   delete seglist;
