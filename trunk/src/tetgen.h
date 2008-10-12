@@ -1194,6 +1194,35 @@ void bond(triface& t1, triface& t2) {
 #define senext2self(s) \
   (s).shver = ve[ve[(s).shver]]
 
+// farsorg(), farsdest() -- s is a subsegment, return the origin or
+//   destination of the segment containing s.
+
+point farsorg(face& s) {
+  face travesh, neighsh;
+  shellface sptr;
+  travesh = s;
+  while (1) {
+    senext2(travesh, neighsh);
+    spivotself(neighsh); 
+    if (neighsh.sh = NULL) break;
+    senext2(neighsh, travesh); 
+  }
+  return sorg(travesh);
+}
+
+point farsdest(face& s) {
+  face travesh, neighsh;
+  shellface sptr;
+  travesh = s;
+  while (1) {
+    senext(travesh, neighsh);
+    spivotself(neighsh); 
+    if (neighsh.sh = NULL) break;
+    senext(neighsh, travesh); 
+  }
+  return sdest(travesh);
+}
+
 // shellmark() -- set or read the shell mark.
 
 #define shellmark(s) ((int *) ((s).sh))[shmarkindex]
@@ -1204,7 +1233,7 @@ void bond(triface& t1, triface& t2) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Interactions between tetrahedra and subfaces.                             //
+// Interactions between tetrahedra and subfaces and subsegments.             //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1223,12 +1252,6 @@ void tspivot(triface& t, face& s) {
 
 // tsbond() -- connect a tet and subface.
  
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// Interactions between tetrahedra and subsegments.                          //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
 // tsspivot1() -- given a tet's edge t, return a subsegment s at this edge.
 //   t and s is bonded through tssbond1(). if s.sh == NULL, the edge is
 //   not a subsegment.
@@ -1478,9 +1501,10 @@ void meshsurface();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+void markacutevertices();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
-void markacutevertices();
+void getsegmentsplitpoint(face* sseg, point refpt, point *newpt);
 void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -5,6 +5,82 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// markacutevertices()    Classify vertices as ACUTEVERTEXs or RIDGEVERTEXs. //
+//                                                                           //
+// Initially, all segment vertices are marked as VOLVERTEX (after calling    //
+// incrementaldelaunay()).                                                   //
+//                                                                           //
+// A segment vertex is ACUTEVERTEX if it two segments incident it form an    //
+// interior angle less than 60 degree, otherwise, it is a RIDGEVERTEX.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::markacutevertices()
+{
+  face parentsh, spinsh, nextsh;
+  face sseg, checkseg;
+  point pa, pb;
+  REAL anglimit, ang;
+  bool acuteflag;
+  int acutecount;
+
+  shellface sptr;
+
+  if (b->verbose) {
+    printf("  Marking acute vertices.\n");
+  }
+
+  anglimit = PI / 3.0;  // 60 degree.
+  acutecount = 0;
+
+  subsegpool->traversalinit();
+  sseg.sh = shellfacetraverse(subsegpool);
+  while (sseg.sh != NULL) {
+    for (sseg.shver = 0; sseg.shver < 2; sseg.shver++) {
+      pa = sorg(sseg);
+      if (pointtype(pa) == VOLVERTEX) {
+        acuteflag = false;
+        pb = sdest(sseg);
+        spivot(sseg, parentsh);
+        spinsh = parentsh;
+        do {
+          // Rotate edges around pa until a segment is found.
+          nextsh = spinsh;
+          while (1) {
+            if (sorg(nextsh) != pa) sesymself(nextsh);
+            // Go to the next edge.
+            senext2self(nextsh);
+            sspivot(nextsh, checkseg);
+            if (checkseg.sh != NULL) break;
+            // Get the adjacent coplanar subface.
+            spivotself(nextsh);
+          }
+          if (sorg(checkseg) != pa) sesymself(checkseg);
+          // Calculate the angle if it is not calulcated yet.
+          ang = interiorangle(pa, pb, sdest(checkseg), NULL);
+          acuteflag = ang > anglimit;
+          if (acuteflag) break;
+          spivotself(spinsh);
+        } while (spinsh.sh != parentsh.sh);
+        // Now mark the vertex.
+        if (b->verbose > 1) {
+          printf("    Mark %d as %s.\n", pointmark(pa), acuteflag ?
+            "ACUTEVERTEX" : "RIDGEVERTEX");
+        }
+        pointtype(pa) = acuteflag ? ACUTEVERTEX : RIDGEVERTEX;
+        acutecount += (acuteflag ? 1 : 0);
+      }
+    }
+    sseg.sh = shellfacetraverse(subsegpool);
+  }
+
+  if (b->verbose) {
+    printf("  %d acute vertices.\n", acutecount);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // finddirection()    Find the tet on the path from one point to another.    //
 //                                                                           //
 // The path starts from 'searchtet''s origin and ends at 'endpt'. On finish, //
@@ -335,17 +411,18 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 // ment. Return TRUE if such edge exists, and the segment is attached to the //
 // surrounding tets. Otherwise return FALSE.                                 //
 //                                                                           //
-// If 'searchtet' != NULL, it's origin must be the origin of 'sseg'. It can  //
-// be used as the starting tet for searching the edge. If such edge does not //
-// found (return FALSE), 'searchtet' contains the tet whose edge or face is  //
-// crossed by the segment.                                                   //
+// If 'searchtet' != NULL, it's origin must be the origin of 'sseg'.  It is  //
+// used as the starting tet for searching the edge.                          //
+//                                                                           //
+// If the segment does not exist (return FALSE), 'refpt' returns a reference //
+// point for the segment. 'searchtet' returns the tet containing the 'refpt'.//
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   triface* searchtet, point* refpt)
 {
-  triface neightet;
+  triface neightet, reftet;
   face checkseg;
   point startpt, endpt;
   point pa, pb, pc, pd;
@@ -459,6 +536,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     angmax = ang;
     *refpt = pc;
   }
+  reftet = *searchtet; // Save the tet containing the refpt.
 
   // Search intersecting faces along the segment.
   while (1) {
@@ -478,6 +556,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     if (ang > angmax) {
       angmax = ang;
       *refpt = pd;
+      reftet = *searchtet;
     }
 
     // Find a face intersecting the segment.
@@ -517,6 +596,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
           if (ang > angmax) {
             angmax = ang;
             *refpt = pc;
+            reftet = neightet;
           }
         }
         // Check if this face intersects the segment.
@@ -547,7 +627,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       }
       pd = org(neightet);
       if (b->verbose > 2) {
-        angmax =  interiorangle(pc, startpt, endpt, NULL);
+        angmax =  interiorangle(pd, startpt, endpt, NULL);
       }
       *refpt = pd;
       break;
@@ -568,82 +648,92 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     printf("      Choose refpoint %d, ang(%g), dir(%d).\n", pointmark(*refpt),
       angmax / PI * 180.0, (int) dir);
   }
+
+  *searchtet = reftet;
   return dir;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// markacutevertices()    Classify vertices as ACUTEVERTEXs or RIDGEVERTEXs. //
-//                                                                           //
-// Initially, all segment vertices are marked as VOLVERTEX (after calling    //
-// incrementaldelaunay()).                                                   //
-//                                                                           //
-// A segment vertex is ACUTEVERTEX if it two segments incident it form an    //
-// interior angle less than 60 degree, otherwise, it is a RIDGEVERTEX.       //
+// getsegmentsplitpoint()    Calculate a split point in the given segment.   //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::markacutevertices()
+void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, point *newpt)
 {
-  face parentsh, spinsh, nextsh;
-  face sseg, checkseg;
-  point pa, pb;
-  REAL anglimit, ang;
-  bool acuteflag;
-  int acutecount;
+  point ei, ej, ek;
+  int stype, sign;
 
-  shellface sptr;
+  // Decide the type of this segment.
+  sign = 1;
+  ei = sorg(*sseg);
+  ej = sdest(*sseg);
 
-  if (b->verbose) {
-    printf("  Marking acute vertices.\n");
-  }
-
-  anglimit = PI / 3.0;  // 60 degree.
-  acutecount = 0;
-
-  subsegpool->traversalinit();
-  sseg.sh = shellfacetraverse(subsegpool);
-  while (sseg.sh != NULL) {
-    for (sseg.shver = 0; sseg.shver < 2; sseg.shver++) {
-      pa = sorg(sseg);
-      if (pointtype(pa) == VOLVERTEX) {
-        acuteflag = false;
-        pb = sdest(sseg);
-        spivot(sseg, parentsh);
-        spinsh = parentsh;
-        do {
-          // Rotate edges around pa until a segment is found.
-          nextsh = spinsh;
-          while (1) {
-            if (sorg(nextsh) != pa) sesymself(nextsh);
-            // Go to the next edge.
-            senext2self(nextsh);
-            sspivot(nextsh, checkseg);
-            if (checkseg.sh != NULL) break;
-            // Get the adjacent coplanar subface.
-            spivotself(nextsh);
+  if (pointtype(ei) == ACUTEVERTEX) {
+    if (pointtype(ej) == ACUTEVERTEX) {
+      // Both ei and ej are ACUTEVERTEX.
+      stype = 0;
+    } else {
+      // ej is either a RIDGEVERTEX or a STEINERVERTEX.
+      stype = 1;
+    }
+  } else {
+    if (pointtype(ei) == RIDGEVERTEX) {
+      if (pointtype(ej) == ACUTEVERTEX) {
+        stype = 1; sign = -1;
+      } else {
+        if (pointtype(ej) == RIDGEVERTEX) {
+          stype = 0;
+        } else {
+          // ej is a STEINERVETEX.
+          ek = farsdest(*sseg);
+          if (pointtype(ek) == ACUTEVERTEX) {
+            stype = 1; sign = -1;
+          } else {
+            stype = 0;
           }
-          if (sorg(checkseg) != pa) sesymself(checkseg);
-          // Calculate the angle if it is not calulcated yet.
-          ang = interiorangle(pa, pb, sdest(checkseg), NULL);
-          acuteflag = ang > anglimit;
-          if (acuteflag) break;
-          spivotself(spinsh);
-        } while (spinsh.sh != parentsh.sh);
-        // Now mark the vertex.
-        if (b->verbose > 1) {
-          printf("    Mark %d as %s.\n", pointmark(pa), acuteflag ?
-            "ACUTEVERTEX" : "RIDGEVERTEX");
         }
-        pointtype(pa) = acuteflag ? ACUTEVERTEX : RIDGEVERTEX;
-        acutecount += (acuteflag ? 1 : 0);
+      }
+    } else {
+      // ei is a STEINERVERTEX.
+      if (pointtype(ej) == ACUTEVERTEX) {
+        stype = 1; sign = -1;
+      } else {
+        ek = farsorg(*sseg);
+        if (pointtype(ej) == RIDGEVERTEX) {
+          if (pointtype(ek) == ACUTEVERTEX) {
+            stype = 1;
+          } else {
+            stype = 0;
+          }
+        } else {
+          // Both ei and ej are STEINERVETEXs. ei has priority.
+          if (pointtype(ek) == ACUTEVERTEX) {
+            stype = 1;
+          } else {
+            ek = farsdest(*sseg);
+            if (pointtype(ek) == ACUTEVERTEX) {
+              stype = 1; sign = -1;
+            } else {
+              stype = 0;
+            }
+          }
+        }
       }
     }
-    sseg.sh = shellfacetraverse(subsegpool);
   }
 
-  if (b->verbose) {
-    printf("  %d acute vertices.\n", acutecount);
+  // Get the needed endpoints, ei, ej, and ek.
+  if (sign == -1) {
+    sesymself(*sseg);
+    ei = sorg(*sseg);
+    ej = sdest(*sseg);
+  }
+  ek = farsorg(*sseg);
+
+  if (b->verbose > 1) {
+    printf("    Get split point in seg(%d, %d) ek(%d), ref(%d), ty(%d).\n",
+      pointmark(ek), pointmark(ei), pointmark(ei), pointmark(refpt), stype);
   }
 }
 
@@ -654,9 +744,12 @@ void tetgenmesh::markacutevertices()
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::delaunizesegments()
-{ /*
+{
   arraypool *seglist;
+  triface searchtet;
   face sseg, *psseg;
+  point refpt, newpt;
+  enum intersection dir;
   int s, i;
 
   if (!b->quiet) {
@@ -665,17 +758,17 @@ void tetgenmesh::delaunizesegments()
 
   // Segments will be introduced.
   checksubsegs = 1;
-  // Construct a map from points to tets for speeding point location.
+  // Construct a map for speeding point location.
   makepoint2tetmap();
   // Mark acutes vertices.
-  // markacutevertices();
-  // Initialize the pool for tets<->subsegs.
+  markacutevertices();
+  // Initialize the pool for tet-subseg connections.
   tet2subpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
 
   // Calculate the log-2 of the number of segments.
   s = 1; i = 0;
   while (s < subsegpool->items) {
-    s =<< 1; i++;
+    s = s << 1; i++;
   }
   // Initialize the list of segments to be recovered.
   seglist = new arraypool(sizeof(face), i + 1);
@@ -683,17 +776,34 @@ void tetgenmesh::delaunizesegments()
   subsegpool->traversalinit();
   for (i = 0; i < subsegpool->items; i++) {
     sseg.sh = shellfacetraverse(subsegpool);
-    seglist->newindex(&pseeg);
+    seglist->newindex((void **) &psseg);
     *psseg = sseg;
   }
 
   // Loop until 'seglist' is empty.
   while (seglist->objects > 0l) {
-  
+    // Default seglist is used as a stack.
+    seglist->objects--;
+    psseg = (face *) fastlookup(seglist, seglist->objects);
+    sseg = *psseg;
+
+    // Insert the segment.
+    searchtet.tet = NULL;
+    dir = scoutsegment(&sseg, &searchtet, &refpt);
+
+    if (dir != COLLINEAR) {
+      // The segment is missing, recover it.
+      if (dir != ACROSSVERT) {
+        // Calulcate the new point (using rule 1, 2, 3).
+        // getsegmentsplitpoint(&sseg, refpt, &newpt);
+      } else {
+        newpt = refpt;
+      }
+    }
   }
 
   delete seglist;
-  delete tet2subpool;*/
+  delete tet2subpool;
 }
 
 #endif // #ifndef constrainCXX
