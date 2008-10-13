@@ -1103,8 +1103,7 @@ void bond(triface& t1, triface& t2) {
 // Each shellface contains three pointers to its adjacent shellfaces, with   //
 // their edge versions (shver in [0, 5]).  To save memory, all informations  //
 // of an adjacent shellface are compressed in a single pointer. To make this //
-// possible, all shellface are aligned to 16-byte boundaries.  An extra bit  //
-// (the last fourth) is used for infect(), sinfect() primitives.             //
+// possible, all shellface are aligned to 8-byte boundaries.                 //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1232,6 +1231,17 @@ point farsdest(face& s) {
 // areabound() -- set of read the maximal area bound.
 
 #define areabound(s) ((REAL *) ((s).sh))[areaboundindex]
+
+// sinfect(), sinfected(), suninfect() -- primitives to flag or unflag a
+//   subface. The last third bit of the first subsegment is flaged.
+
+#define sinfect(s) \
+  (s).sh[6] = (shellface) ((unsigned long) s.sh[6] | (unsigned long) 4l)
+
+#define suninfect(s) \
+  s.sh[6] = (shellface) ((unsigned long) s.sh[6] & ~(unsigned long) 4l)
+
+#define sinfected(s) (((unsigned long) s.sh[6] & (unsigned long) 4l) != 0)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1393,7 +1403,7 @@ void maketetrahedron(memorypool*, triface*);
 void makeshellface(memorypool*, face*);
 void makepoint(point*);
 void makeindex2pointmap(point*&);
-void makesubfacemap(int*&, face*&);
+void makepoint2submap(memorypool*, int*&, face*&);
 void makepoint2tetmap();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1508,10 +1518,10 @@ void meshsurface();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void markacutevertices();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
+void markacutevertices(int* idx2seglist, face* segperverlist);
 void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////

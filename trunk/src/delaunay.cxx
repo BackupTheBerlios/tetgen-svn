@@ -682,7 +682,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           cavetet->ver = 0;
           for (j = 0; j < 3; j++) {
             tsspivot1(*cavetet, sseg);
-            if (sseg.sh != NULL) {
+            if ((sseg.sh != NULL) && !sinfected(sseg)) {
               enext0fnext(*cavetet, neightet);
               symself(neightet);
               if (neightet.tet[4] == NULL) {
@@ -690,6 +690,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
                   printf("    Queue encroached segment (%d, %d).\n",
                     pointmark(sorg(sseg)), pointmark(sdest(sseg)));
                 }
+                sinfect(sseg);  // Only save it once.
                 subsegstack->newindex((void **) &psseg);
                 *psseg = sseg;
               }
@@ -750,6 +751,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       for (j = 0; j < 3; j++) {
         tsspivot1(neightet, sseg);
         if (sseg.sh != NULL) {
+          assert(!sinfected(sseg));  // SELF_CHECK
           tssbond1(newtet, sseg);
         }
         enextself(neightet);

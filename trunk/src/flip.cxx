@@ -157,9 +157,8 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
   pb = sdest(*splitedge);
 
   if (b->verbose > 1) {
-    printf("    flip n-to-2n: %d, (%d, %d) %d %d ... (%d faces) \n", 
-      pointmark(newpt), pointmark(pa), pointmark(pb), pointmark(pt[0]), 
-      pointmark(pt[1]), n);
+    printf("    flip n-to-2n: %d, (%d, %d) %d ... (%d faces) \n", 
+      pointmark(newpt), pointmark(pa), pointmark(pb), pointmark(pt[0]), n); 
   }
   flipn2nfcount++;
 
@@ -249,7 +248,14 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     makeshellface(subfacepool, &bseg);
     // Insert the new point p.
     setsdest(aseg, newpt);
-    setshvertices(bseg, pb, newpt, NULL);
+    setshvertices(bseg, newpt, pb, NULL);
+    // Connect pb<->b#.
+    senext(aseg, aoutseg);
+    spivotself(aoutseg);
+    if (aoutseg.sh != NULL) {
+      senext(bseg, boutseg);
+      sbond2(boutseg, aoutseg);
+    }
     // Connect ap <-> pb.
     senext(aseg, aoutseg);
     senext2(bseg, boutseg);

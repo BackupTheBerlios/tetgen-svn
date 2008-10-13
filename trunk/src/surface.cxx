@@ -65,7 +65,7 @@ void tetgenmesh::unifysegments()
   }
 
   // Create a mapping from vertices to subfaces incident at them.
-  makesubfacemap(idx2faclist, facperverlist);
+  makepoint2submap(subfacepool, idx2faclist, facperverlist);
 
   segmarker = 1;
   subsegloop.shver = 0;

@@ -845,7 +845,8 @@ void tetgenmesh::makeindex2pointmap(point*& idx2ptmap)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::makesubfacemap(int*& idx2faclist, face*& facperverlist)
+void tetgenmesh::makepoint2submap(memorypool* pool, int*& idx2faclist,
+  face*& facperverlist)
 {
   face shloop;
   int i, j, k;
@@ -859,15 +860,20 @@ void tetgenmesh::makesubfacemap(int*& idx2faclist, face*& facperverlist)
   for (i = 0; i < pointpool->items + 1; i++) idx2faclist[i] = 0;
 
   // Loop all subfaces, counter the number of subfaces incident at a vertex.
-  subfacepool->traversalinit();
-  shloop.sh = shellfacetraverse(subfacepool);
+  pool->traversalinit();
+  shloop.sh = shellfacetraverse(pool);
   while (shloop.sh != (shellface *) NULL) {
     // Increment the number of incident subfaces for each vertex.
-    for (i = 0; i < 3; i++) {
-      j = pointmark((point) shloop.sh[3 + i]) - in->firstnumber;
+    j = pointmark((point) shloop.sh[3]) - in->firstnumber;
+    idx2faclist[j]++;
+    j = pointmark((point) shloop.sh[4]) - in->firstnumber;
+    idx2faclist[j]++;
+    // Skip the third corner if it is a segment.
+    if (shloop.sh[5] != NULL) {
+      j = pointmark((point) shloop.sh[5]) - in->firstnumber;
       idx2faclist[j]++;
     }
-    shloop.sh = shellfacetraverse(subfacepool);
+    shloop.sh = shellfacetraverse(pool);
   }
 
   // Calculate the total length of array 'facperverlist'.
@@ -883,16 +889,30 @@ void tetgenmesh::makesubfacemap(int*& idx2faclist, face*& facperverlist)
   facperverlist = new face[idx2faclist[i]];
 
   // Loop all subfaces again, remember the subfaces at each vertex.
-  subfacepool->traversalinit();
-  shloop.sh = shellfacetraverse(subfacepool);
+  pool->traversalinit();
+  shloop.sh = shellfacetraverse(pool);
   while (shloop.sh != (shellface *) NULL) {
-    for (i = 0; i < 3; i++) {
-      j = pointmark((point) shloop.sh[3 + i]) - in->firstnumber;
-      shloop.shver = i * 2;  // save the origin.
+    j = pointmark((point) shloop.sh[3]) - in->firstnumber;
+    shloop.shver = 0; // save the origin.
+    facperverlist[idx2faclist[j]] = shloop;
+    idx2faclist[j]++;
+    // Is it a subface or a subsegment?
+    if (shloop.sh[5] != NULL) {
+      j = pointmark((point) shloop.sh[4]) - in->firstnumber;
+      shloop.shver = 2; // save the origin.
+      facperverlist[idx2faclist[j]] = shloop;
+      idx2faclist[j]++;
+      j = pointmark((point) shloop.sh[5]) - in->firstnumber;
+      shloop.shver = 4; // save the origin.
+      facperverlist[idx2faclist[j]] = shloop;
+      idx2faclist[j]++;
+    } else {
+      j = pointmark((point) shloop.sh[4]) - in->firstnumber;
+      shloop.shver = 1; // save the origin.
       facperverlist[idx2faclist[j]] = shloop;
       idx2faclist[j]++;
     }
-    shloop.sh = shellfacetraverse(subfacepool);
+    shloop.sh = shellfacetraverse(pool);
   }
 
   // Contents in 'idx2faclist' are shifted, now shift them back.
@@ -930,6 +950,7 @@ void tetgenmesh::makepoint2tetmap()
     point2tet(pt[5]) = (tetrahedron) tptr;
     point2tet(pt[6]) = (tetrahedron) tptr;
     point2tet(pt[7]) = (tetrahedron) tptr;
+    pt[8] = NULL; // Clear the pointer to connection pool.
     tptr = tetrahedrontraverse(tetrahedronpool);
   }
 }
