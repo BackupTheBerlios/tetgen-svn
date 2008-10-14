@@ -208,10 +208,12 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
   }
 
   // Create new subfaces ring at edge pb.
-  for (i = 0; i < n; i++) {
-    senext2(bbdedges[i], boutfaces[i]);
-    senext2(bbdedges[(i + 1) % n], boutfaces[(i + 1) % n]);
-    sbond1(boutfaces[i], boutfaces[(i + 1) % n]);
+  if (n > 2) {
+    for (i = 0; i < n; i++) {
+      senext2(bbdedges[i], boutfaces[i]);
+      senext2(bbdedges[(i + 1) % n], boutfaces[(i + 1) % n]);
+      sbond1(boutfaces[i], boutfaces[(i + 1) % n]);
+    }
   }
 
   // Check edge ab to see if it is a subsegment.
@@ -238,8 +240,9 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     senext(aseg, aoutseg);
     senext2(bseg, boutseg);
     sbond2(aoutseg, boutseg);
-    // Connect pb to subfaces (in boutfaces[i]) having it.
+    // Connect seg pb to subfaces having it.
     for (i = 0; i < n; i++) {
+      senext2(bbdedges[i], boutfaces[i]);
       ssbond(boutfaces[i], bseg);
     }
   }

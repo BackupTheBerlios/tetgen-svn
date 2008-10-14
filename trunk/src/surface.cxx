@@ -286,44 +286,46 @@ void tetgenmesh::mergefacets()
     edest = sdest(segloop);
     spivot(segloop, parentsh);
     spivot(parentsh, neighsh);
-    spivot(neighsh, neineighsh);
-    if ((parentsh.sh != neighsh.sh) && (parentsh.sh == neineighsh.sh)) {
-      // Exactly two subfaces at this segment.
-      fidx1 = shellmark(parentsh) - 1;
-      fidx2 = shellmark(neighsh) - 1;
-      // Possible to merge them if they are not in the same facet.
-      if (fidx1 != fidx2) {
-        // Test if they are coplanar wrt the tolerance.
-        ori = orient3d(eorg, edest, sapex(parentsh), sapex(neighsh));
-        if ((ori == 0) || iscoplanar(eorg, edest, sapex(parentsh),
-          sapex(neighsh), ori)) {
-          // Found two adjacent coplanar facets.
-          mergeflag = ((in->facetmarkerlist == NULL) || 
-            (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));
-          if (mergeflag) {
-            if (b->verbose > 1) {
-              printf("  Removing segment (%d, %d).\n", pointmark(eorg),
-                     pointmark(edest));
+    if (neighsh.sh != NULL) {
+      spivot(neighsh, neineighsh);
+      if (parentsh.sh == neineighsh.sh) {
+        // Exactly two subfaces at this segment.
+        fidx1 = shellmark(parentsh) - 1;
+        fidx2 = shellmark(neighsh) - 1;
+        // Possible to merge them if they are not in the same facet.
+        if (fidx1 != fidx2) {
+          // Test if they are coplanar wrt the tolerance.
+          ori = orient3d(eorg, edest, sapex(parentsh), sapex(neighsh));
+          if ((ori == 0) || iscoplanar(eorg, edest, sapex(parentsh),
+            sapex(neighsh), ori)) {
+            // Found two adjacent coplanar facets.
+            mergeflag = ((in->facetmarkerlist == NULL) || 
+              (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));
+            if (mergeflag) {
+              if (b->verbose > 1) {
+                printf("  Removing segment (%d, %d).\n", pointmark(eorg),
+                       pointmark(edest));
+              }
+              ssdissolve(parentsh);
+              ssdissolve(neighsh);
+              shellfacedealloc(subsegpool, segloop.sh);
+              j = pointmark(eorg);
+              segspernodelist[j]--;
+              if (segspernodelist[j] == 0) {
+                pointtype(eorg) = FACETVERTEX;
+              }
+              j = pointmark(edest);
+              segspernodelist[j]--;
+              if (segspernodelist[j] == 0) {
+                pointtype(edest) = FACETVERTEX;
+              }
+              // Add the edge to flip stack.
+              futureflip = flipshpush(futureflip, &parentsh);
             }
-            ssdissolve(parentsh);
-            ssdissolve(neighsh);
-            shellfacedealloc(subsegpool, segloop.sh);
-            j = pointmark(eorg);
-            segspernodelist[j]--;
-            if (segspernodelist[j] == 0) {
-              pointtype(eorg) = FACETVERTEX;
-            }
-            j = pointmark(edest);
-            segspernodelist[j]--;
-            if (segspernodelist[j] == 0) {
-              pointtype(edest) = FACETVERTEX;
-            }
-            // Add the edge to flip stack.
-            futureflip = flipshpush(futureflip, &parentsh);
           }
         }
       }
-    }
+    } // if (neighsh.sh != NULL)
     segloop.sh = shellfacetraverse(subsegpool);
   }
 
