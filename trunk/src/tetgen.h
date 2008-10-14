@@ -1119,11 +1119,11 @@ void bond(triface& t1, triface& t2) {
 
 // spivot() -- find the next face in the face ring.
 
-#define spivot(s1, s2) sdecode((s1).sh[(s1).shver >> 1], (s2))
+#define spivot(s1, s2) sdecode((s1).sh[(s1).shver >> 1], s2)
 
 #define spivotself(s) \
   sptr = (s).sh[(s).shver >> 1];\
-  sdecode(sptr, (s))
+  sdecode(sptr, s)
 
 // sspivot() -- find the abutting subsegment (seg) at the face (s).
 

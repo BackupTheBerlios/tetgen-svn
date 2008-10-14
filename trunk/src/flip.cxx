@@ -115,8 +115,7 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
 
 void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
 {
-  face *abdedges, *aoutfaces, *ainfaces;
-  face *bbdedges, *boutfaces, *binfaces;
+  face *abdedges, *bbdedges, *boutfaces, *binfaces;
   face aseg, bseg, aoutseg, boutseg;
   face checkface, checkseg;
   point pa, pb, *pt;
@@ -132,12 +131,10 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
   do {
     spivotself(checkface);
     n++;
-  } while (checkface.sh != splitedge->sh);
+  } while ((checkface.sh != NULL) && (checkface.sh != splitedge->sh));
 
   // Allocate spaces.
   abdedges = new face[n];
-  aoutfaces = new face[n];
-  ainfaces = new face[n];
   bbdedges = new face[n];
   boutfaces = new face[n];
   binfaces = new face[n];
@@ -166,64 +163,48 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     senext2self(abdedges[i]);
   }
 
-  // Collect outer boundary faces.
-  for (i = 0; i < n; i++) {
-    spivot(abdedges[i], aoutfaces[i]);
-    ainfaces[i] = aoutfaces[i];
-    sspivot(abdedges[i], checkseg);
-    if (checkseg.sh != NULL) {
-      spivot(ainfaces[i], checkface);
-      while (checkface.sh != abdedges[i].sh) {
-        ainfaces[i] = checkface;
-        spivot(ainfaces[i], checkface);
-      }
-    }
-  }
+  // Collect outer boundary faces at bp[i].
   for (i = 0; i < n; i++) {
     spivot(bbdedges[i], boutfaces[i]);
     binfaces[i] = boutfaces[i];
-    sspivot(bbdedges[i], checkseg);
-    if (checkseg.sh != NULL) {
-      spivot(binfaces[i], checkface);
-      while (checkface.sh != bbdedges[i].sh) {
-        binfaces[i] = checkface;
+    if (boutfaces[i].sh != NULL) {
+      sspivot(bbdedges[i], checkseg);
+      if (checkseg.sh != NULL) {
         spivot(binfaces[i], checkface);
+        while (checkface.sh != bbdedges[i].sh) {
+          binfaces[i] = checkface;
+          spivot(binfaces[i], checkface);
+        }
       }
     }
-  }
-
-  // We need n new subfaces.
-  for (i = 0; i < n; i++) {
-    makeshellface(subfacepool, &(bbdedges[i]));
   }
 
   // Insert the new point p.
   for (i = 0; i < n; i++) {
     setsapex(abdedges[i], newpt);  // ap[i]b->ap[i]p.
-  }
-  for (i = 0; i < n; i++) {
+    makeshellface(subfacepool, &(bbdedges[i]));
     setshvertices(bbdedges[i], pb, pt[i], newpt); // bp[i]p.
   }
 
-  // Connect boundary edges to outer boundary faces.
+  // Connect new boundary edges to outer faces.
   for (i = 0; i < n; i++) {
-    sbond1(abdedges[i], aoutfaces[i]);
-    sbond1(ainfaces[i], abdedges[i]);
-    sspivot(aoutfaces[i], checkseg); // checkseg may be NULL.
-    ssbond(abdedges[i], checkseg); // Clear the old bond as well.
-  }
-  for (i = 0; i < n; i++) {
-    sbond1(bbdedges[i], boutfaces[i]);
-    sbond1(binfaces[i], bbdedges[i]);
-    sspivot(boutfaces[i], checkseg); // checkseg may be NULL.
-    ssbond(bbdedges[i], checkseg); // Clear the old bond as well.
+    if (boutfaces[i].sh != NULL) {
+      sbond1(bbdedges[i], boutfaces[i]);
+      sbond1(binfaces[i], bbdedges[i]);
+    }
+    senext2(abdedges[i], checkface);
+    sspivot(checkface, checkseg);  // Check subsegment.
+    if (checkseg.sh != NULL) {
+      ssdissolve(checkface);  // Clear the old bond.
+      ssbond(bbdedges[i], checkseg);
+    }
   }
 
-  // Connect new subfaces to updated subfaces. (Reuse aoutfaces, boutfaces).
+  // Connect new subfaces to updated subfaces. (Reuse boutfaces, binfaces).
   for (i = 0; i < n; i++) {
-    senext2(abdedges[i], aoutfaces[i]);
-    senext(bbdedges[i], boutfaces[i]);
-    sbond2(aoutfaces[i], boutfaces[i]);
+    senext2(abdedges[i], boutfaces[i]);
+    senext(bbdedges[i], binfaces[i]);
+    sbond2(boutfaces[i], binfaces[i]);
   }
 
   // Create new subfaces ring at edge pb.
@@ -242,10 +223,9 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
       printf("    flip 1-to-2: %d, (%d, %d).\n", pointmark(newpt), 
         pointmark(pa), pointmark(pb));
     }
-    // We need a new subsegment.
-    makeshellface(subfacepool, &bseg);
     // Insert the new point p.
     setsdest(aseg, newpt);
+    makeshellface(subfacepool, &bseg);
     setshvertices(bseg, newpt, pb, NULL);
     // Connect pb<->b#.
     senext(aseg, aoutseg);
@@ -268,8 +248,6 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     // Put the boundary edges into flip stack.
     for (i = 0; i < n; i++) {
       futureflip = flipshpush(futureflip, &abdedges[i]);
-    }
-    for (i = 0; i < n; i++) {
       futureflip = flipshpush(futureflip, &bbdedges[i]);
     }
   }
@@ -277,8 +255,6 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
   // Return apc = app[0] = *splitedge.
 
   delete [] abdedges;
-  delete [] aoutfaces;
-  delete [] ainfaces;
   delete [] bbdedges;
   delete [] boutfaces;
   delete [] binfaces;
