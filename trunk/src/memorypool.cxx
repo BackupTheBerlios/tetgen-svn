@@ -948,7 +948,6 @@ void tetgenmesh::makepoint2tetmap()
     point2tet(pt[5]) = (tetrahedron) tptr;
     point2tet(pt[6]) = (tetrahedron) tptr;
     point2tet(pt[7]) = (tetrahedron) tptr;
-    pt[8] = NULL; // Clear the pointer to connection pool.
     tptr = tetrahedrontraverse(tetrahedronpool);
   }
 }

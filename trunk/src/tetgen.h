@@ -1388,6 +1388,7 @@ long flip23count, flip32count, flipnmcount;
 long flip13count, flip22count, flipn2nfcount;
 REAL tloctime, tfliptime, tinserttime;
 long force_ptloc_count;
+long triedgcount, triedgcopcount, trivercopcount;
 long r1count, r2count, r3count;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1600,6 +1601,7 @@ void initialize()
   flip13count = flip22count = flipn2nfcount = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
   force_ptloc_count = 0l;
+  triedgcount = triedgcopcount = trivercopcount = 0l;
   r1count = r2count = r3count = 0l;
 }
 
@@ -1614,9 +1616,6 @@ void deinitialize()
   if (subfacepool != (memorypool *) NULL) {
     delete subfacepool;
     delete subsegpool;
-  }
-  if (tet2subpool != (memorypool *) NULL) {
-    delete tet2subpool;
   }
   if (pointpool != (memorypool *) NULL) {
     delete pointpool;

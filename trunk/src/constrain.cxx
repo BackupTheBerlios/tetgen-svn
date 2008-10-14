@@ -351,7 +351,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   triface* searchtet, point* refpt)
 {
   triface neightet, reftet;
-  face checkseg;
+  face splitsh, checkseg;
   point startpt, endpt;
   point pa, pb, pc, pd;
   enum location loc;
@@ -413,7 +413,14 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     pd = dest(*searchtet);
     if (pd != endpt) {
       // Split the segment.
-      flipn2nf(pd, sseg, 1);
+      spivot(*sseg, splitsh);
+      flipn2nf(pd, &splitsh, 1);
+      sspivot(splitsh, *sseg);
+      // Make sure that sseg is: startpt->pd.
+      if (sorg(*sseg) != startpt) {
+        sesymself(*sseg);
+        assert(sorg(*sseg) == startpt);
+      }
       // Reset the type for the point.
       if (pointtype(pd) != ACUTEVERTEX) {
         pointtype(pd) = RIDGEVERTEX;
@@ -422,6 +429,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       lawsonflip();
     }
     // Found! Insert (the first part of) the segment.
+    tsspivot1(*searchtet, checkseg);  // SELF_CHECK
+    assert(checkseg.sh == NULL);  // SELF_CHECK
     neightet = *searchtet;
     do {
       tssbond1(neightet, *sseg);
@@ -889,6 +898,23 @@ void tetgenmesh::delaunizesegments()
   if (b->verbose) {
     printf("  %d protecting points.\n", r1count + r2count + r3count);
   }
+
+  // Clear the pointers from tets to subsegs.
+  tetrahedronpool->traversalinit();
+  searchtet.tet = tetrahedrontraverse(tetrahedronpool);
+  while (searchtet.tet != NULL) {
+    searchtet.tet[8] = NULL;
+    searchtet.tet = tetrahedrontraverse(tetrahedronpool);  
+  }
+
+  hulltetrahedronpool->traversalinit();
+  searchtet.tet = tetrahedrontraverse(hulltetrahedronpool);
+  while (searchtet.tet != NULL) {
+    searchtet.tet[8] = NULL;
+    searchtet.tet = tetrahedrontraverse(hulltetrahedronpool);  
+  }
+
+  checksubsegs = 0;
 
   delete subsegstack;
   delete tet2subpool;

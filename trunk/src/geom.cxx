@@ -38,6 +38,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(R),
       s3, s4, s5);
   }
+  trivercopcount++;
 
   if (s3 < 0) {
     return DISJOINT;
@@ -129,6 +130,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
       pointmark(R), s3, s4, s5);
   }
+  triedgcopcount++;
 
   s3s4 = s3 * s4;
   s4s5 = s4 * s5;
@@ -496,6 +498,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
       s1, s2);
   }
+  triedgcount++;
 
   s1s2 = s1 * s2;
 

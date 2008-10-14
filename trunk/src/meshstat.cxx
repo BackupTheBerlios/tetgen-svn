@@ -385,10 +385,8 @@ void tetgenmesh::statistics()
       printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
       printf("  Number of 3-to-2 flips: %ld\n", flip32count);
     } else {
-      printf("  Number of deleted tets: %ld\n", 
-        flip23count * 2l + flip32count * 3l);
-      printf("  Number of created tets: %ld\n",
-        flip23count * 3l + flip32count * 2l);
+      printf("  Number of deleted tets: %ld\n", flip23count*2l+flip32count*3l);
+      printf("  Number of created tets: %ld\n", flip23count*3l+flip32count*2l);
       printf("  Number of 1-to-4 flips: %ld\n", flip14count);
       printf("  Number of 2-to-6 flips: %ld\n", flip26count);
       printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
@@ -399,9 +397,15 @@ void tetgenmesh::statistics()
     }
     if (b->plc) {
       printf("  Number of 2-to-2 flips: %ld\n", flip22count);
+      printf("  Number of tri-edge intersections: %ld\n", triedgcount);
+      printf("  Number of coplanar intersections: %ld\n", triedgcopcount);
+      printf("  Number of rule-1 points: %ld\n", r1count);
+      printf("  Number of rule-2 points: %ld\n", r2count);
+      printf("  Number of rule-3 points: %ld\n", r3count);
+      printf("  Number of force point locations: %ld\n", force_ptloc_count);
     }
     printf("  Total point location distance (# tets): %ld\n", ptloc_count);
-    printf("  Maximal point location distance (# tets): %ld\n", 
+    printf("  Maximal single point location distance (# tets): %ld\n", 
            ptloc_max_count);
     // printf("  Total point location time (millisec):  %g\n", 
     //        tloctime * 1e+3);
