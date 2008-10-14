@@ -218,7 +218,7 @@ void tetgenmesh::checkshells()
       pb = sdest(shloop);
       spinsh = shloop;
       spivot(spinsh, nextsh);
-      while (nextsh.sh != shloop.sh) {
+      while ((nextsh.sh != NULL) && (nextsh.sh != shloop.sh)) {
         // check if they have the same edge.
         if (!((sorg(nextsh) == pa) && (sdest(nextsh) == pb) ||
              (sorg(nextsh) == pb) && (sdest(nextsh) == pa))) {

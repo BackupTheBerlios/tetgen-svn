@@ -1139,6 +1139,10 @@ void bond(triface& t1, triface& t2) {
   (s1).sh[(s1).shver >> 1] = sencode(s2);\
   (s2).sh[(s2).shver >> 1] = sencode(s1)
 
+// sdisolve() -- dissolve a subface-subface connection (at one side).
+
+#define sdissolve(s) (s).sh[(s).shver >> 1] = NULL;
+
 // ssbond() -- connect a subface (s) and a subsegment (seg) together.
 // NOTE: we allow that 'seg.sh' may be a NULL.
 

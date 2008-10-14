@@ -272,7 +272,7 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
 
 void tetgenmesh::flip22(face* flipfaces, int flipflag)
 {
-  face bdedges[4], outfaces[4], infaces[4];
+  face bdedges[4], outfaces[4], infaces[4], bdsegs[4];
   face checkface, checkseg;
   point pa, pb, pc, pd;
   int i;
@@ -303,12 +303,15 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
   for (i = 0; i < 4; i++) {
     spivot(bdedges[i], outfaces[i]);
     infaces[i] = outfaces[i];
-    sspivot(bdedges[i], checkseg);
-    if (checkseg.sh != NULL) {
-      spivot(infaces[i], checkface);
-      while (checkface.sh != bdedges[i].sh) {
-        infaces[i] = checkface;
+    sspivot(bdedges[i], bdsegs[i]);
+    if (outfaces[i].sh != NULL) {
+      sspivot(bdedges[i], checkseg);
+      if (checkseg.sh != NULL) {
         spivot(infaces[i], checkface);
+        while (checkface.sh != bdedges[i].sh) {
+          infaces[i] = checkface;
+          spivot(infaces[i], checkface);
+        }
       }
     }
   }
@@ -320,10 +323,17 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
 
   // Reconnect boundary edges to outer boundary faces.
   for (i = 0; i < 4; i++) {
-    sbond1(bdedges[i], outfaces[(3 + i) % 4]);
-    sbond1(infaces[(3 + i) % 4], bdedges[i]);
-    sspivot(outfaces[(3 + i) % 4], checkseg); // checkseg may be NULL.
-    ssbond(bdedges[i], checkseg); // Clear the old bond as well.
+    if (outfaces[(3 + i) % 4].sh != NULL) {
+      sbond1(bdedges[i], outfaces[(3 + i) % 4]);
+      sbond1(infaces[(3 + i) % 4], bdedges[i]);
+    } else {
+      sdissolve(bdedges[i]);
+    }
+    if (bdsegs[(3 + i) % 4].sh != NULL) {
+      ssbond(bdedges[i], bdsegs[(3 + i) % 4]);
+    } else {
+      ssdissolve(bdedges[i]);
+    }
   }
 
   if (flipflag) {
