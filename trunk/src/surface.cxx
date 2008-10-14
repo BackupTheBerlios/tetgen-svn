@@ -64,7 +64,7 @@ void tetgenmesh::unifysegments()
     printf("  Unifying segments.\n");
   }
 
-  // Create a mapping from vertices to subfaces incident at them.
+  // Create a mapping from vertices to subfaces.
   makepoint2submap(subfacepool, idx2faclist, facperverlist);
 
   segmarker = 1;
@@ -215,22 +215,23 @@ void tetgenmesh::unifysegments()
     }
 
     // Create the face ring at the segment.
-    f1 = facelink;
-    for (k = 1; k <= flippool->items; k++) {
-      k < flippool->items ? f2 = f1->nextitem : f2 = facelink;
-      if (b->verbose > 2) {
-        printf("    Bond subfaces (%d, %d, %d) and (%d, %d, %d).\n",
-               pointmark(torg), pointmark(tdest), pointmark(sapex(f1->ss)),
-               pointmark(torg), pointmark(tdest), pointmark(sapex(f2->ss)));
+    if (flippool->items > 1) {
+      f1 = facelink;
+      for (k = 1; k <= flippool->items; k++) {
+        k < flippool->items ? f2 = f1->nextitem : f2 = facelink;
+        if (b->verbose > 2) {
+          printf("    Bond subfaces (%d, %d, %d) and (%d, %d, %d).\n",
+                 pointmark(torg), pointmark(tdest), pointmark(sapex(f1->ss)),
+                 pointmark(torg), pointmark(tdest), pointmark(sapex(f2->ss)));
+        }
+        sbond1(f1->ss, f2->ss);
+        f1 = f2;
       }
-      sbond1(f1->ss, f2->ss);
-      f1 = f2;
     }
 
     // Set the unique segment marker into the unified segment.
     shellmark(subsegloop) = segmarker;
     segmarker++;
-    // sfacelist->clear();
     flippool->restart();
 
     subsegloop.sh = shellfacetraverse(subsegpool);

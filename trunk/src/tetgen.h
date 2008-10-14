@@ -1205,7 +1205,8 @@ point farsorg(face& s) {
   while (1) {
     senext2(travesh, neighsh);
     spivotself(neighsh); 
-    if (neighsh.sh = NULL) break;
+    if (neighsh.sh == NULL) break;
+    assert(sorg(neighsh) == sorg(travesh)); // SELF_CHECK
     senext2(neighsh, travesh); 
   }
   return sorg(travesh);
@@ -1218,7 +1219,8 @@ point farsdest(face& s) {
   while (1) {
     senext(travesh, neighsh);
     spivotself(neighsh); 
-    if (neighsh.sh = NULL) break;
+    if (neighsh.sh == NULL) break;
+    assert(sdest(neighsh) == sdest(travesh)); // SELF_CHECK
     senext(neighsh, travesh); 
   }
   return sdest(travesh);
@@ -1236,12 +1238,12 @@ point farsdest(face& s) {
 //   subface. The last third bit of the first subsegment is flaged.
 
 #define sinfect(s) \
-  (s).sh[6] = (shellface) ((unsigned long) s.sh[6] | (unsigned long) 4l)
+  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] | (unsigned long) 4l)
 
 #define suninfect(s) \
-  s.sh[6] = (shellface) ((unsigned long) s.sh[6] & ~(unsigned long) 4l)
+  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] & ~(unsigned long) 4l)
 
-#define sinfected(s) (((unsigned long) s.sh[6] & (unsigned long) 4l) != 0)
+#define sinfected(s) (((unsigned long) (s).sh[6] & (unsigned long) 4l) != 0)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1376,7 +1378,7 @@ int checkconstraints, checksubfaces, checksubsegs, checkpbcs;
 long ptloc_count, ptloc_max_count;
 long orient3dcount;
 long inspherecount, insphere_sos_count;
-long maxbowatcavsize, totalbowatcavsize;
+long maxbowatcavsize, totalbowatcavsize, totaldeadtets;
 long flip14count, flip26count, flipn2ncount;
 long flip23count, flip32count, flipnmcount;
 long flip13count, flip22count, flipn2nfcount;
@@ -1588,7 +1590,7 @@ void initialize()
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;
   inspherecount = insphere_sos_count = 0l;
-  maxbowatcavsize = totalbowatcavsize = 0l;
+  maxbowatcavsize = totalbowatcavsize = totaldeadtets = 0l;
   flip14count = flip26count = flipn2ncount = 0l;
   flip23count = flip32count = flipnmcount = 0l;
   flip13count = flip22count = flipn2nfcount = 0l;

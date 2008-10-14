@@ -34,7 +34,7 @@ tetgenmesh::badface* tetgenmesh::flipshpush(badface* flipstack, face* flipedge)
 
 void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
 {
-  face bdedges[3], outfaces[3], infaces[3];
+  face newfaces[3], bdedge, casout, casin;
   face checkface, checkseg;
   point pa, pb, pc;
   int i;
@@ -51,53 +51,51 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
   }
   flip13count++;
 
-  // Get the old boundary edges: ab, bc, and ca.
-  bdedges[0] = *splitface;
-  senext(*splitface, bdedges[1]);
-  senext2(*splitface, bdedges[2]);
-
-  // Collect outer boundary faces.
-  for (i = 0; i < 3; i++) {
-    spivot(bdedges[i], outfaces[i]);
-    infaces[i] = outfaces[i];
-    sspivot(bdedges[i], checkseg);
-    if (checkseg.sh != NULL) {
-      spivot(infaces[i], checkface);
-      while (checkface.sh != bdedges[i].sh) {
-        infaces[i] = checkface;
-        spivot(infaces[i], checkface);
-      }
-    }
-  }
-
   // We need two new subfaces.
-  makeshellface(subfacepool, &(bdedges[1]));
-  makeshellface(subfacepool, &(bdedges[2]));
+  newfaces[0] = *splitface;
+  makeshellface(subfacepool, &(newfaces[1]));
+  makeshellface(subfacepool, &(newfaces[2]));
 
   // Insert the new point p.
-  setsapex(bdedges[0], newpt);  // abc->abp.
-  setshvertices(bdedges[1], pb, pc, newpt); // bcp.
-  setshvertices(bdedges[2], pc, pa, newpt); // cap.
+  setsapex(newfaces[0], newpt);  // abc->abp.
+  setshvertices(newfaces[1], pb, pc, newpt); // bcp.
+  setshvertices(newfaces[2], pc, pa, newpt); // cap.
 
-  // Connect boundary edges to outer boundary faces.
-  for (i = 0; i < 3; i++) {
-    sbond1(bdedges[i], outfaces[i]);
-    sbond1(infaces[i], bdedges[i]);
-    sspivot(outfaces[i], checkseg); // checkseg may be NULL.
-    ssbond(bdedges[i], checkseg); // Clear the old bond as well.
+  // Connect outer boundary faces to new faces.
+  senext(newfaces[0], bdedge);
+  for (i = 1; i < 3; i++) {
+    spivot(bdedge, casout);
+    sspivot(bdedge, checkseg);
+    if (casout.sh != NULL) {
+      casin = casout;
+      if (checkseg.sh != NULL) {
+        spivot(casin, checkface);
+        while (checkface.sh != bdedge.sh) {
+          casin = checkface;
+          spivot(casin, checkface);
+        }
+      }
+      sbond1(newfaces[i], casout);
+      sbond1(casin, newfaces[i]);
+    }
+    if (checkseg.sh != NULL) {
+      ssdissolve(bdedge);
+      ssbond(newfaces[i], checkseg);
+    }
+    senextself(bdedge);
   }
 
-  // Connect the three subfaces together. (Re-use outfaces[i]).
+  // Connect the three subfaces together. Reuse casout, casin.
   for (i = 0; i < 3; i++) {
-    senext(bdedges[i], outfaces[i]);
-    senext2(bdedges[(i + 1) % 3], outfaces[(i + 1) % 3]);
-    sbond2(outfaces[i], outfaces[(i + 1) % 3]);
+    senext(newfaces[i], casout);
+    senext2(newfaces[(i + 1) % 3], casin);
+    sbond2(casout, casin);
   }
 
   if (flipflag) {
     // Put the boundary edges into flip stack.
     for (i = 0; i < 3; i++) {
-      futureflip = flipshpush(futureflip, &bdedges[i]);
+      futureflip = flipshpush(futureflip, &(newfaces[i]));
     }
   }
 }

@@ -646,9 +646,9 @@ void tetgenmesh::psh(face *s)
       s->shver, shellmark(*s));
     printf("      length %g", DIST(pt[3], pt[4]));
   }
-  // if (sinfected(*sface)) {
-  //   printf(" (infected)");
-  // }
+  if (sinfected(*s)) {
+    printf(" (infected)");
+  }
   // if (shell2badface(*sface)) {
   //   printf(" (queued)");
   // }
@@ -690,46 +690,42 @@ void tetgenmesh::psh(face *s)
     printf("      Dest[%d] = NULL\n", vd[s->shver]);
   else
     printf("      Dest[%d] = x%lx  (%.12g,%.12g,%.12g) %d\n",
-            vd[s->shver], (unsigned long)(printpoint), printpoint[0],
-            printpoint[1], printpoint[2], pointmark(printpoint));
+           vd[s->shver], (unsigned long)(printpoint), printpoint[0],
+           printpoint[1], printpoint[2], pointmark(printpoint));
 
-  if (sapex(*s) != NULL) {
-    printpoint = sapex(*s);
-    if (printpoint == (point) NULL)
-      printf("      Apex[%d] = NULL\n", va[s->shver]);
-    else
-      printf("      Apex[%d] = x%lx  (%.12g,%.12g,%.12g) %d\n",
-             va[s->shver], (unsigned long)(printpoint), printpoint[0],
-             printpoint[1], printpoint[2], pointmark(printpoint));
+  printpoint = sapex(*s);
+  if (printpoint == (point) NULL)
+    printf("      Apex[%d] = NULL\n", va[s->shver]);
+  else
+    printf("      Apex[%d] = x%lx  (%.12g,%.12g,%.12g) %d\n",
+           va[s->shver], (unsigned long)(printpoint), printpoint[0],
+           printpoint[1], printpoint[2], pointmark(printpoint));
 
+  if (s->sh[5] != NULL) {
     sdecode(s->sh[6], prtsh);
     if (prtsh.sh == NULL) {
       printf("      [6] = No subsegment\n");
     } else {
-      printf("      [6] = x%lx  %d\n",
-             (unsigned long)(prtsh.sh), prtsh.shver);
+      printf("      [6] = x%lx  %d\n", (unsigned long) prtsh.sh, prtsh.shver);
     }
     sdecode(s->sh[7], prtsh);
     if (prtsh.sh == NULL) {
       printf("      [7] = No subsegment\n");
     } else {
-      printf("      [7] = x%lx  %d\n",
-             (unsigned long)(prtsh.sh), prtsh.shver);
+      printf("      [7] = x%lx  %d\n", (unsigned long) prtsh.sh, prtsh.shver);
     }
     sdecode(s->sh[8], prtsh);
     if (prtsh.sh == NULL) {
       printf("      [8] = No subsegment\n");
     } else {
-      printf("      [8] = x%lx  %d\n",
-             (unsigned long)(prtsh.sh), prtsh.shver);
+      printf("      [8] = x%lx  %d\n", (unsigned long) prtsh.sh, prtsh.shver);
     }
 
     decode(s->sh[9], prttet);
     if (prttet.tet == NULL) {
       printf("      [9] = Outer space\n");
     } else {
-      printf("      [9] = x%lx  %d\n",
-             (unsigned long)(prttet.tet), prttet.loc);
+      printf("      [9] = x%lx  %d\n",(unsigned long) prttet.tet, prttet.loc);
     }
   }
 }

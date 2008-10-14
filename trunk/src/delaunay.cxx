@@ -717,6 +717,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
            cavebdrylist->objects, tetcount);
   }
 
+  totaldeadtets += tetcount;
   totalbowatcavsize += cavebdrylist->objects;
   if (maxbowatcavsize < cavebdrylist->objects) {
     maxbowatcavsize = cavebdrylist->objects;
@@ -746,6 +747,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     }
     // Connect newtet <==> neightet, this also disconnect the old bond.
     bond(newtet, neightet);
+    // Replace the old boundary face with the new tet in list.
+    *cavetet = newtet;
     if (checksubsegs) {
       newtet.ver &= ~1;  // Keep in 0th edge ring.
       for (j = 0; j < 3; j++) {
@@ -758,8 +761,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         enext2self(newtet);
       }
     }
-    // Replace the old boundary face with the new tet in list.
-    *cavetet = newtet;
+  }
+
+  // Set a handle for speeding point location.
+  recenttet = newtet;
+  if (checksubsegs) {
+    point2tet(insertpt) = encode(newtet);
   }
 
   // Connect the set of new tetrahedra together.
@@ -785,9 +792,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   // loc_end = clock();
   // tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
-
-  // Set a handle for the point location.
-  recenttet = * (triface *) fastlookup(cavebdrylist, 0);
 
   if (bowyerwatson && (futureflip != NULL)) {
     // There may exist degenerate tets. Check and remove them.

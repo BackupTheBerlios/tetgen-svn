@@ -857,6 +857,8 @@ void tetgenmesh::delaunizesegments()
         // Split the segment by newpt.
         flipn2nf(newpt, &splitsh, 1);
         pointtype(newpt) = STEINERVERTEX;
+        sspivot(splitsh, sseg);
+        if (sorg(sseg) != sorg(splitsh)) sesymself(sseg);
         // Some subfaces may be non-Delaunay.
         lawsonflip();
         // Insert newpt into the DT.
@@ -867,11 +869,11 @@ void tetgenmesh::delaunizesegments()
         if (pointtype(refpt) != ACUTEVERTEX) {
           pointtype(refpt) = RIDGEVERTEX;
         }
+        sspivot(splitsh, sseg);
+        if (sorg(sseg) != sorg(splitsh)) sesymself(sseg);
         lawsonflip();
       }
       // Add two subsegments into the stack.
-      sspivot(splitsh, sseg);
-      if (sorg(sseg) != sorg(splitsh)) sesymself(sseg);
       sinfect(sseg);
       subsegstack->newindex((void **) &psseg);
       *psseg = sseg;

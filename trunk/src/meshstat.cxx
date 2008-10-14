@@ -199,6 +199,7 @@ void tetgenmesh::checkmesh(memorypool* pool)
 void tetgenmesh::checkshells()
 {
   face shloop, spinsh, nextsh;
+  face checkseg;
   point pa, pb;
   int horrors, i;
 
@@ -230,6 +231,19 @@ void tetgenmesh::checkshells()
         }
         spinsh = nextsh;
         spivot(spinsh, nextsh);
+      }
+      // Check subface-subseg bond.
+      sspivot(shloop, checkseg);
+      if (checkseg.sh != NULL) {
+        if (!((sorg(checkseg) == pa) && (sdest(checkseg) == pb) ||
+             (sorg(checkseg) == pb) && (sdest(checkseg) == pa))) {
+          printf("  !! !! Wrong subface-subseg connection.\n");
+          printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+            pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
+          printf("    Seg: x%lx (%d, %d).\n", (unsigned long) checkseg.sh,
+            pmark(sorg(checkseg)), pmark(sdest(checkseg)));
+          horrors++;
+        }
       }
       senextself(shloop);
     }
@@ -363,13 +377,18 @@ void tetgenmesh::statistics()
     printf("  Number of insphere tests: %ld\n", inspherecount);
     printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
     if (b->bowyerwatson) {
-      printf("  Total size of cavities (# tets): %ld\n", totalbowatcavsize);
-      printf("  Maximal size of a single cavity: %ld\n", maxbowatcavsize);
+      printf("  Number of deleted tets: %ld\n", totaldeadtets);
+      printf("  Number of created tets: %ld\n", totalbowatcavsize);
+      printf("  Number of maximum tets per step: %ld\n", maxbowatcavsize);
       printf("  Number of 1-to-4 flips: %ld\n", flip14count);
       printf("  Number of 2-to-6 flips: %ld\n", flip26count);
       printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
       printf("  Number of 3-to-2 flips: %ld\n", flip32count);
     } else {
+      printf("  Number of deleted tets: %ld\n", 
+        flip23count * 2l + flip32count * 3l);
+      printf("  Number of created tets: %ld\n",
+        flip23count * 3l + flip32count * 2l);
       printf("  Number of 1-to-4 flips: %ld\n", flip14count);
       printf("  Number of 2-to-6 flips: %ld\n", flip26count);
       printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);

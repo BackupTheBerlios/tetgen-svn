@@ -497,6 +497,8 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
       s1, s2);
   }
 
+  s1s2 = s1 * s2;
+
   // Classify the 3^2 = 9 cases.
   if (s1s2 > 0) {
     // Both P and Q lie at the same side of ABC.
