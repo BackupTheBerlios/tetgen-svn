@@ -144,8 +144,13 @@ void tetgenmesh::unifysegments()
                 assert(0);
               }
             } else { // ori2 == 0;
-              // f is coplanar and codirection with f1.
-              assert(0);
+              // f is coplanar and with f1 (see Fig. 7).
+              ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
+              if (ori3 > 0) {
+                assert(0);  // f is also codirection with f1.
+              } else {
+                // f is above f2, continue.
+              }
             }
           } else { // ori1 == 0;
             // apex(f2) is coplanar with f1. By assumption, f1 is not
