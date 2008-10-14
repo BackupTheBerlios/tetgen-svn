@@ -574,11 +574,9 @@ void tetgenmesh::initializepools()
   // Initialize the pool for flips.
   flippool = new memorypool(sizeof(badface), 1024, POINTER, 0);
 
-  if (b->bowyerwatson) {
-    // Initialize the arraypools for Bowyer-Watson algorithm.
-    cavetetlist = new arraypool(sizeof(triface), 8);
-    cavebdrylist = new arraypool(sizeof(triface), 8);
-  }
+  // Initialize the arraypools for Bowyer-Watson algorithm.
+  cavetetlist = new arraypool(sizeof(triface), 8);
+  cavebdrylist = new arraypool(sizeof(triface), 8);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -767,7 +765,7 @@ void tetgenmesh::makeshellface(memorypool* pool, face* newsh)
   for (i = 0; i < 10; i++) {
     newsh->sh[i] = (shellface) NULL;
   }
-  if (b->quality && checkconstraints) {
+  if (checkconstraints) {
     areabound(*newsh) = 0.0;
   }
   // setshelltype(*newsh, NSHARP);

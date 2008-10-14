@@ -39,6 +39,9 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
   point pa, pb, pc;
   int i;
 
+  REAL area;
+  int shmark;
+
   splitface->shver &= ~1;  // Stay in the 0th edge ring.
 
   pa = sorg(*splitface);
@@ -60,6 +63,15 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
   setsapex(newfaces[0], newpt);  // abc->abp.
   setshvertices(newfaces[1], pb, pc, newpt); // bcp.
   setshvertices(newfaces[2], pc, pa, newpt); // cap.
+
+  shmark = shellmark(newfaces[0]);
+  shellmark(newfaces[1]) = shmark;
+  shellmark(newfaces[2]) = shmark;
+  if (checkconstraints) {
+    area = areabound(newfaces[0]);
+    areabound(newfaces[1]) = area;
+    areabound(newfaces[2]) = area;
+  }
 
   // Connect outer boundary faces to new faces.
   senext(newfaces[0], bdedge);
@@ -184,6 +196,10 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     setsapex(abdedges[i], newpt);  // ap[i]b->ap[i]p.
     makeshellface(subfacepool, &(bbdedges[i]));
     setshvertices(bbdedges[i], pb, pt[i], newpt); // bp[i]p.
+    shellmark(bbdedges[i]) = shellmark(abdedges[i]);
+    if (checkconstraints) {
+      areabound(bbdedges[i]) = areabound(abdedges[i]);
+    }
   }
 
   // Connect new boundary edges to outer faces.
@@ -227,8 +243,12 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     }
     // Insert the new point p.
     setsdest(aseg, newpt);
-    makeshellface(subfacepool, &bseg);
+    makeshellface(subsegpool, &bseg);
     setshvertices(bseg, newpt, pb, NULL);
+    shellmark(bseg) = shellmark(aseg);
+    if (checkconstraints) {
+      areabound(bseg) = areabound(aseg);
+    }
     // Connect pb<->b#.
     senext(aseg, aoutseg);
     spivotself(aoutseg);
