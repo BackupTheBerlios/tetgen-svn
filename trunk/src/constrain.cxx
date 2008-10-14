@@ -411,42 +411,22 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
 
   if (dir == COLLINEAR) {
     pd = dest(*searchtet);
-    if (pd != endpt) {
-      // Split the segment.
-      spivot(*sseg, splitsh);
-      flipn2nf(pd, &splitsh, 1);
-      sspivot(splitsh, *sseg);
-      // Make sure that sseg is: startpt->pd.
-      if (sorg(*sseg) != startpt) {
-        sesymself(*sseg);
-        assert(sorg(*sseg) == startpt);
-      }
-      // Reset the type for the point.
-      if (pointtype(pd) != ACUTEVERTEX) {
-        pointtype(pd) = RIDGEVERTEX;
-      }
-      // Some subfaces may be non-Delaunay.
-      lawsonflip();
+    if (pd == endpt) {
+      // Found! Insert the segment.
+      tsspivot1(*searchtet, checkseg);  // SELF_CHECK
+      assert(checkseg.sh == NULL);  // SELF_CHECK
+      neightet = *searchtet;
+      do {
+        tssbond1(neightet, *sseg);
+        fnextself(neightet);
+      } while (neightet.tet != searchtet->tet);
+      // The job is done. 
+      return dir;
+    } else {
+      // A point is on the path.
+      *refpt = pd;
+      return ACROSSVERT;
     }
-    // Found! Insert (the first part of) the segment.
-    tsspivot1(*searchtet, checkseg);  // SELF_CHECK
-    assert(checkseg.sh == NULL);  // SELF_CHECK
-    neightet = *searchtet;
-    do {
-      tssbond1(neightet, *sseg);
-      fnextself(neightet);
-    } while (neightet.tet != searchtet->tet);
-    if (pd != endpt) {
-      // Search the scond part of the segment.
-      senext2self(*sseg);
-      spivotself(*sseg);
-      sseg->shver = 0;
-      if (sorg(*sseg) != pd) sesymself(*sseg);
-      enextself(*searchtet);
-      return scoutsegment(sseg, searchtet, refpt);
-    }
-    // The job is done.
-    return dir;
   }
 
   if (b->verbose > 1) {
@@ -456,7 +436,13 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
 
   // The segment is missing. Search a reference point for it.
   symedgeself(*searchtet);
-  assert(oppo(*searchtet) != dummypoint); // SELF_CHECK
+  if (oppo(*searchtet) == dummypoint) {
+    // Enter outside! Move back to inside.
+    esymself(*searchtet);
+    symedgeself(*searchtet); // This is the old one.
+    fnextself(*searchtet);
+    assert(oppo(*searchtet) != dummypoint);  // SELF_CHECK
+  }
 
   pa = org(*searchtet);
   angmax = interiorangle(pa, startpt, endpt, NULL);
@@ -528,6 +514,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       while (1) {
         fnextself(neightet);
         pc = apex(neightet);
+        if (pc == endpt) break;  // Reach the end point.
         if (pc != dummypoint) {
           ang = interiorangle(pc, startpt, endpt, NULL);
           if (ang > angmax) {
@@ -542,6 +529,15 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         ori1 = ori2;
       }
       assert(neightet.tet != searchtet->tet); // SELF_CHECK
+      // Stop if we reached the end point.
+      if (pc == endpt) break;
+      // Where we are?
+      pd = oppo(neightet);
+      if (pd == dummypoint) {
+        // We entered outside! Move back.
+        esymself(neightet);
+        symedgeself(neightet);
+      }
       // One of the two side faces in 'searchtet' intersects the segment.
       *searchtet = neightet;
       neightet.ver = 0;
@@ -713,7 +709,11 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
     d2 = DIST(vt, ej);
     if (d1 > d2) {
       // Use rule-3.
-      d -= d1;
+      if (d1 < 0.5 * d) {
+        d -= d1;
+      } else {
+        d /= 2.0;
+      }
       split = d / L;
       for (i = 0; i < 3; i++) {
         vt[i] = ek[i] + split * (ej[i] - ek[i]);

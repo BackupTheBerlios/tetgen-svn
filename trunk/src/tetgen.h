@@ -1630,9 +1630,6 @@ void deinitialize()
     delete cavetetlist;
     delete cavebdrylist;
   }
-  if (subsegstack != (arraypool *) NULL) {
-    delete subsegstack;
-  }
   futureflip = (badface *) NULL;
 }
 
