@@ -573,6 +573,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     }
     // Go to the next tet.
     symedge(neightet, *searchtet);
+    // Update the pa, pb, pc.
+    pa = org(*searchtet);
+    pb = dest(*searchtet);
+    pc = apex(*searchtet);
 
   } // while (1)
 
@@ -796,7 +800,7 @@ void tetgenmesh::markacutevertices(int* idx2seglist, face* segperverlist)
 void tetgenmesh::delaunizesegments()
 {
   triface searchtet;
-  face sseg, *psseg, splitsh;
+  face *psseg, sseg, nsseg, splitshs[2];
   point refpt, newpt;
   enum intersection dir;
   int s, i;
@@ -858,40 +862,37 @@ void tetgenmesh::delaunizesegments()
 
     if (dir != COLLINEAR) {
       // The segment is missing, split it.
-      spivot(sseg, splitsh);
+      spivot(sseg, splitshs[0]);
       if (dir != ACROSSVERT) {
         // Create the new point.
         makepoint(&newpt);
         getsegmentsplitpoint(&sseg, refpt, newpt);
         // Split the segment by newpt.
-        flipn2nf(newpt, &splitsh, 1);
+        flipn2nf(newpt, splitshs, 1);
         pointtype(newpt) = STEINERVERTEX;
-        sspivot(splitsh, sseg);
-        if (sorg(sseg) != sorg(splitsh)) sesymself(sseg);
+        sspivot(splitshs[0], sseg);
+        sspivot(splitshs[1], nsseg);
         // Some subfaces may be non-Delaunay.
         lawsonflip();
         // Insert newpt into the DT.
         insertvertex(newpt, &searchtet, true);
       } else {
         // Split the segment by refpt.
-        flipn2nf(refpt, &splitsh, 1);
+        flipn2nf(refpt, splitshs, 1);
         if (pointtype(refpt) != ACUTEVERTEX) {
           pointtype(refpt) = RIDGEVERTEX;
         }
-        sspivot(splitsh, sseg);
-        if (sorg(sseg) != sorg(splitsh)) sesymself(sseg);
+        sspivot(splitshs[0], sseg);
+        sspivot(splitshs[1], nsseg);
         lawsonflip();
       }
       // Add two subsegments into the stack.
       sinfect(sseg);
       subsegstack->newindex((void **) &psseg);
       *psseg = sseg;
-      senextself(sseg);
-      spivotself(sseg);
-      sseg.shver = 0;
-      sinfect(sseg);
+      sinfect(nsseg);
       subsegstack->newindex((void **) &psseg);
-      *psseg = sseg;
+      *psseg = nsseg;
     }
   }
 

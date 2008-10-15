@@ -1468,7 +1468,7 @@ enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
 
 badface* flipshpush(badface* flipstack, face* flipedge);
 void flip13(point newpt, face* splitface, int flipflag);
-void flipn2nf(point newpt, face* splitedge, int flipflag);
+void flipn2nf(point newpt, face* splitedges, int flipflag);
 void flip22(face* flipfaces, int flipflag);
 void lawsonflip();
 

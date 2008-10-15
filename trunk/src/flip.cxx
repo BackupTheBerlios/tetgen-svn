@@ -125,7 +125,7 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
+void tetgenmesh::flipn2nf(point newpt, face* splitedges, int flipflag)
 {
   face *abdedges, *bbdedges, *boutfaces, *binfaces;
   face aseg, bseg, aoutseg, boutseg;
@@ -135,15 +135,15 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
 
   shellface sptr;
 
-  splitedge->shver &= ~1;  // Stay in the 0th edge ring.
+  splitedges[0].shver &= ~1;  // Stay in the 0th edge ring.
 
   // Count the number of faces at ab.
   n = 0;
-  checkface = *splitedge;
+  checkface = splitedges[0];
   do {
     spivotself(checkface);
     n++;
-  } while ((checkface.sh != NULL) && (checkface.sh != splitedge->sh));
+  } while ((checkface.sh != NULL) && (checkface.sh != splitedges[0].sh));
 
   // Allocate spaces.
   abdedges = new face[n];
@@ -153,15 +153,16 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
   pt = new point[n];
 
   // Collect the faces, abp[0], ..., abp[n-1].
-  abdedges[0] = *splitedge;
+  abdedges[0] = splitedges[0];
   pt[0] = sapex(abdedges[0]);
   for (i = 0; i < n - 1; i++) {
     spivot(abdedges[i], abdedges[i + 1]);
+    if (sorg(abdedges[i + 1]) != pa) sesymself(abdedges[i + 1]);
     pt[i + 1] = sapex(abdedges[i + 1]);
   }
 
-  pa = sorg(*splitedge);
-  pb = sdest(*splitedge);
+  pa = sorg(splitedges[0]);
+  pb = sdest(splitedges[0]);
 
   if (b->verbose > 1) {
     printf("    flip n-to-2n: %d, (%d, %d) %d ... (%d faces) \n", 
@@ -233,18 +234,19 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
   }
 
   // Check edge ab to see if it is a subsegment.
-  sspivot(*splitedge, aseg);
+  sspivot(splitedges[0], aseg);
   if (aseg.sh != NULL) {
     // Split a subsegment ab to ap and pb.
-    if (sorg(aseg) != pa) sesymself(aseg);
+    // if (sorg(aseg) != pa) sesymself(aseg);
+    aseg.shver = 0;
     if (b->verbose > 1) {
       printf("    flip 1-to-2: %d, (%d, %d).\n", pointmark(newpt), 
-        pointmark(pa), pointmark(pb));
+        pointmark(sorg(aseg)), pointmark(sdest(aseg)));
     }
     // Insert the new point p.
-    setsdest(aseg, newpt);
     makeshellface(subsegpool, &bseg);
-    setshvertices(bseg, newpt, pb, NULL);
+    setshvertices(bseg, newpt, sdest(aseg), NULL);
+    setsdest(aseg, newpt);
     shellmark(bseg) = shellmark(aseg);
     if (checkconstraints) {
       areabound(bseg) = areabound(aseg);
@@ -260,10 +262,29 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     senext(aseg, aoutseg);
     senext2(bseg, boutseg);
     sbond2(aoutseg, boutseg);
-    // Connect seg pb to subfaces having it.
-    for (i = 0; i < n; i++) {
-      senext2(bbdedges[i], boutfaces[i]);
-      ssbond(boutfaces[i], bseg);
+    // Connect seg ap to face ring of splitshs[0], this will disconnect the
+    //   old bonds as well. *** Because we mixed the edge versions ***
+    if (sorg(aseg) == sorg(splitedges[0])) {
+      for (i = 0; i < n; i++) {
+        senext(abdedges[i], boutfaces[i]);
+        ssbond(boutfaces[i], aseg);
+      }
+      // Connect seg pb to subfaces having it.
+      for (i = 0; i < n; i++) {
+        senext2(bbdedges[i], boutfaces[i]);
+        ssbond(boutfaces[i], bseg);
+      }
+    } else {
+      // The edge version is reversed.
+      assert(sdest(bseg) == sorg(splitedges[0]));
+      for (i = 0; i < n; i++) {
+        senext(abdedges[i], boutfaces[i]);
+        ssbond(boutfaces[i], bseg);
+      }
+      for (i = 0; i < n; i++) {
+        senext2(bbdedges[i], boutfaces[i]);
+        ssbond(boutfaces[i], aseg);
+      }
     }
   }
 
@@ -275,7 +296,8 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedge, int flipflag)
     }
   }
 
-  // Return apc = app[0] = *splitedge.
+  // Return apc = app[0] = splitedges[0].
+  senext2(bbdedges[0], splitedges[1]); // return pbp[0].
 
   delete [] abdedges;
   delete [] bbdedges;
