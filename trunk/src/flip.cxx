@@ -157,7 +157,9 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedges, int flipflag)
   pt[0] = sapex(abdedges[0]);
   for (i = 0; i < n - 1; i++) {
     spivot(abdedges[i], abdedges[i + 1]);
-    if (sorg(abdedges[i + 1]) != pa) sesymself(abdedges[i + 1]);
+    if (sorg(abdedges[i + 1]) != sorg(splitedges[0])) {
+      sesymself(abdedges[i + 1]);
+    }
     pt[i + 1] = sapex(abdedges[i + 1]);
   }
 
