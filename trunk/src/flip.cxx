@@ -227,7 +227,7 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedges, int flipflag)
   }
 
   // Create new subfaces ring at edge pb.
-  if (n > 2) {
+  if (n > 1) {
     for (i = 0; i < n; i++) {
       senext2(bbdedges[i], boutfaces[i]);
       senext2(bbdedges[(i + 1) % n], boutfaces[(i + 1) % n]);

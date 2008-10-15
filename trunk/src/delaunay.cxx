@@ -754,8 +754,15 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       for (j = 0; j < 3; j++) {
         tsspivot1(neightet, sseg);
         if (sseg.sh != NULL) {
-          assert(!sinfected(sseg));  // SELF_CHECK
-          tssbond1(newtet, sseg);
+          if (sinfected(sseg)) {
+            // The segment is not missing.
+            if (b->verbose > 1) {
+              printf("    Dequeue encroached segment (%d, %d).\n",
+                pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+            }
+            suninfect(sseg);
+            tssbond1(newtet, sseg);
+          }
         }
         enextself(neightet);
         enext2self(newtet);

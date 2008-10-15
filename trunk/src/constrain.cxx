@@ -854,6 +854,8 @@ void tetgenmesh::delaunizesegments()
     subsegstack->objects--;
     psseg = (face *) fastlookup(subsegstack, subsegstack->objects);
     sseg = *psseg;
+
+    if (!sinfected(sseg)) continue; // Not a missing segment.
     suninfect(sseg);
 
     // Insert the segment.

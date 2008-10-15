@@ -1210,6 +1210,7 @@ point farsorg(face& s) {
     senext2(travesh, neighsh);
     spivotself(neighsh); 
     if (neighsh.sh == NULL) break;
+    if (sorg(neighsh) != sorg(travesh)) sesymself(neighsh);
     assert(sorg(neighsh) == sorg(travesh)); // SELF_CHECK
     senext2(neighsh, travesh); 
   }
@@ -1224,6 +1225,7 @@ point farsdest(face& s) {
     senext(travesh, neighsh);
     spivotself(neighsh); 
     if (neighsh.sh == NULL) break;
+    if (sdest(neighsh) != sdest(travesh)) sesymself(neighsh);
     assert(sdest(neighsh) == sdest(travesh)); // SELF_CHECK
     senext(neighsh, travesh); 
   }
