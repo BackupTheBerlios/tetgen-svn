@@ -319,6 +319,59 @@ void tetgenmesh::checkdelaunay()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// checksegments()    Check the segment connections.                         //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::checksegments()
+{
+  triface tetloop, neightet;
+  shellface *segs;
+  face sseg, checkseg;
+  int horrors, i;
+
+  horrors = 0;
+  tetrahedronpool->traversalinit();
+  tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  while (tetloop.tet != NULL) {
+    // Loop the six edges of the tet.
+    if (tetloop.tet[8] != NULL) {
+      segs = (shellface *) tetloop.tet[8];
+      for (i = 0; i < 6; i++) {
+        sdecode(segs[i], sseg);
+        if (sseg.sh != NULL) {
+          // Get the edge of the tet.
+          tetloop.loc = edge2locver[i][0];
+          tetloop.ver = edge2locver[i][1];
+          // Loop all tets sharing at this edge.
+          neightet = tetloop;
+          do {
+            tsspivot1(neightet, checkseg);
+            if (checkseg.sh != sseg.sh) {
+              printf("  !! Mis tet-seg connection at seg (%d, %d).\n",
+                pointmark(sseg.sh[3]), pointmark(sseg.sh[4]));
+              printf("    Tet: (%d, %d, %d, %d).\n", pointmark(org(tetloop)),
+                pointmark(dest(tetloop)), pointmark(apex(tetloop)),
+                pointmark(oppo(tetloop)));
+              horrors++;
+            }
+            fnextself(neightet);
+          } while (neightet.tet != tetloop.tet);
+        }
+      }
+    }
+    tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+
+  if (horrors == 0) {
+    printf("  Segments are connected properly.\n");
+  } else {
+    printf("  !! !! !! !! Found %d missing connections.\n", horrors);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // statistics()    Print all sorts of cool facts.                            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

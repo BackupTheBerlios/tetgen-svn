@@ -1564,6 +1564,7 @@ void checkmesh(memorypool* pool);
 void checkshells();
 void checkdelaunay();
 void checkconforming();
+void checksegments();
 void qualitystatistics();
 void statistics();
 
@@ -1662,6 +1663,7 @@ int pmark(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
 void print_tetarray(int n, triface *tetarray);
+void print_cavebdrylist();
 void print_flipstack();
 
 ///////////////////////////////////////////////////////////////////////////////

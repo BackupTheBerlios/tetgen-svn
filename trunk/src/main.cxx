@@ -531,6 +531,8 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
 void tetgenmesh::ptet(triface* t)
 {
   triface tmpface, prtface;
+  shellface *shells;
+  face checksh;
   point *pts, tmppt;
   REAL ori;
   int facecount;
@@ -611,6 +613,25 @@ void tetgenmesh::ptet(triface* t)
     printf("      Oppo[%i] x%lx (%.12g,%.12g,%.12g) %d\n",
            loc2oppo[t->loc], (unsigned long)(tmppt),
            tmppt[0], tmppt[1], tmppt[2], pointmark(tmppt));
+  }
+
+  if (checksubsegs) {
+    if (t->tet[8] != NULL) {
+      shells = (shellface *) t->tet[8];
+      for (facecount = 0; facecount < 6; facecount++) {
+        sdecode(shells[facecount], checksh);
+        if (checksh.sh != NULL) {
+          printf("      [%d] x%lx %d.", facecount, (unsigned long) checksh.sh,
+            checksh.shver);
+        } else {
+          printf("      [%d] NULL.", facecount);
+        }
+        if (locver2edge[t->loc][t->ver] == facecount) {
+          printf(" (*)");  // It is the current edge.
+        }
+        printf("\n");
+      }
+    }
   }
 }
 
@@ -937,6 +958,27 @@ void tetgenmesh::print_tetarray(int n, triface *tetarray)
       pointmark(org(tetarray[i])), pointmark(dest(tetarray[i])),
       pointmark(apex(tetarray[i])), pointmark(oppo(tetarray[i])), i + 1);
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Print an array of tetrahedra (in draw command)
+
+void tetgenmesh::print_cavebdrylist()
+{
+  FILE *fout;
+  triface *cavetet;
+  int i;
+
+  printf("  Dump %ld faces to dump_cavebdry.lua.\n", cavebdrylist->objects);
+
+  fout = fopen("dump_cavebdry.lua", "w");
+  for (i = 0; i < cavebdrylist->objects; i++) {
+    cavetet = (triface *) fastlookup(cavebdrylist, i);
+    fprintf(fout, "p:draw_subface(%d, %d, %d) -- %d\n", 
+      pointmark(org(*cavetet)), pointmark(dest(*cavetet)), 
+      pointmark(apex(*cavetet)), i);
+  }
+  fclose(fout);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

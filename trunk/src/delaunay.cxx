@@ -761,8 +761,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
                 pointmark(sorg(sseg)), pointmark(sdest(sseg)));
             }
             suninfect(sseg);
-            tssbond1(newtet, sseg);
           }
+          tssbond1(newtet, sseg);
         }
         enextself(neightet);
         enext2self(newtet);
