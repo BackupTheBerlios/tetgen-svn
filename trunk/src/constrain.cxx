@@ -454,10 +454,12 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     *refpt = pb;
   }
   pc = apex(*searchtet);
-  ang = interiorangle(pc, startpt, endpt, NULL);
-  if (ang > angmax) {
-    angmax = ang;
-    *refpt = pc;
+  if (pc != startpt) {
+    ang = interiorangle(pc, startpt, endpt, NULL);
+    if (ang > angmax) {
+      angmax = ang;
+      *refpt = pc;
+    }
   }
   reftet = *searchtet; // Save the tet containing the refpt.
 
@@ -509,7 +511,13 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       }
       // Find the tet containing the face intersected by the segment.
       ori1 = orient3d(pa, pb, pc, endpt);
-      assert(ori1 != 0);  // SELF_CHECK
+      if (ori1 == 0) { 
+        // abc is coplanar with endpt (see Fig. ACROSSEDGE, new case).
+        enext0fnextself(*searchtet);
+        pc = apex(*searchtet);
+        ori1 = orient3d(pa, pb, pc, endpt);
+        assert(ori1 != 0.0);
+      }
       neightet = *searchtet;
       while (1) {
         fnextself(neightet);
