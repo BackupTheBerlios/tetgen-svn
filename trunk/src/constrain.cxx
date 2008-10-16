@@ -350,14 +350,13 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   triface* searchtet, point* refpt)
 {
-  triface neightet, reftet;
+  triface neightet, reftet, checktet;
   face splitsh, checkseg;
   point startpt, endpt;
   point pa, pb, pc, pd;
   enum location loc;
   enum intersection dir;
   REAL angmax, ang;
-  REAL ori1, ori2;
   bool orgflag;
   int shver, pos, i;
 
@@ -438,9 +437,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   symedgeself(*searchtet);
   if (oppo(*searchtet) == dummypoint) {
     // Enter outside! Move back to inside.
-    esymself(*searchtet);
     symedgeself(*searchtet); // This is the old one.
-    fnextself(*searchtet);
     assert(oppo(*searchtet) != dummypoint);  // SELF_CHECK
   }
 
@@ -499,7 +496,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         if (dir != DISJOINT) break;
       }
       assert(i < 3);  // SELF_CHECK
-    } else { // if (dir == ACROSSEDGE)
+    } else { // dir == ACROSSEDGE
       // Check whether two segments are intersecting.
       tsspivot1(*searchtet, checkseg);
       if (checkseg.sh != NULL) {
@@ -510,55 +507,47 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         terminatetetgen(1);
       }
       // Find the tet containing the face intersected by the segment.
-      ori1 = orient3d(pa, pb, pc, endpt);
-      if (ori1 == 0) { 
-        // abc is coplanar with endpt (see Fig. ACROSSEDGE, new case).
-        enext0fnextself(*searchtet);
-        pc = apex(*searchtet);
-        ori1 = orient3d(pa, pb, pc, endpt);
-        assert(ori1 != 0.0);
-      }
       neightet = *searchtet;
       while (1) {
-        fnextself(neightet);
         pc = apex(neightet);
+        assert(pc != dummypoint); // // SELF CHECK
         if (pc == endpt) break;  // Reach the end point.
-        if (pc != dummypoint) {
+        if (oppo(neightet) == endpt) {
+          pc = endpt; break;
+        }
+        if (pc != startpt) {
           ang = interiorangle(pc, startpt, endpt, NULL);
           if (ang > angmax) {
             angmax = ang;
             *refpt = pc;
             reftet = neightet;
           }
+          // org(neightet)->dest(neightet) intersects with startpt->endpt.
+          // Do intersection tests with the other two sides of neightet.
+          checktet.tet = neightet.tet;
+          checktet.ver = 0;
+          for (i = 0; i < 2; i++) {
+            checktet.loc = locverpivot[neightet.loc][neightet.ver][i];
+            pa = org(checktet);
+            pb = dest(checktet);
+            pc = apex(checktet);
+            pd = oppo(checktet);
+            dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
+            if (dir != DISJOINT) {
+              // Found! Update neightet.
+              neightet = checktet;
+              break;
+            }
+          }
+          if (dir != DISJOINT) break;
         }
-        // Check if this face intersects the segment.
-        ori2 = orient3d(pa, pb, pc, endpt);
-        if ((ori2 == 0) || (ori1 * ori2 < 0)) break;
-        ori1 = ori2;
+        // Go to the next tet.
+        fnextself(neightet);
+        // We will not return.
+        assert(neightet.tet != searchtet->tet); // SELF CHECK
       }
-      assert(neightet.tet != searchtet->tet); // SELF_CHECK
       // Stop if we reached the end point.
       if (pc == endpt) break;
-      // Where we are?
-      pd = oppo(neightet);
-      if (pd == dummypoint) {
-        // We entered outside! Move back.
-        esymself(neightet);
-        symedgeself(neightet);
-      }
-      // One of the two side faces in 'searchtet' intersects the segment.
-      *searchtet = neightet;
-      neightet.ver = 0;
-      for (i = 0; i < 2; i++) {
-        neightet.loc = locverpivot[searchtet->loc][searchtet->ver][i];
-        pa = org(neightet);
-        pb = dest(neightet);
-        pc = apex(neightet);
-        pd = oppo(neightet);
-        dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
-        if (dir != DISJOINT) break;
-      }
-      assert(i < 2);  // SELF_CHECK
     }
 
     if (dir == ACROSSVERT) {
@@ -581,10 +570,6 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     }
     // Go to the next tet.
     symedge(neightet, *searchtet);
-    // Update the pa, pb, pc.
-    pa = org(*searchtet);
-    pb = dest(*searchtet);
-    pc = apex(*searchtet);
 
   } // while (1)
 
