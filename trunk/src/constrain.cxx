@@ -8,11 +8,16 @@
 // finddirection()    Find the tet on the path from one point to another.    //
 //                                                                           //
 // The path starts from 'searchtet''s origin and ends at 'endpt'. On finish, //
-// 'searchtet' returns the tet on the path, its origin does not change.      //
+// 'searchtet' contains a tet on the path, its origin does not change.       //
 //                                                                           //
-// The return value notes whether the path is collinear with an edge, or cr- //
-// osses an edge, or crosses an face of the tet, 'searchtet' represents the  //
-// according edge or face, respectively.                                     //
+// The return value indicates one of the following cases (let 'searchtet' be //
+// abcd, a is the origin of the path):                                       //
+//   - COLLINEAR, edge ab is collinear with the path;                        //
+//   - ACROSSEDGE, edge bc intersects with the path;                         //
+//   - ACROSSFACE, face bcd intersects with the path.                        //
+//                                                                           //
+// WARNING: This routine is designed for convex triangulations, and will not //
+// generally work after the holes and concavities have been carved.          //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -304,7 +309,6 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
       return COLLINEAR;
     }
     // pa->'endpt' crosses the edge pb->pc.
-    enextself(*searchtet);
     return ACROSSEDGE;
   }
   if (rori == 0) {
@@ -317,17 +321,17 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
     }
     // pa->'endpt' crosses the edge pb->pd.
     enext0fnextself(*searchtet); // face abd.
+    esymself(*searchtet);
     enextself(*searchtet);
     return ACROSSEDGE;
   }
   if (lori == 0) {
     // pa->'endpt' crosses the edge pc->pd.
     enext2fnextself(*searchtet);  // face cad
-    enext2self(*searchtet);
+    esymself(*searchtet);
     return ACROSSEDGE;
   }
   // pa->'endpt' crosses the face bcd.
-  enextfnextself(*searchtet);
   return ACROSSFACE;
 }
 
@@ -335,15 +339,16 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 //                                                                           //
 // scoutsegment()    Look for a given segment in the tetrahedralization.     //
 //                                                                           //
-// Search an edge in current tetrahedralization that matches the given segm- //
-// ment. Return TRUE if such edge exists, and the segment is attached to the //
-// surrounding tets. Otherwise return FALSE.                                 //
+// Search an edge in the tetrahedralization that matches the given segmment. //
+// Return TRUE if such edge exists, and the segment is attached to tets con- //
+// taining it. Otherwise return FALSE.                                       //
 //                                                                           //
 // If 'searchtet' != NULL, it's origin must be the origin of 'sseg'.  It is  //
 // used as the starting tet for searching the edge.                          //
 //                                                                           //
 // If the segment does not exist (return FALSE), 'refpt' returns a reference //
-// point for the segment. 'searchtet' returns the tet containing the 'refpt'.//
+// point for the segment. 'searchtet' returns a tet containing the 'refpt'.  //
+// It is used for searching the splitting point of the segment.              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -375,7 +380,6 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         // Check if this tet contains pa.
         for (i = 4; i < 8 && !orgflag; i++) {
           if ((point) searchtet->tet[i] == startpt) {
-            orgflag = true;
             // Found. Set pa as its origin.
             switch (i) {
               case 4: searchtet->loc = 0; searchtet->ver = 0; break;
@@ -384,6 +388,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
               case 7: searchtet->loc = 1; searchtet->ver = 2; break;
             }
             sseg->shver = shver;
+            orgflag = true;
           }
         }
       }
@@ -433,13 +438,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       pointmark(endpt));
   }
 
-  // The segment is missing. Search a reference point for it.
-  symedgeself(*searchtet);
-  if (oppo(*searchtet) == dummypoint) {
-    // Enter outside! Move back to inside.
-    symedgeself(*searchtet); // This is the old one.
-    assert(oppo(*searchtet) != dummypoint);  // SELF_CHECK
-  }
+  enextfnextself(*searchtet); // Go the opposite face.
+  symedgeself(*searchtet); // Enter the adjacent tet.
 
   pa = org(*searchtet);
   angmax = interiorangle(pa, startpt, endpt, NULL);
@@ -450,13 +450,23 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     angmax = ang;
     *refpt = pb;
   }
-  pc = apex(*searchtet);
-  if (pc != startpt) {
-    ang = interiorangle(pc, startpt, endpt, NULL);
-    if (ang > angmax) {
-      angmax = ang;
-      *refpt = pc;
+
+  // Check whether two segments are intersecting.
+  if (dir == ACROSSEDGE) {
+    tsspivot1(*searchtet, checkseg);
+    if (checkseg.sh != NULL) {
+      printf("  Invalid PLC!  Two segments intersect each other.\n");
+      printf("    1st: (%d, %d), 2nd: (%d, %d).\n", pointmark(startpt), 
+        pointmark(endpt), pointmark(pa), pointmark(pb));
+      terminatetetgen(1);
     }
+  }
+  
+  pc = apex(*searchtet);
+  ang = interiorangle(pc, startpt, endpt, NULL);
+  if (ang > angmax) {
+    angmax = ang;
+    *refpt = pc;
   }
   reftet = *searchtet; // Save the tet containing the refpt.
 
@@ -495,59 +505,26 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
         if (dir != DISJOINT) break;
       }
-      assert(i < 3);  // SELF_CHECK
+      assert(dir != DISJOINT);  // SELF_CHECK
     } else { // dir == ACROSSEDGE
-      // Check whether two segments are intersecting.
-      tsspivot1(*searchtet, checkseg);
-      if (checkseg.sh != NULL) {
-        printf("  Invalid PLC!  Two segments intersect each other.\n");
-        printf("    1st: (%d, %d), 2nd: (%d, %d).\n", 
-          pointmark(sorg(*sseg)), pointmark(sdest(*sseg)), 
-          pointmark(org(*searchtet)), pointmark(dest(*searchtet)));
-        terminatetetgen(1);
-      }
-      // Find the tet containing the face intersected by the segment.
+      // Check the two opposite faces (of the edge) in 'searchtet'.
       neightet = *searchtet;
-      while (1) {
+      neightet.ver = 0;
+      for (i = 0; i < 2; i++) {
+        neightet.loc = locverpivot[searchtet->loc][searchtet->ver][i];
+        pa = org(neightet);
+        pb = dest(neightet);
         pc = apex(neightet);
-        assert(pc != dummypoint); // // SELF CHECK
-        if (pc == endpt) break;  // Reach the end point.
-        if (oppo(neightet) == endpt) {
-          pc = endpt; break;
-        }
-        if (pc != startpt) {
-          ang = interiorangle(pc, startpt, endpt, NULL);
-          if (ang > angmax) {
-            angmax = ang;
-            *refpt = pc;
-            reftet = neightet;
-          }
-          // org(neightet)->dest(neightet) intersects with startpt->endpt.
-          // Do intersection tests with the other two sides of neightet.
-          checktet.tet = neightet.tet;
-          checktet.ver = 0;
-          for (i = 0; i < 2; i++) {
-            checktet.loc = locverpivot[neightet.loc][neightet.ver][i];
-            pa = org(checktet);
-            pb = dest(checktet);
-            pc = apex(checktet);
-            pd = oppo(checktet);
-            dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
-            if (dir != DISJOINT) {
-              // Found! Update neightet.
-              neightet = checktet;
-              break;
-            }
-          }
-          if (dir != DISJOINT) break;
-        }
-        // Go to the next tet.
-        fnextself(neightet);
-        // We will not return.
-        assert(neightet.tet != searchtet->tet); // SELF CHECK
+        pd = oppo(neightet);
+        dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
+        if (dir != DISJOINT) break;
       }
-      // Stop if we reached the end point.
-      if (pc == endpt) break;
+      if (dir == DISJOINT) {
+        // No intersection. Go to the next tet.
+        dir = ACROSSEDGE;
+        fnextself(*searchtet);
+        continue;
+      }
     }
 
     if (dir == ACROSSVERT) {
@@ -570,6 +547,18 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     }
     // Go to the next tet.
     symedge(neightet, *searchtet);
+
+    if (dir == ACROSSEDGE) {
+      // Check whether two segments are intersecting.
+      tsspivot1(*searchtet, checkseg);
+      if (checkseg.sh != NULL) {
+        printf("  Invalid PLC!  Two segments intersect each other.\n");
+        printf("    1st: (%d, %d), 2nd: (%d, %d).\n", pointmark(startpt), 
+          pointmark(endpt), pointmark(sorg(checkseg)), 
+          pointmark(sdest(checkseg)));
+        terminatetetgen(1);
+      }
+    }
 
   } // while (1)
 
@@ -796,6 +785,7 @@ void tetgenmesh::delaunizesegments()
   face *psseg, sseg, nsseg, splitshs[2];
   point refpt, newpt;
   enum intersection dir;
+  REAL bakeps;
   int s, i;
 
   face *segperverlist;
@@ -840,6 +830,9 @@ void tetgenmesh::delaunizesegments()
 
   // Segments will be introduced.
   checksubsegs = 1;
+  // Bakup the epsilon.
+  bakeps = b->epsilon;
+  b->epsilon = 0;
 
   // Loop until 'subsegstack' is empty.
   while (subsegstack->objects > 0l) {
@@ -911,6 +904,7 @@ void tetgenmesh::delaunizesegments()
   }
 
   checksubsegs = 0;
+  b->epsilon = bakeps;
 
   delete subsegstack;
   delete tet2subpool;
