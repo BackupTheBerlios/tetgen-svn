@@ -848,6 +848,41 @@ void tetgenmesh::pface(int i, int j, int k)
   delete [] marklist;
 }
 
+bool tetgenmesh::pedge(int i, int j)
+{
+  triface t, t1;
+  int ii;
+
+  t.ver = t1.ver = 0;
+  tetrahedronpool->traversalinit();
+  t.tet = tetrahedrontraverse(tetrahedronpool);
+  while (t.tet != NULL) {
+    for (ii = 0; ii < 6; ii++) {
+      t.loc = edge2locver[ii][0];
+      t.ver = edge2locver[ii][1];
+      if ((pointmark(org(t)) == i && pointmark(dest(t)) == j) ||
+          (pointmark(org(t)) == j && pointmark(dest(t)) == i)) break;
+    }
+    if (ii < 6) {
+      // Now t is the edge (i, j). Find all tets at (i, j).
+      t1 = t;
+      do {
+        printf("  tet x%lx (%d, %d, %d, %d) %d\n", (unsigned long) t1.tet,
+          pointmark(org(t1)), pointmark(dest(t1)), pointmark(apex(t1)), 
+          pointmark(oppo(t1)), t1.loc);
+        fnextself(t1);
+      } while (t1.tet != t.tet);
+      break;
+    }
+    t.tet = tetrahedrontraverse(tetrahedronpool);
+  }
+  
+  if (t.tet == NULL) {
+    printf("  !! Not exist.\n");
+  }
+  return t.tet != NULL;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Find the subface with indices (i, j, k)
 

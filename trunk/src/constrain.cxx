@@ -355,13 +355,14 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   triface* searchtet, point* refpt)
 {
-  triface neightet, reftet, checktet;
+  triface neightet, reftet;
   face splitsh, checkseg;
   point startpt, endpt;
   point pa, pb, pc, pd;
   enum location loc;
   enum intersection dir;
   REAL angmax, ang;
+  long facecount;
   bool orgflag;
   int shver, pos, i;
 
@@ -437,6 +438,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     printf("    Scout ref point of seg (%d, %d).\n", pointmark(startpt), 
       pointmark(endpt));
   }
+  facecount = across_face_count;
 
   enextfnextself(*searchtet); // Go the opposite face.
   symedgeself(*searchtet); // Enter the adjacent tet.
@@ -460,6 +462,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         pointmark(endpt), pointmark(pa), pointmark(pb));
       terminatetetgen(1);
     }
+    across_edge_count++;
   }
   
   pc = apex(*searchtet);
@@ -480,6 +483,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       printf("      Passing face (%d, %d, %d, %d), dir(%d).\n", pointmark(pa),
         pointmark(pb), pointmark(pc), pointmark(pd), (int) dir);
     }
+    across_face_count++;
 
     // Stop if we meet 'endpt'.
     if (pd == endpt) break;
@@ -534,7 +538,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       }
       pd = org(neightet);
       if (b->verbose > 2) {
-        angmax =  interiorangle(pd, startpt, endpt, NULL);
+        angmax = interiorangle(pd, startpt, endpt, NULL);
       }
       *refpt = pd;
       break;
@@ -558,14 +562,18 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
           pointmark(sdest(checkseg)));
         terminatetetgen(1);
       }
+      across_edge_count++;
     }
 
   } // while (1)
 
   // dir is either ACROSSVERT, or ACROSSEDGE, or ACROSSFACE.
   if (b->verbose > 2) {
-    printf("      Choose refpoint %d, ang(%g), dir(%d).\n", pointmark(*refpt),
-      angmax / PI * 180.0, (int) dir);
+    printf("      Refpt %d (%g), visited %ld faces.\n", pointmark(*refpt),
+      angmax / PI * 180.0, (int) dir, across_face_count - facecount);
+  }
+  if (across_face_count - facecount > across_max_count) {
+    across_max_count = across_face_count - facecount;
   }
 
   *searchtet = reftet;

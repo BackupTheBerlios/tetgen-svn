@@ -678,24 +678,20 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           *parytet = neightet;
         }
         if (checksubsegs) {
-          // Check if some segments lie inside the cavity.
-          cavetet->ver = 0;
-          for (j = 0; j < 3; j++) {
+          // Some segments (may) lie inside the cavity.
+          for (j = 0; j < 6; j++) {
+            cavetet->loc = edge2locver[j][0];
+            cavetet->ver = edge2locver[j][1];
             tsspivot1(*cavetet, sseg);
             if ((sseg.sh != NULL) && !sinfected(sseg)) {
-              enext0fnext(*cavetet, neightet);
-              symself(neightet);
-              if (neightet.tet[4] == NULL) {
-                if (b->verbose > 1) {
-                  printf("    Queue encroached segment (%d, %d).\n",
+              if (b->verbose > 2) {
+                  printf("      Queue encroached segment (%d, %d).\n",
                     pointmark(sorg(sseg)), pointmark(sdest(sseg)));
-                }
-                sinfect(sseg);  // Only save it once.
-                subsegstack->newindex((void **) &psseg);
-                *psseg = sseg;
               }
+              sinfect(sseg);  // Only save it once.
+              subsegstack->newindex((void **) &psseg);
+              *psseg = sseg;
             }
-            enextself(*cavetet);
           }
         }
         tetrahedrondealloc(cavetet->tet);
@@ -756,8 +752,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         if (sseg.sh != NULL) {
           if (sinfected(sseg)) {
             // The segment is not missing.
-            if (b->verbose > 1) {
-              printf("    Dequeue encroached segment (%d, %d).\n",
+            if (b->verbose > 2) {
+              printf("      Dequeue encroached segment (%d, %d).\n",
                 pointmark(sorg(sseg)), pointmark(sdest(sseg)));
             }
             suninfect(sseg);

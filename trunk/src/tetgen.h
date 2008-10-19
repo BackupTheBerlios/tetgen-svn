@@ -1391,6 +1391,7 @@ long flip13count, flip22count, flipn2nfcount;
 REAL tloctime, tfliptime, tinserttime;
 long force_ptloc_count;
 long triedgcount, triedgcopcount, trivercopcount;
+long across_face_count, across_edge_count, across_max_count;
 long r1count, r2count, r3count;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1565,6 +1566,7 @@ void checkshells();
 void checkdelaunay();
 void checkconforming();
 void checksegments();
+void algorithmstatistics();
 void qualitystatistics();
 void statistics();
 
@@ -1605,6 +1607,7 @@ void initialize()
   tloctime = tfliptime = tinserttime = 0.0;
   force_ptloc_count = 0l;
   triedgcount = triedgcopcount = trivercopcount = 0l;
+  across_face_count = across_edge_count = across_max_count = 0l;
   r1count = r2count = r3count = 0l;
 }
 
@@ -1656,7 +1659,7 @@ void ptet(triface* t);
 void psh(face* s);
 void pteti(int i, int j, int k, int l);
 void pface(int i, int j, int k);
-void pedge(int i, int j);
+bool pedge(int i, int j);
 void psubface(int i, int j, int k);
 void psubseg(int i, int j);
 int pmark(point p);

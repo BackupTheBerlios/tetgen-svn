@@ -372,6 +372,80 @@ void tetgenmesh::checksegments()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// algorithmstatistics()    Report algorithmic performances.                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::algorithmstatistics()
+{
+  /*// Report memory usages.
+    unsigned long totalmeshbytes;
+    printf("Memory allocation statistics:\n\n");
+    printf("  Maximum number of vertices: %ld\n", pointpool->maxitems);
+    totalmeshbytes = pointpool->maxitems * pointpool->itembytes;
+    printf("  Maximum number of tetrahedra: %ld\n", tetrahedronpool->maxitems);
+    totalmeshbytes += tetrahedronpool->maxitems * tetrahedronpool->itembytes;
+    if (subfacepool != (memorypool *) NULL) {
+      printf("  Maximum number of subfaces: %ld\n", subfacepool->maxitems);
+      totalmeshbytes += subfacepool->maxitems * subfacepool->itembytes;
+    }
+    if (subsegpool != (memorypool *) NULL) {
+      printf("  Maximum number of segments: %ld\n", subsegpool->maxitems);
+      totalmeshbytes += subsegpool->maxitems * subsegpool->itembytes;
+    }
+    printf("  Heap memory used by the mesh (K bytes): %g\n\n",
+           ((double) totalmeshbytes) / 1024.0);
+  */
+
+  printf("Algorithmic statistics:\n\n");
+  printf("  Number of orient3d tests: %ld\n", orient3dcount);
+  printf("  Number of insphere tests: %ld\n", inspherecount);
+  printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
+  printf("  Number of visited tets in point location: %ld\n", ptloc_count);
+  printf("  Maximal number of tets per point location: %ld\n",ptloc_max_count);
+  printf("  Number of 1-to-4 flips: %ld\n", flip14count);
+  printf("  Number of 2-to-6 flips: %ld\n", flip26count);
+  printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
+
+  if (b->bowyerwatson) {
+    printf("  Number of deleted tets: %ld\n", totaldeadtets);
+    printf("  Number of created tets: %ld\n", totalbowatcavsize);
+    printf("  Maximum number of tets per new point: %ld\n", maxbowatcavsize);
+    printf("  Number of 3-to-2 flips: %ld\n", flip32count);
+  } else {
+    printf("  Number of 2-to-3 flips: %ld\n", flip23count);
+    printf("  Number of 3-to-2 flips: %ld\n", flip32count);
+    printf("  Number of n-to-m flips: %ld\n", flipnmcount);
+    printf("  Total number of primitive flips: %ld\n",flip23count+flip32count);
+    printf("  Number of deleted tets: %ld\n", flip23count*2l+flip32count*3l);
+    printf("  Number of created tets: %ld\n", flip23count*3l+flip32count*2l);
+  }
+
+  if (b->plc) {
+    printf("  Number of 2-to-2 flips: %ld\n", flip22count);
+    printf("  Number of tri-edge inter (coplanar) tests: %ld (%ld)\n",
+      triedgcount, triedgcopcount);
+    printf("  Number of crossed faces (edges) in scout segs: %ld (%ld)\n",
+      across_face_count, across_edge_count);
+    printf("  Maximaul number of crossed faces per segment: %ld\n",
+      across_max_count);
+    printf("  Number of forced point locations: %ld\n", force_ptloc_count);
+    printf("  Number of rule-1 points: %ld\n", r1count);
+    printf("  Number of rule-2 points: %ld\n", r2count);
+    printf("  Number of rule-3 points: %ld\n", r3count);
+  }
+  
+  // printf("  Total point location time (millisec):  %g\n", tloctime * 1e+3);
+  // printf("  Total point insertion time (millisec):  %g\n",tinserttime*1e+3);
+  // if (b->bowyerwatson == 0) {
+  //   printf("  Total flip time (millisec):  %g\n", tfliptime * 1e+3);
+  // }
+
+  printf("\n");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // statistics()    Print all sorts of cool facts.                            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -406,68 +480,7 @@ void tetgenmesh::statistics()
 
   if (b->verbose > 0) {
     // qualitystatistics();
-    // Report memory usages.
-    unsigned long totalmeshbytes;
-    printf("Memory allocation statistics:\n\n");
-    printf("  Maximum number of vertices: %ld\n", pointpool->maxitems);
-    totalmeshbytes = pointpool->maxitems * pointpool->itembytes;
-    printf("  Maximum number of tetrahedra: %ld\n", tetrahedronpool->maxitems);
-    totalmeshbytes += tetrahedronpool->maxitems * tetrahedronpool->itembytes;
-    if (subfacepool != (memorypool *) NULL) {
-      printf("  Maximum number of subfaces: %ld\n", subfacepool->maxitems);
-      totalmeshbytes += subfacepool->maxitems * subfacepool->itembytes;
-    }
-    if (subsegpool != (memorypool *) NULL) {
-      printf("  Maximum number of segments: %ld\n", subsegpool->maxitems);
-      totalmeshbytes += subsegpool->maxitems * subsegpool->itembytes;
-    }
-    printf("  Heap memory used by the mesh (K bytes): %g\n\n",
-           ((double) totalmeshbytes) / 1024.0);
-
-    // Report algorithmic performances.
-    printf("Algorithmic statistics:\n\n");
-    printf("  Number of orient3d tests: %ld\n", orient3dcount);
-    printf("  Number of insphere tests: %ld\n", inspherecount);
-    printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
-    if (b->bowyerwatson) {
-      printf("  Number of deleted tets: %ld\n", totaldeadtets);
-      printf("  Number of created tets: %ld\n", totalbowatcavsize);
-      printf("  Number of maximum tets per step: %ld\n", maxbowatcavsize);
-      printf("  Number of 1-to-4 flips: %ld\n", flip14count);
-      printf("  Number of 2-to-6 flips: %ld\n", flip26count);
-      printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
-      printf("  Number of 3-to-2 flips: %ld\n", flip32count);
-    } else {
-      printf("  Number of deleted tets: %ld\n", flip23count*2l+flip32count*3l);
-      printf("  Number of created tets: %ld\n", flip23count*3l+flip32count*2l);
-      printf("  Number of 1-to-4 flips: %ld\n", flip14count);
-      printf("  Number of 2-to-6 flips: %ld\n", flip26count);
-      printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
-      printf("  Number of n-to-m flips: %ld\n", flipnmcount);
-      printf("  Number of 2-to-3 flips: %ld\n", flip23count);
-      printf("  Number of 3-to-2 flips: %ld\n", flip32count);
-      printf("  Number of primitive flips: %ld\n", flip23count + flip32count);
-    }
-    if (b->plc) {
-      printf("  Number of 2-to-2 flips: %ld\n", flip22count);
-      printf("  Number of tri-edge intersections: %ld\n", triedgcount);
-      printf("  Number of coplanar intersections: %ld\n", triedgcopcount);
-      printf("  Number of rule-1 points: %ld\n", r1count);
-      printf("  Number of rule-2 points: %ld\n", r2count);
-      printf("  Number of rule-3 points: %ld\n", r3count);
-      printf("  Number of force point locations: %ld\n", force_ptloc_count);
-    }
-    printf("  Total point location distance (# tets): %ld\n", ptloc_count);
-    printf("  Maximal single point location distance (# tets): %ld\n", 
-           ptloc_max_count);
-    // printf("  Total point location time (millisec):  %g\n", 
-    //        tloctime * 1e+3);
-    // printf("  Total point insertion time (millisec):  %g\n",
-    //        tinserttime * 1e+3);
-    // if (b->bowyerwatson == 0) {
-    //   printf("  Total flip time (millisec):  %g\n", tfliptime * 1e+3);
-    // }
-    printf("\n");
+    algorithmstatistics();
   }
 }
 
