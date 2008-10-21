@@ -898,17 +898,10 @@ void tetgenmesh::delaunizesegments()
 
   // Clear the pointers from tets to subsegs.
   tetrahedronpool->traversalinit();
-  searchtet.tet = tetrahedrontraverse(tetrahedronpool);
+  searchtet.tet = alltetrahedrontraverse();
   while (searchtet.tet != NULL) {
     searchtet.tet[8] = NULL;
-    searchtet.tet = tetrahedrontraverse(tetrahedronpool);  
-  }
-
-  hulltetrahedronpool->traversalinit();
-  searchtet.tet = tetrahedrontraverse(hulltetrahedronpool);
-  while (searchtet.tet != NULL) {
-    searchtet.tet[8] = NULL;
-    searchtet.tet = tetrahedrontraverse(hulltetrahedronpool);  
+    searchtet.tet = alltetrahedrontraverse();  
   }
 
   checksubsegs = 0;

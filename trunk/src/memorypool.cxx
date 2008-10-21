@@ -540,7 +540,6 @@ void tetgenmesh::initializepools()
   }
   // Having determined the memory size of an element, initialize the pools.
   tetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
-  hulltetrahedronpool = new memorypool(elesize, ELEPERBLOCK, POINTER, 16);
 
   if (b->useshelles) {
     // The number of bytes occupied by a subface.  The list of pointers
@@ -590,8 +589,6 @@ void tetgenmesh::initializepools()
 
 void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
 {
-  memorypool *pool;
-
   // Mark it as a dead tet.
   dyingtet[4] = (tetrahedron) NULL;
 
@@ -602,13 +599,10 @@ void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
     }
   }
 
-  // Choose the right pool.
-  pool = ((point) dyingtet[7] != dummypoint) ? tetrahedronpool : 
-    hulltetrahedronpool;
   // Actually pool->dealloc();
-  *((void **) (dyingtet)) = pool->deaditemstack;
-  pool->deaditemstack = (void *) (dyingtet);
-  pool->items--;
+  *((void **) (dyingtet)) = tetrahedronpool->deaditemstack;
+  tetrahedronpool->deaditemstack = (void *) (dyingtet);
+  tetrahedronpool->items--;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -617,12 +611,27 @@ void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-tetgenmesh::tetrahedron* tetgenmesh::tetrahedrontraverse(memorypool *pool)
+tetgenmesh::tetrahedron* tetgenmesh::tetrahedrontraverse()
+{
+  tetrahedron *newtetrahedron;
+
+  // Skip dead and hull tetrahedra.
+  do {
+    newtetrahedron = (tetrahedron *) tetrahedronpool->traverse();
+    if (newtetrahedron == (tetrahedron *) NULL) {
+      return (tetrahedron *) NULL;
+    }
+  } while ((newtetrahedron[4] == (tetrahedron) NULL) ||
+    ((point) newtetrahedron[7] == dummypoint)); 
+  return newtetrahedron;
+}
+
+tetgenmesh::tetrahedron* tetgenmesh::alltetrahedrontraverse()
 {
   tetrahedron *newtetrahedron;
 
   do {
-    newtetrahedron = (tetrahedron *) pool->traverse();
+    newtetrahedron = (tetrahedron *) tetrahedronpool->traverse();
     if (newtetrahedron == (tetrahedron *) NULL) {
       return (tetrahedron *) NULL;
     }
@@ -729,11 +738,11 @@ tetgenmesh::point tetgenmesh::pointtraverse()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::maketetrahedron(memorypool* pool, triface *newtet)
+void tetgenmesh::maketetrahedron(triface *newtet)
 {
   int i;
 
-  newtet->tet = (tetrahedron *) pool->alloc();
+  newtet->tet = (tetrahedron *) tetrahedronpool->alloc();
   for (i = 0; i < 4; i++) {
     newtet->tet[i] = (tetrahedron) NULL;
   }
@@ -941,14 +950,14 @@ void tetgenmesh::makepoint2tetmap()
   }
 
   tetrahedronpool->traversalinit();
-  tptr = tetrahedrontraverse(tetrahedronpool);
+  tptr = tetrahedrontraverse();
   while (tptr != (tetrahedron *) NULL) {
     pt  = (point *) tptr;
     point2tet(pt[4]) = (tetrahedron) tptr;
     point2tet(pt[5]) = (tetrahedron) tptr;
     point2tet(pt[6]) = (tetrahedron) tptr;
     point2tet(pt[7]) = (tetrahedron) tptr;
-    tptr = tetrahedrontraverse(tetrahedronpool);
+    tptr = tetrahedrontraverse();
   }
 }
 

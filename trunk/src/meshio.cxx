@@ -130,7 +130,7 @@ void tetgenmesh::numberedges()
 
   meshedges = 0l;
   tetrahedronpool->traversalinit();
-  worktet.tet = tetrahedrontraverse(tetrahedronpool);
+  worktet.tet = tetrahedrontraverse();
   while (worktet.tet != NULL) {
     // Count the number of Voronoi faces. Look at the six edges of this
     //   tet. Count an edge only if this tet's pointer is smaller than
@@ -150,7 +150,7 @@ void tetgenmesh::numberedges()
         meshedges++;
       }
     }
-    worktet.tet = tetrahedrontraverse(tetrahedronpool);
+    worktet.tet = tetrahedrontraverse();
   }
 }
 
@@ -299,6 +299,7 @@ void tetgenmesh::outelements(tetgenio* out)
   point *extralist;
   REAL *talist;
   int *tlist;
+  long ntets;
   int firstindex, shift;
   int pointindex, attribindex;
   int elementnumber;
@@ -318,6 +319,9 @@ void tetgenmesh::outelements(tetgenio* out)
     }
   }
 
+  // The number of tets excluding hull tets.
+  ntets = tetrahedronpool->items - hullsize;
+
   eextras = in->numberoftetrahedronattributes;
   if (out == (tetgenio *) NULL) {
     outfile = fopen(outelefilename, "w");
@@ -326,25 +330,23 @@ void tetgenmesh::outelements(tetgenio* out)
       terminatetetgen(1);
     }
     // Number of tetras, points per tetra, attributes per tetra.
-    fprintf(outfile, "%ld  %d  %d\n", tetrahedronpool->items,
-            b->order == 1 ? 4 : 10, eextras);
+    fprintf(outfile, "%ld  %d  %d\n", ntets, b->order == 1 ? 4 : 10, eextras);
   } else {
     // Allocate memory for output tetrahedra.
-    out->tetrahedronlist = new int[tetrahedronpool->items * 
-                                   (b->order == 1 ? 4 : 10)];
+    out->tetrahedronlist = new int[ntets * (b->order == 1 ? 4 : 10)];
     if (out->tetrahedronlist == (int *) NULL) {
       printf("Error:  Out of memory.\n");
       terminatetetgen(1);
     }
     // Allocate memory for output tetrahedron attributes if necessary.
     if (eextras > 0) {
-      out->tetrahedronattributelist = new REAL[tetrahedronpool->items*eextras];
+      out->tetrahedronattributelist = new REAL[ntets * eextras];
       if (out->tetrahedronattributelist == (REAL *) NULL) {
         printf("Error:  Out of memory.\n");
         terminatetetgen(1);
       }
     }
-    out->numberoftetrahedra = tetrahedronpool->items;
+    out->numberoftetrahedra = ntets;
     out->numberofcorners = b->order == 1 ? 4 : 10;
     out->numberoftetrahedronattributes = eextras;
     tlist = out->tetrahedronlist;
@@ -364,7 +366,7 @@ void tetgenmesh::outelements(tetgenio* out)
   meshedges = 0l;
 
   tetrahedronpool->traversalinit();
-  tptr = tetrahedrontraverse(tetrahedronpool);
+  tptr = tetrahedrontraverse();
   elementnumber = firstindex; // in->firstnumber;
   while (tptr != (tetrahedron *) NULL) {
     // Reverse the orientation so that Orient3D() > 0.
@@ -430,7 +432,7 @@ void tetgenmesh::outelements(tetgenio* out)
         meshedges++;
       }
     }
-    tptr = tetrahedrontraverse(tetrahedronpool);
+    tptr = tetrahedrontraverse();
     elementnumber++;
   }
 
@@ -458,7 +460,7 @@ void tetgenmesh::outfaces(tetgenio* out)
   triface tface, tsymface;
   face checkmark;
   point torg, tdest, tapex;
-  long faces;
+  long ntets, faces;
   int *elist, *emlist;
   int neigh1, neigh2;
   int bmark, faceid, marker;
@@ -479,7 +481,8 @@ void tetgenmesh::outfaces(tetgenio* out)
     }
   }
 
-  faces = (tetrahedronpool->items * 4l + hulltetrahedronpool->items) / 2l;
+  ntets = tetrahedronpool->items - hullsize;
+  faces = (ntets * 4l + hullsize) / 2l;
   bmark = !b->nobound && in->facetmarkerlist;
 
   if (out == (tetgenio *) NULL) {
@@ -526,7 +529,7 @@ void tetgenmesh::outfaces(tetgenio* out)
   }
 
   tetrahedronpool->traversalinit();
-  tface.tet = tetrahedrontraverse(tetrahedronpool);
+  tface.tet = tetrahedrontraverse();
   facenumber = firstindex; // in->firstnumber;
   // To loop over the set of faces, loop over all tetrahedra, and look at
   //   the four faces of each one. If its adjacent tet is a hull tet,
@@ -595,7 +598,7 @@ void tetgenmesh::outfaces(tetgenio* out)
         facenumber++;
       }
     }
-    tface.tet = tetrahedrontraverse(tetrahedronpool);
+    tface.tet = tetrahedrontraverse();
   }
 
   if (out == (tetgenio *) NULL) {
@@ -642,15 +645,15 @@ void tetgenmesh::outhullfaces(tetgenio* out)
       printf("File I/O Error:  Cannot create file %s.\n", facefilename);
       terminatetetgen(1);
     }
-    fprintf(outfile, "%ld  0\n", hulltetrahedronpool->items);
+    fprintf(outfile, "%ld  0\n", hullsize);
   } else {
     // Allocate memory for 'trifacelist'.
-    out->trifacelist = new int[hulltetrahedronpool->items * 3];
+    out->trifacelist = new int[hullsize * 3];
     if (out->trifacelist == (int *) NULL) {
       printf("Error:  Out of memory.\n");
       terminatetetgen(1);
     }
-    out->numberoftrifaces = hulltetrahedronpool->items;
+    out->numberoftrifaces = hullsize;
     elist = out->trifacelist;
     index = 0;
   }
@@ -662,27 +665,29 @@ void tetgenmesh::outhullfaces(tetgenio* out)
     shift = 1; // Shift the output indices by 1.
   }
 
-  hulltetrahedronpool->traversalinit();
-  hulltet.tet = tetrahedrontraverse(hulltetrahedronpool);
+  tetrahedronpool->traversalinit();
+  hulltet.tet = alltetrahedrontraverse();
   facenumber = firstindex;
   while (hulltet.tet != (tetrahedron *) NULL) {
-    torg = (point) hulltet.tet[4];
-    tdest = (point) hulltet.tet[5];
-    tapex = (point) hulltet.tet[6];
-    if (out == (tetgenio *) NULL) {
-      // Face number, indices of three vertices.
-      fprintf(outfile, "%5d   %4d  %4d  %4d", facenumber,
-        pointmark(torg) - shift, pointmark(tdest) - shift,
-        pointmark(tapex) - shift);
-      fprintf(outfile, "\n");
-    } else {
-      // Output indices of three vertices.
-      elist[index++] = pointmark(torg) - shift;
-      elist[index++] = pointmark(tdest) - shift;
-      elist[index++] = pointmark(tapex) - shift;
+    if ((point) hulltet.tet[7] == dummypoint) {
+      torg = (point) hulltet.tet[4];
+      tdest = (point) hulltet.tet[5];
+      tapex = (point) hulltet.tet[6];
+      if (out == (tetgenio *) NULL) {
+        // Face number, indices of three vertices.
+        fprintf(outfile, "%5d   %4d  %4d  %4d", facenumber,
+          pointmark(torg) - shift, pointmark(tdest) - shift,
+          pointmark(tapex) - shift);
+        fprintf(outfile, "\n");
+      } else {
+        // Output indices of three vertices.
+        elist[index++] = pointmark(torg) - shift;
+        elist[index++] = pointmark(tdest) - shift;
+        elist[index++] = pointmark(tapex) - shift;
+      }
+      facenumber++;
     }
-    facenumber++;
-    hulltet.tet = tetrahedrontraverse(hulltetrahedronpool);
+    hulltet.tet = alltetrahedrontraverse();
   }
   
   if (out == (tetgenio *) NULL) {
@@ -905,7 +910,7 @@ void tetgenmesh::outedges(tetgenio* out)
   }
 
   tetrahedronpool->traversalinit();
-  tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  tetloop.tet = tetrahedrontraverse();
   edgenumber = firstindex; // in->firstnumber;
   while (tetloop.tet != (tetrahedron *) NULL) {
     // Count the number of Voronoi faces. Look at the six edges of this
@@ -959,7 +964,7 @@ void tetgenmesh::outedges(tetgenio* out)
         edgenumber++;
       }
     }
-    tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+    tetloop.tet = tetrahedrontraverse();
   }
 
   if (out == (tetgenio *) NULL) {
@@ -1069,6 +1074,7 @@ void tetgenmesh::outneighbors(tetgenio* out)
   int neighbor1, neighbor2, neighbor3, neighbor4;
   int firstindex;
   int elementnumber;
+  long ntets;
 
   if (out == (tetgenio *) NULL) {
     strcpy(neighborfilename, b->outfilename);
@@ -1083,6 +1089,8 @@ void tetgenmesh::outneighbors(tetgenio* out)
     }
   }
 
+  ntets = tetrahedronpool->items - hullsize;
+
   if (out == (tetgenio *) NULL) {
     outfile = fopen(neighborfilename, "w");
     if (outfile == (FILE *) NULL) {
@@ -1090,10 +1098,10 @@ void tetgenmesh::outneighbors(tetgenio* out)
       terminatetetgen(1);
     }
     // Number of tetrahedra, four faces per tetrahedron.
-    fprintf(outfile, "%ld  %d\n", tetrahedronpool->items, 4);
+    fprintf(outfile, "%ld  %d\n", ntets, 4);
   } else {
     // Allocate memory for 'neighborlist'.
-    out->neighborlist = new int[tetrahedronpool->items * 4];
+    out->neighborlist = new int[ntets * 4];
     if (out->neighborlist == (int *) NULL) {
       printf("Error:  Out of memory.\n");
       terminatetetgen(1);
@@ -1105,7 +1113,7 @@ void tetgenmesh::outneighbors(tetgenio* out)
   firstindex = b->zeroindex ? 0 : in->firstnumber;
 
   tetrahedronpool->traversalinit();
-  tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  tetloop.tet = tetrahedrontraverse();
   elementnumber = firstindex; // in->firstnumber;
   while (tetloop.tet != (tetrahedron *) NULL) {
     tetloop.loc = 2;
@@ -1146,7 +1154,7 @@ void tetgenmesh::outneighbors(tetgenio* out)
       nlist[index++] = neighbor3;
       nlist[index++] = neighbor4;
     }
-    tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+    tetloop.tet = tetrahedrontraverse();
     elementnumber++;
   }
 

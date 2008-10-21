@@ -10,6 +10,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 int tetgenmesh::ve[6] = { 2, 5, 4, 1, 0, 3 };
+int tetgenmesh::ve2[6] = { 4, 3, 0, 5, 2, 1 };
+
 int tetgenmesh::vo[6] = { 0, 1, 1, 2, 2, 0 };
 int tetgenmesh::vd[6] = { 1, 0, 2, 1, 0, 2 };
 int tetgenmesh::va[6] = { 2, 2, 0, 0, 1, 1 };
@@ -100,7 +102,7 @@ int tetgenmesh::locverpivot[4][6][2] = {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::checkmesh(memorypool* pool)
+void tetgenmesh::checkmesh()
 {
   triface tetloop;
   triface neightet, symtet;
@@ -115,8 +117,8 @@ void tetgenmesh::checkmesh(memorypool* pool)
   horrors = 0;
   tetloop.ver = 0;
   // Run through the list of tetrahedra, checking each one.
-  pool->traversalinit();
-  tetloop.tet = tetrahedrontraverse(pool);
+  tetrahedronpool->traversalinit();
+  tetloop.tet = tetrahedrontraverse();
   while (tetloop.tet != (tetrahedron *) NULL) {
     // Check all four faces of the tetrahedron.
     for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
@@ -178,7 +180,7 @@ void tetgenmesh::checkmesh(memorypool* pool)
         }
       }
     }
-    tetloop.tet = tetrahedrontraverse(pool);
+    tetloop.tet = tetrahedrontraverse();
   }
   if (horrors == 0) {
     if (!b->quiet) {
@@ -283,7 +285,7 @@ void tetgenmesh::checkdelaunay()
   tetloop.ver = 0;
   // Run through the list of triangles, checking each one.
   tetrahedronpool->traversalinit();
-  tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  tetloop.tet = tetrahedrontraverse();
   while (tetloop.tet != (tetrahedron *) NULL) {
     // Check all four faces of the tetrahedron.
     for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
@@ -305,7 +307,7 @@ void tetgenmesh::checkdelaunay()
         }
       }
     }
-    tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+    tetloop.tet = tetrahedrontraverse();
   }
 
   if (horrors == 0) {
@@ -332,7 +334,7 @@ void tetgenmesh::checksegments()
 
   horrors = 0;
   tetrahedronpool->traversalinit();
-  tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+  tetloop.tet = tetrahedrontraverse();
   while (tetloop.tet != NULL) {
     // Loop the six edges of the tet.
     if (tetloop.tet[8] != NULL) {
@@ -360,7 +362,7 @@ void tetgenmesh::checksegments()
         }
       }
     }
-    tetloop.tet = tetrahedrontraverse(tetrahedronpool);
+    tetloop.tet = tetrahedrontraverse();
   }
 
   if (horrors == 0) {
@@ -465,16 +467,16 @@ void tetgenmesh::statistics()
   }
 
   printf("\n  Mesh points: %ld\n", pointpool->items);
-  printf("  Mesh tetrahedra: %ld\n", tetrahedronpool->items);
-  printf("  Mesh faces: %ld\n", (tetrahedronpool->items * 4 + 
-    hulltetrahedronpool->items) / 2l);
+  printf("  Mesh tetrahedra: %ld\n", tetrahedronpool->items - hullsize);
+  printf("  Mesh faces: %ld\n", ((tetrahedronpool->items - hullsize) * 4 + 
+    hullsize) / 2l);
   printf("  Mesh edges: %ld\n", meshedges);
 
   if (b->plc || b->refine) {
     printf("  Mesh boundary faces: %ld\n", subfacepool->items);
     printf("  Mesh boundary edges: %ld\n", subsegpool->items);
   } else {
-    printf("  Convex hull faces: %ld\n", hulltetrahedronpool->items);
+    printf("  Convex hull faces: %ld\n", hullsize);
   }
   printf("\n");
 

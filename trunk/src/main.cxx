@@ -769,7 +769,7 @@ void tetgenmesh::pteti(int i, int j, int k, int l)
 
   t.loc = t.ver = 0;
   tetrahedronpool->traversalinit();
-  t.tet = tetrahedrontraverse(tetrahedronpool);
+  t.tet = tetrahedrontraverse();
   while (t.tet != NULL) {
     pts = (point *) t.tet;
     if (pts[7] != dummypoint) {
@@ -779,7 +779,7 @@ void tetgenmesh::pteti(int i, int j, int k, int l)
         break;
       }
     }
-    t.tet = tetrahedrontraverse(tetrahedronpool);
+    t.tet = tetrahedrontraverse();
   }
   
   if (t.tet == NULL) {
@@ -803,7 +803,7 @@ void tetgenmesh::pface(int i, int j, int k)
 
   t.ver = t1.ver = 0;
   tetrahedronpool->traversalinit();
-  t.tet = tetrahedrontraverse(tetrahedronpool);
+  t.tet = tetrahedrontraverse();
   while (t.tet != NULL) {
     pts = (point *) t.tet;
     if (pts[7] != dummypoint) {
@@ -839,7 +839,7 @@ void tetgenmesh::pface(int i, int j, int k)
         break;
       }
     }
-    t.tet = tetrahedrontraverse(tetrahedronpool);
+    t.tet = tetrahedrontraverse();
   }
   
   if (t.tet == NULL) {
@@ -855,7 +855,7 @@ bool tetgenmesh::pedge(int i, int j)
 
   t.ver = t1.ver = 0;
   tetrahedronpool->traversalinit();
-  t.tet = tetrahedrontraverse(tetrahedronpool);
+  t.tet = tetrahedrontraverse();
   while (t.tet != NULL) {
     for (ii = 0; ii < 6; ii++) {
       t.loc = edge2locver[ii][0];
@@ -874,7 +874,7 @@ bool tetgenmesh::pedge(int i, int j)
       } while (t1.tet != t.tet);
       break;
     }
-    t.tet = tetrahedrontraverse(tetrahedronpool);
+    t.tet = tetrahedrontraverse();
   }
   
   if (t.tet == NULL) {

@@ -151,12 +151,13 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
 
 enum tetgenmesh::location tetgenmesh::locate(point searchpt,triface* searchtet)
 {
-  tetrahedron ptr;
   triface neightet;
   point torg, tdest, tapex, toppo, ntoppo;
   enum {ORGMOVE, DESTMOVE, APEXMOVE} nextmove;
   REAL ori, oriorg, oridest, oriapex;
   REAL searchdist, dist;
+
+  tetrahedron ptr;
   int *iptr;
 
   if ((point) searchtet->tet[7] == dummypoint) {
@@ -164,8 +165,8 @@ enum tetgenmesh::location tetgenmesh::locate(point searchpt,triface* searchtet)
     searchtet->loc = 0;
     symself(*searchtet);
   } else {
-    // Keep the CCW edge ring.
-    if (searchtet->ver &= 01) esymself(*searchtet);
+    // Stay in the 0th edge ring.
+    if (searchtet->ver & 01) esymself(*searchtet);
   }
   // Let searchtet be the face such that 'searchpt' lies above to it.
   for (; ; searchtet->loc = (searchtet->loc + 1) % 4) { 
@@ -433,17 +434,18 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
   }
 
   // Create the first tetrahedron.
-  maketetrahedron(tetrahedronpool, &firsttet);
+  maketetrahedron(&firsttet);
   setvertices(firsttet, pa, pb, pc, pd);
   // Create four hull tetrahedra.
-  maketetrahedron(hulltetrahedronpool, &tetopa);
+  maketetrahedron(&tetopa);
   setvertices(tetopa, pb, pc, pd, dummypoint);
-  maketetrahedron(hulltetrahedronpool, &tetopb);
+  maketetrahedron(&tetopb);
   setvertices(tetopb, pc, pa, pd, dummypoint);
-  maketetrahedron(hulltetrahedronpool, &tetopc);
+  maketetrahedron(&tetopc);
   setvertices(tetopc, pa, pb, pd, dummypoint);
-  maketetrahedron(hulltetrahedronpool, &tetopd);
+  maketetrahedron(&tetopd);
   setvertices(tetopd, pb, pa, pc, dummypoint);
+  hullsize += 4;
 
   // Connect hull tetrahedra to firsttet (at four faces of firsttet).
   bond(firsttet, tetopd); // ab
@@ -558,7 +560,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   if (loc == ONVERTEX) {
     // The point already exists. Mark it and do nothing on it.
-    // In a STL mesh, duplicated points are implicitly included.
     if (b->object != tetgenbehavior::STL) {
       printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
         pointmark(insertpt), pointmark(org(*searchtet)));
@@ -581,6 +582,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       cavetetlist->newindex((void **) &parytet);
       *parytet = neightet;
     }
+    if ((point) searchtet->tet[7] == dummypoint) hullsize--;
     tetrahedrondealloc(searchtet->tet);
     tetcount = 1;
     flip14count++;
@@ -597,6 +599,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       cavetetlist->newindex((void **) &parytet);
       *parytet = neightet;
     }
+    if ((point) spintet.tet[7] == dummypoint) hullsize--;
+    if ((point) searchtet->tet[7] == dummypoint) hullsize--;
     tetrahedrondealloc(spintet.tet);
     tetrahedrondealloc(searchtet->tet);
     tetcount = 2;
@@ -619,6 +623,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     spintet = *searchtet;
     for (i = 0; i < tetcount; i++) {
       fnext(spintet, neightet);
+      if ((point) spintet.tet[7] == dummypoint) hullsize--;
       tetrahedrondealloc(spintet.tet);
       spintet = neightet;
     }
@@ -694,6 +699,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
             }
           }
         }
+        if ((point) cavetet->tet[7] == dummypoint) hullsize--;
         tetrahedrondealloc(cavetet->tet);
         tetcount++;
       } else {
@@ -726,14 +732,15 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     unmarktest(neightet); // Unmark it.
     if (apex(neightet) != dummypoint) {
       // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
-      maketetrahedron(tetrahedronpool, &newtet);
+      maketetrahedron(&newtet);
       setorg(newtet, dest(neightet));
       setdest(newtet, org(neightet));
       setapex(newtet, apex(neightet));
       setoppo(newtet, insertpt);
     } else {
       // Create a new hull tet (see Fig. bowyerwatson 2).
-      maketetrahedron(hulltetrahedronpool, &newtet);
+      hullsize++;
+      maketetrahedron(&newtet);
       setorg(newtet, org(neightet));
       setdest(newtet, dest(neightet));
       setapex(newtet, insertpt);

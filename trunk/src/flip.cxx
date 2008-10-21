@@ -480,7 +480,7 @@ tetgenmesh::badface* tetgenmesh::flippush(badface* flipstack,
 
 void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
 {
-  triface fliptets[4], castets[4];
+  triface fliptets[3], castets[3];
   triface newface, casface;
   point pa, pb, pc, pd;
   int i;
@@ -509,42 +509,34 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
     fnext(*splittet, castets[i]);
     enextself(*splittet);
   }
-  symedge(*splittet, castets[3]); // At face abc.
 
-  // Delete the old tet.
-  tetrahedrondealloc(splittet->tet);
-
-  // Check if d is dummytet.
-  if (pd != dummypoint) {
-    // Create three new tets for abpd, bcpd, and capd.
-    maketetrahedron(tetrahedronpool, &(fliptets[0]));
-    maketetrahedron(tetrahedronpool, &(fliptets[1]));
-    maketetrahedron(tetrahedronpool, &(fliptets[2]));
-  } else {
-    // Create three hull tets for abpd, bcpd, and capd.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0]));
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1]));
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2]));
+  // Update the number of hull tets.
+  if (pd == dummypoint) {
+    // We remove one old hull tet (abcp), but add three new hull tets.
+    hullsize += 2;
   }
-  // Create the new tet for abcp.
-  maketetrahedron(tetrahedronpool, &(fliptets[3]));
+  
+  // Create three new tets for abpd, bcpd, and capd.
+  maketetrahedron(&(fliptets[0]));
+  maketetrahedron(&(fliptets[1]));
+  maketetrahedron(&(fliptets[2]));
   // Set the vertices.
   setvertices(fliptets[0], pa, pb, newpt, pd);
   setvertices(fliptets[1], pb, pc, newpt, pd);
   setvertices(fliptets[2], pc, pa, newpt, pd);
-  setvertices(fliptets[3], pa, pb, pc, newpt);
+  // Update the old tet to abcp.
+  setoppo(*splittet, newpt);
 
   // Bond the new tets to outer boundary tets.
   for (i = 0; i < 3; i++) {
     enext0fnext(fliptets[i], newface);
     bond(newface, castets[i]);
   }
-  bond(fliptets[3], castets[3]); // At face abc.
   // Bond the new tets together (at six interior faces).
   for (i = 0; i < 3; i++) {
-    enext0fnext(fliptets[3], newface);
+    enext0fnext(*splittet, newface);
     bond(newface, fliptets[i]);
-    enextself(fliptets[3]);
+    enextself(*splittet);
   }
   for (i = 0; i < 3; i++) {
     enextfnext(fliptets[i], newface);
@@ -558,10 +550,10 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
       enext0fnext(fliptets[i], newface);
       futureflip = flippush(futureflip, &newface, newpt);
     }
-    futureflip = flippush(futureflip, &(fliptets[3]), newpt);
+    futureflip = flippush(futureflip, splittet, newpt);
   }
 
-  *splittet = fliptets[0]; // Return abcp.
+  // Return abcp in 'splittet'.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -581,30 +573,28 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
 
 void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 {
-  triface fliptets[6], topcastets[3], botcastets[3];
-  triface newface, casface;
+  triface fliptets[4], castets[4];
+  triface symface, newface, casface;
   point pa, pb, pc, pd, pe;
   int i;
 
   int *iptr;
 
-  fliptets[0] = *splitface;
-  fliptets[0].ver &= ~1;
-  symedge(fliptets[0], fliptets[1]);
+  splitface->ver &= ~1;
+  symedge(*splitface, symface);
 
-  // Check if e is dummypoint.
-  if (oppo(fliptets[1]) == dummypoint) {
+  if (oppo(symface) == dummypoint) {
     // Swap the two old tets.
-    newface = fliptets[0];
-    fliptets[0] = fliptets[1];
-    fliptets[1] = newface;
+    newface = *splitface;
+    *splitface = symface;
+    symface = newface;
   }
 
-  pa = org(fliptets[0]);
-  pb = dest(fliptets[0]);
-  pc = apex(fliptets[0]);
-  pd = oppo(fliptets[0]);
-  pe = oppo(fliptets[1]);
+  pa = org(*splitface);
+  pb = dest(*splitface);
+  pc = apex(*splitface);
+  pd = oppo(*splitface);
+  pe = oppo(symface);
 
   if (b->verbose > 1) {
     printf("    flip 2-to-6: (%d, %d, %d, %d, %d)\n", pointmark(pa),
@@ -613,73 +603,78 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   flip26count++;
 
   // Get the outer boundary faces.
-  for (i = 0; i < 3; i++) {
-    fnext(fliptets[0], topcastets[i]);
-    enextself(fliptets[0]);
-  }
-  for (i = 0; i < 3; i++) {
-    fnext(fliptets[1], botcastets[i]);
-    enext2self(fliptets[1]);
+  enext(*splitface, fliptets[0]);
+  enext2(*splitface, fliptets[1]);
+  enext2(symface, fliptets[2]);
+  enext(symface, fliptets[3]);
+
+  for (i = 0; i < 4; i++) {
+    fnext(fliptets[i], castets[i]);
   }
 
-  // Delete the old tets.
-  tetrahedrondealloc(fliptets[0].tet);
-  tetrahedrondealloc(fliptets[1].tet);
-
-  // Check if d is dummytet.
-  if (pd != dummypoint) {
-    maketetrahedron(tetrahedronpool, &(fliptets[0])); // abpd
-    maketetrahedron(tetrahedronpool, &(fliptets[1])); // bcpd
-    maketetrahedron(tetrahedronpool, &(fliptets[2])); // capd
-  } else {
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // abpd
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // bcpd
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // capd
+  // Update the number of hull tets.
+  if (pd == dummypoint) {
+    // We remove one old hull tet (abcp), but add three new hull tets.
+    hullsize += 2;
   }
-  maketetrahedron(tetrahedronpool, &(fliptets[3])); // bape
-  maketetrahedron(tetrahedronpool, &(fliptets[4])); // cbpe
-  maketetrahedron(tetrahedronpool, &(fliptets[5])); // acpe
+
+  // Create new tets.
+  maketetrahedron(&(fliptets[0])); // bcpd
+  maketetrahedron(&(fliptets[1])); // capd
+  maketetrahedron(&(fliptets[2])); // cbpe
+  maketetrahedron(&(fliptets[3])); // acpe
+
   // Set new vertices.
-  setvertices(fliptets[0], pa, pb, newpt, pd);
-  setvertices(fliptets[1], pb, pc, newpt, pd);
-  setvertices(fliptets[2], pc, pa, newpt, pd);
-  setvertices(fliptets[3], pb, pa, newpt, pe);
-  setvertices(fliptets[4], pc, pb, newpt, pe);
-  setvertices(fliptets[5], pa, pc, newpt, pe);
+  setapex(*splitface, newpt);
+  setvertices(fliptets[0], pb, pc, newpt, pd);
+  setvertices(fliptets[1], pc, pa, newpt, pd);
+  setapex(symface, newpt);
+  setvertices(fliptets[2], pc, pb, newpt, pe);
+  setvertices(fliptets[3], pa, pc, newpt, pe);
 
   // Bond the new tets to outer boundary faces.
-  for (i = 0; i < 3; i++) {
+  for (i = 0; i < 4; i++) {
     enext0fnext(fliptets[i], newface);
-    bond(newface, topcastets[i]);
-  }
-  for (i = 0; i < 3; i++) {
-    enext0fnext(fliptets[i + 3], newface);
-    bond(newface, botcastets[i]);
-  }
-  // Bond the top and bottom new tets together.
-  bond(fliptets[0], fliptets[3]);
-  bond(fliptets[1], fliptets[4]);
-  bond(fliptets[2], fliptets[5]);
-  // Bond the new tets together.
-  for (i = 0; i < 3; i++) {
-    enextfnext(fliptets[i], newface);
-    enext2fnext(fliptets[(i + 1) % 3], casface);
-    bond(newface, casface);
-  }
-  for (i = 0; i < 3; i++) {
-    enext2fnext(fliptets[3 + i], newface);
-    enextfnext(fliptets[3 + (i + 1) % 3], casface);
-    bond(newface, casface);
+    bond(newface, castets[i]);
   }
 
+  // Bond the top and bottom new tets together.
+  bond(fliptets[0], fliptets[2]);
+  bond(fliptets[1], fliptets[3]);
+
+  // Bond the new tets together.
+  enextfnext(*splitface, newface);
+  enext2fnext(fliptets[0], casface);
+  bond(newface, casface);
+  enextfnext(fliptets[0], newface);
+  enext2fnext(fliptets[1], casface);
+  bond(newface, casface);
+  enextfnext(fliptets[1], newface);
+  enext2fnext(*splitface, casface);
+  bond(newface, casface);
+
+  enext2fnext(symface, newface);
+  enextfnext(fliptets[2], casface);
+  bond(newface, casface);
+  enext2fnext(fliptets[2], newface);
+  enextfnext(fliptets[3], casface);
+  bond(newface, casface);
+  enext2fnext(fliptets[3], newface);
+  enextfnext(symface, casface);
+  bond(newface, casface);
+
   if (flipflag > 0) {
-    for (i = 0; i < 6; i++) {
+    enext0fnext(*splitface, newface);
+    futureflip = flippush(futureflip, &newface, newpt);
+    enext0fnext(symface, newface);
+    futureflip = flippush(futureflip, &newface, newpt);
+    for (i = 0; i < 4; i++) {
       enext0fnext(fliptets[i], newface);
       futureflip = flippush(futureflip, &newface, newpt);
     }
   }
 
-  *splitface = fliptets[0]; // Return abpd.
+  // Return abpd in 'splitface'.
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -701,7 +696,7 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 
 void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 {
-  triface *fliptets, *bfliptets, *topcastets, *botcastets;
+  triface *fliptets, *bfliptets, *castets;
   triface newface, casface;
   point pa, pb, *pt;
   int dummyflag; // 0 or 1.
@@ -728,8 +723,7 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
   // Allocate spaces for fliptets.
   fliptets = new triface[n];
   bfliptets = new triface[n];
-  topcastets = new triface[n];
-  botcastets = new triface[n];
+  castets = new triface[n];
   pt = new point[n];
 
   // Get the n old tets.
@@ -752,75 +746,57 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 
   // Get the outer boundary faces.
   for (i = 0; i < n; i++) {
-    enext2(fliptets[i], casface);  // at edge p[i]a.
-    fnext(casface, topcastets[i]);
-  }
-  for (i = 0; i < n; i++) {
-    enext(fliptets[i], casface);  // at edge bp[i].
-    fnext(casface, botcastets[i]);
+    enext(fliptets[i], casface);  // at edge p[i]a.
+    fnext(casface, castets[i]);
   }
 
-  // Delete the n old tets.
-  for (i = 0; i < n; i++) {
-    tetrahedrondealloc(fliptets[i].tet);
+  // Update the number of hull tets.
+  if (pt[0] == dummypoint) {
+    // We remove 2 old hull tet (abcp), but add 4 new hull tets.
+    hullsize += 2;
   }
 
-  // Create 2n new tets.
+  // Create n new tets.
   if (pt[0] != dummypoint) {
-    maketetrahedron(tetrahedronpool, &(fliptets[0])); // app[0]p[1]
-    maketetrahedron(tetrahedronpool, &(fliptets[n - 1])); // app[n-1]p[0]
-    maketetrahedron(tetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
-    maketetrahedron(tetrahedronpool, &(bfliptets[n - 1])); // pbp[n-1]p[0]
-    setvertices(fliptets[0], pa, newpt, pt[0], pt[1]);
-    setvertices(fliptets[n - 1], pa, newpt, pt[n - 1], pt[0]);
+    setdest(fliptets[0], newpt);  // app[0]p[1]
+    setdest(fliptets[n - 1], newpt);  // app[n-1]p[0]
+    maketetrahedron(&(bfliptets[0])); // pbp[0]p[1]
+    maketetrahedron(&(bfliptets[n - 1])); // pbp[n-1]p[0]
     setvertices(bfliptets[0], newpt, pb, pt[0], pt[1]);
     setvertices(bfliptets[n - 1], newpt, pb, pt[n - 1], pt[0]);
   } else {
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // app[0]p[1]
-    maketetrahedron(hulltetrahedronpool, &(fliptets[n - 1])); 
-    maketetrahedron(hulltetrahedronpool, &(bfliptets[0])); // pbp[0]p[1]
-    maketetrahedron(hulltetrahedronpool, &(bfliptets[n - 1])); 
     // NOTE: the base face must contain no 'dummypoint'.
-    setvertices(fliptets[0], newpt, pa, pt[1], pt[0]); 
-    setvertices(fliptets[n - 1], pa, newpt, pt[n - 1], pt[0]);
+    setdest(fliptets[0], newpt);  // app[0]p[1]
+    setdest(fliptets[n - 1], newpt);  // app[n-1]p[0]
+    maketetrahedron(&(bfliptets[0])); // pbp[0]p[1]
+    maketetrahedron(&(bfliptets[n - 1])); 
     setvertices(bfliptets[0], pb, newpt, pt[1], pt[0]);
     setvertices(bfliptets[n - 1], newpt, pb, pt[n - 1], pt[0]);
-    // Adjust the faces of fliptets[0] and bfliptets[0].
-    enext0fnextself(fliptets[0]);
-    esymself(fliptets[0]);
+    // Adjust the face of and bfliptets[0].
     enext0fnextself(bfliptets[0]);
     esymself(bfliptets[0]);
   }
   for (i = 1; i < n - 1; i++) {
-    maketetrahedron(tetrahedronpool, &(fliptets[i])); // app[i]p[i+1]
-    maketetrahedron(tetrahedronpool, &(bfliptets[i])); // pbp[i]p[i+1]
-    setvertices(fliptets[i], pa, newpt, pt[i], pt[i + 1]);
+    setdest(fliptets[i], newpt); // app[i]p[i+1]
+    maketetrahedron(&(bfliptets[i])); // pbp[i]p[i+1]
     setvertices(bfliptets[i], newpt, pb, pt[i], pt[i + 1]);
   }
 
   // Bond new tets to outer boundary faces.
   for (i = 0; i < n; i++) {
-    enext2fnext(fliptets[i], newface);
-    bond(newface, topcastets[i]);
-  }
-  for (i = 0; i < n; i++) {
     enextfnext(bfliptets[i], newface);
-    bond(newface, botcastets[i]);
+    bond(newface, castets[i]);
+  }
+  // Bond new tets together.
+  for (i = 0; i < n; i++) {
+    enext0fnext(bfliptets[i], newface);
+    bond(newface, bfliptets[(i + 1) % n]);
   }
   // Bond top and bottom new tets togther
   for (i = 0; i < n; i++) {
     enextfnext(fliptets[i], newface);
     enext2fnext(bfliptets[i], casface);
     bond(newface, casface);
-  }
-  // Bond new tets together.
-  for (i = 0; i < n; i++) {
-    enext0fnext(fliptets[i], newface);
-    bond(newface, fliptets[(i + 1) % n]);
-  }
-  for (i = 0; i < n; i++) {
-    enext0fnext(bfliptets[i], newface);
-    bond(newface, bfliptets[(i + 1) % n]);
   }
 
   if (flipflag > 0) {
@@ -835,12 +811,11 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
   }
 
   // If dummyflag !=0, the original tet is shifted by (n - dummyflag + 1).
-  *splitedge = (dummyflag == 0 ? fliptets[0] : fliptets[n - dummyflag + 1]);
+  //*splitedge = (dummyflag == 0 ? fliptets[0] : fliptets[n - dummyflag + 1]);
 
   delete [] fliptets;
   delete [] bfliptets;
-  delete [] topcastets;
-  delete [] botcastets;
+  delete [] castets;
   delete [] pt;
 }
 
@@ -923,35 +898,33 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
     enext2self(fliptets[1]);
   }
 
-  // Delete the old tets.
-  tetrahedrondealloc(fliptets[0].tet);
-  tetrahedrondealloc(fliptets[1].tet);
+  // Re-use fliptets[0] and fliptets[1].
+  fliptets[0].loc = fliptets[0].ver = 0;
+  fliptets[1].loc = fliptets[1].ver = 0;
 
   // Check if d is dummytet.
   if (pd != dummypoint) {
-    maketetrahedron(tetrahedronpool, &(fliptets[0])); // Create edab.
+    // Update fliptets[0] to edab.
     setvertices(fliptets[0], pe, pd, pa, pb);
+    // Update fliptets[1] to edbc.
+    setvertices(fliptets[1], pe, pd, pb, pc);
+    // Create new tet edca.
+    maketetrahedron(&(fliptets[2]));
     // Check if c is dummypoint.
     if (pc != dummypoint) {
-      maketetrahedron(tetrahedronpool, &(fliptets[1])); // Create edbc.
-      maketetrahedron(tetrahedronpool, &(fliptets[2])); // Create edca.
       setvertices(fliptets[2], pe, pd, pc, pa);
     } else {
-      maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create edbc.
-      maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create deac.
       setvertices(fliptets[2], pd, pe, pa, pc);
       // Adjust deac->edca
       enext0fnextself(fliptets[2]);
       esymself(fliptets[2]);
     }
-    setvertices(fliptets[1], pe, pd, pb, pc);
+    // The hullsize does not change.
   } else {
-    // d is dummypoint. Create three new hull tets.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // Create abed.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // Create bced.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[2])); // Create caed.
-    setvertices(fliptets[0], pa, pb, pe, pd);
-    setvertices(fliptets[1], pb, pc, pe, pd);
+    // d is dummypoint.
+    setvertices(fliptets[0], pa, pb, pe, pd); // Create abed.
+    setvertices(fliptets[1], pb, pc, pe, pd); // Create bced.
+    maketetrahedron(&(fliptets[2])); // Create caed.    
     setvertices(fliptets[2], pc, pa, pe, pd);
     // Adjust abed->edab, bced->edbc, caed->edca
     for (i = 0; i < 3; i++) {
@@ -959,6 +932,8 @@ void tetgenmesh::flip23(triface* fliptets, int flipflag)
       enext2self(fliptets[i]);
       esymself(fliptets[i]);
     }
+    // We removed one old hull tet, and added three new hull tets.
+    hullsize += 2;
   }
 
   // Bond three new tets together.
@@ -1109,26 +1084,26 @@ void tetgenmesh::flip32(triface* fliptets, int flipflag)
     symedge(casface, botcastets[i]);
   }
 
-  // Delete the old tets.
-  tetrahedrondealloc(fliptets[0].tet);
-  tetrahedrondealloc(fliptets[1].tet);
+  // Re-use fliptets[0] and fliptets[1].
+  fliptets[0].loc = fliptets[0].ver = 0;
+  fliptets[1].loc = fliptets[1].ver = 0;
+
+  // Delete an old tet.
   tetrahedrondealloc(fliptets[2].tet);
 
   // Check if c is dummypointc.
   if (pc != dummypoint) {
     // Check if d is dummypoint.
     if (pd != dummypoint) {
-      maketetrahedron(tetrahedronpool, &(fliptets[0])); // abcd
+      // No hull tet is involved.
     } else {
-      maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // a hull tet.
+      // We removed three old hull tets, and added on new hull tet.
+      hullsize -= 2;
     }
-    maketetrahedron(tetrahedronpool, &(fliptets[1])); // bace
     setvertices(fliptets[0], pa, pb, pc, pd);
     setvertices(fliptets[1], pb, pa, pc, pe);
   } else {
     // c is dummypoint. The two new tets are hull tets.
-    maketetrahedron(hulltetrahedronpool, &(fliptets[0])); // badc
-    maketetrahedron(hulltetrahedronpool, &(fliptets[1])); // abec
     setvertices(fliptets[0], pb, pa, pd, pc);
     setvertices(fliptets[1], pa, pb, pe, pc);
     // Adjust badc -> abcd.
@@ -1137,6 +1112,7 @@ void tetgenmesh::flip32(triface* fliptets, int flipflag)
     // Adjust abec -> bace.
     enext0fnextself(fliptets[1]);
     esymself(fliptets[1]);
+    // The hullsize does not changle.
   }
   
   // Bond abcd <==> bace.

@@ -787,7 +787,7 @@ struct badface {
 ///////////////////////////////////////////////////////////////////////////////
 
 // For enext() primitive, uses 'ver' as the key.
-static int ve[6];
+static int ve[6], ve2[6];
 
 // For sorg(), sdest, spaex(), use 'shver' as the key.
 static int vo[6], vd[6], va[6];
@@ -945,9 +945,9 @@ static int locverpivot[4][6][2];
 
 #define enext2(t1, t2) \
   (t2).tet = (t1).tet; (t2).loc = (t1).loc;\
-  (t2).ver = ve[ve[(t1).ver]]
+  (t2).ver = ve2[(t1).ver]
 
-#define enext2self(t) (t).ver = ve[ve[(t).ver]]
+#define enext2self(t) (t).ver = ve2[(t).ver]
 
 // enextfnext(), enext2fnext() -- primitives for moving faces in tet.
 //   the tetrahedron remains the same. 
@@ -976,13 +976,13 @@ static int locverpivot[4][6][2];
   (t).ver = iptr[1]
 
 #define enext2fnext(t1, t2) \
-  iptr = &(locver2nextf[(t1).loc * 8 + ve[ve[(t1).ver]]]);\
+  iptr = &(locver2nextf[(t1).loc * 8 + ve2[(t1).ver]]);\
   (t2).tet = (t1).tet;\
   (t2).loc = iptr[0];\
   (t2).ver = iptr[1]
 
 #define enext2fnextself(t) \
-  iptr = &(locver2nextf[(t).loc * 8 + ve[ve[(t).ver]]]);\
+  iptr = &(locver2nextf[(t).loc * 8 + ve2[(t).ver]]);\
   (t).loc = iptr[0];\
   (t).ver = iptr[1]
 
@@ -1192,10 +1192,10 @@ void bond(triface& t1, triface& t2) {
 
 #define senext2(s1, s2) \
   (s2).sh = (s1).sh;\
-  (s2).shver = ve[ve[(s1).shver]]
+  (s2).shver = ve2[(s1).shver]
   
 #define senext2self(s) \
-  (s).shver = ve[ve[(s).shver]]
+  (s).shver = ve2[(s).shver]
 
 // farsorg(), farsdest() -- s is a subsegment, return the origin or
 //   destination of the segment containing s.
@@ -1339,8 +1339,8 @@ tetgenio *in;
 // Pointer to the options (and filenames).
 tetgenbehavior *b;
 
-// Pools of tetrahedra, hull tetrahedra, points, etc.
-memorypool *tetrahedronpool, *hulltetrahedronpool;
+// Pools of tetrahedra, shellfaces, points, etc.
+memorypool *tetrahedronpool;
 memorypool *subfacepool, *subsegpool, *tet2subpool;
 memorypool *pointpool;
 memorypool *flippool;
@@ -1363,6 +1363,9 @@ int point2tetindex, pointmarkindex;
 int elemmarkerindex;
 int elemattribindex, volumeboundindex, highorderindex;
 int shmarkindex, areaboundindex;
+
+// The number of hull tetrahedra (which contain dummypoint).
+long hullsize;
 
 // Current random number seed, number of random samples (for point location).
 unsigned long randomseed, samples;
@@ -1402,14 +1405,15 @@ long r1count, r2count, r3count;
 
 void initializepools();
 void tetrahedrondealloc(tetrahedron*);
-tetrahedron *tetrahedrontraverse(memorypool*);
+tetrahedron *tetrahedrontraverse();
+tetrahedron *alltetrahedrontraverse();
 void shellfacedealloc(memorypool*, shellface*);
 shellface *shellfacetraverse(memorypool*);
 void badfacedealloc(memorypool*, badface*);
 badface *badfacetraverse(memorypool*);
 void pointdealloc(point);
 point pointtraverse();
-void maketetrahedron(memorypool*, triface*);
+void maketetrahedron(triface*);
 void makeshellface(memorypool*, face*);
 void makepoint(point*);
 void makeindex2pointmap(point*&);
@@ -1561,7 +1565,7 @@ void outvoronoi(tetgenio* out);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void checkmesh(memorypool* pool);
+void checkmesh();
 void checkshells();
 void checkdelaunay();
 void checkconforming();
@@ -1580,7 +1584,7 @@ void initialize()
 {
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
-  tetrahedronpool = hulltetrahedronpool = (memorypool *) NULL;
+  tetrahedronpool = (memorypool *) NULL;
   subfacepool = subsegpool = tet2subpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
   flippool = (memorypool *) NULL;
@@ -1591,6 +1595,7 @@ void initialize()
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
   elemattribindex = volumeboundindex = highorderindex = 0;
+  hullsize = 0l;
   randomseed = samples = 1l;
   recenttet.tet = (tetrahedron *) NULL;
   recenttet.loc = recenttet.ver = 0;
@@ -1617,7 +1622,6 @@ void deinitialize()
   b = (tetgenbehavior *) NULL;
   if (tetrahedronpool != (memorypool *) NULL) {
     delete tetrahedronpool;
-    delete hulltetrahedronpool;
   }
   if (subfacepool != (memorypool *) NULL) {
     delete subfacepool;
