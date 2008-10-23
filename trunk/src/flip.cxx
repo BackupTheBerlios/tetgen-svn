@@ -1453,6 +1453,8 @@ void tetgenmesh::lawsonflip3d()
           // Delete the two tets.
           tetrahedrondealloc(fliptet.tet);
           tetrahedrondealloc(neightet.tet);
+          // Update the hull size.
+          hullsize -= 2;
         }
       }
       continue;
@@ -1505,14 +1507,14 @@ void tetgenmesh::lawsonflip3d()
           fliptets[0] = fliptet; // tet abcd, d is the new vertex.
           baktets[0] = fliptets[2];
           baktets[1] = fliptets[3];
-          flip23(fliptets, 0, 1);
+          flip23(fliptets, 1, 1); // hull tet may involve.
           // Then do a 3-to-2 flip. 
           enextfnextself(fliptets[0]);  // fliptets[0] is edab.
           enextself(fliptets[0]);
           esymself(fliptets[0]);  // tet badc, d is the new vertex.
           fliptets[1] = baktets[0];
           fliptets[2] = baktets[1];
-          flip32(fliptets, 0, 1);
+          flip32(fliptets, 1, 1); // hull tet may involve.
           recenttet = fliptets[0]; // for point location.
         } else {
           // An unflipable face. Will be flipped later. 
