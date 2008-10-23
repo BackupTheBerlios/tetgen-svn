@@ -843,7 +843,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
             terminatetetgen(1);
           }
           // Do a 3-to-2 flip to remove the degenerate tet.
-          flip32(fliptets, 0);
+          flip32(fliptets, 1, 0);
           // Rememebr the new tet.
           recenttet = fliptets[0];
         } else {
