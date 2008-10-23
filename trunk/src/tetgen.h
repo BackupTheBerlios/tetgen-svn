@@ -1117,43 +1117,6 @@ void bond(triface& t1, triface& t2) {
   (s).shver = (int) ((unsigned long) (sptr) & (unsigned long) 7l);\
   (s).sh = (shellface *) ((unsigned long) (sptr) & ~ (unsigned long) 7l)
 
-// spivot() -- find the next face in the face ring.
-
-#define spivot(s1, s2) sdecode((s1).sh[(s1).shver >> 1], s2)
-
-#define spivotself(s) \
-  sptr = (s).sh[(s).shver >> 1];\
-  sdecode(sptr, s)
-
-// sspivot() -- find the abutting subsegment (seg) at the face (s).
-
-#define sspivot(s, seg) sdecode((s).sh[((s).shver >> 1) + 6], seg)
-
-// sbond1() -- s1 and s2 share an edge, connect s1 <-- s2, i.e., s1 knows
-//   its neighbor is s2. sbond2() connects s1 <==> s2.
-// Note: We assume that s1 and s2 are the same directed edge.
-
-#define sbond1(s1, s2) (s1).sh[(s1).shver >> 1] = sencode(s2);
-
-#define sbond2(s1, s2) \
-  (s1).sh[(s1).shver >> 1] = sencode(s2);\
-  (s2).sh[(s2).shver >> 1] = sencode(s1)
-
-// sdisolve() -- dissolve a subface-subface connection (at one side).
-
-#define sdissolve(s) (s).sh[(s).shver >> 1] = NULL;
-
-// ssbond() -- connect a subface (s) and a subsegment (seg) together.
-// NOTE: we allow that 'seg.sh' may be a NULL.
-
-#define ssbond(s, seg) \
-  (s).sh[((s).shver >> 1) + 6] = sencode(seg);\
-  if ((seg).sh != NULL) (seg).sh[0] = sencode(s)
-
-// ssdisolve() -- dissolve a subface-subsegment connection (at subface side).
-
-#define ssdissolve(s) (s).sh[((s).shver >> 1) + 6] = NULL;
-
 // sorg(), sdest(), sapex() -- return the origin, destination, apex,
 //   of the subface.
     
@@ -1197,6 +1160,92 @@ void bond(triface& t1, triface& t2) {
 #define senext2self(s) \
   (s).shver = ve2[(s).shver]
 
+// The general rule to connect two subfaces s1 and s2 is:  Let s1's edge
+//   be a->b, which is in s1's 0th edge ring, then the edge b->a of s2 is
+//   bonded to s1.  The same rule for connecting a subface and a subseg.
+
+// sbond1() -- s1 and s2 share an edge, connect s1 <-- s2, i.e., s1 knows
+//   its neighbor is s2. sbond2() connects s1 <==> s2.
+
+void sbond1(face& s1, face& s2) {
+  int v1, v2;
+  v1 = s1.shver;
+  v2 = s2.shver;
+  s1.shver &= ~1; // 0th edge ring.
+  if (sorg(s1) != sorg(s2)) sesymself(s2);
+  (s1).sh[(s1).shver >> 1] = sencode(s2);
+  s1.shver = v1;
+  s2.shver = v2;
+}
+
+void sbond2(face& s1, face& s2) {
+  int v1, v2;
+  v1 = s1.shver;
+  v2 = s2.shver;
+  s1.shver &= ~1; // 0th edge ring.
+  if (sorg(s1) != sorg(s2)) sesymself(s2);
+  (s1).sh[(s1).shver >> 1] = sencode(s2);
+  if (s2.shver & 01) sesymself(s1);
+  (s2).sh[(s2).shver >> 1] = sencode(s1);
+  s1.shver = v1;
+  s2.shver = v2;
+}
+
+// sdisolve() -- dissolve a subface-subface connection (at one side).
+
+#define sdissolve(s) (s).sh[(s).shver >> 1] = NULL;
+
+// ssbond() -- connect a subface (s) and a subsegment (seg) together.
+// NOTE: we allow that 'seg.sh' should not be NULL.
+
+void ssbond(face& s, face& seg) {
+  int v1, v2;
+  v1 = s.shver;
+  v2 = seg.shver;
+  s.shver &= ~1; // 0th edge ring.
+  if (sorg(s) != sorg(seg)) sesymself(seg);
+  (s).sh[((s).shver >> 1) + 6] = sencode(seg);
+  if (seg.shver & 01) sesymself(s);
+  (seg).sh[0] = sencode(s);
+  s.shver = v1;
+  seg.shver = v2;
+}
+
+// ssdisolve() -- dissolve a subface-subsegment connection (at subface side).
+
+#define ssdissolve(s) (s).sh[((s).shver >> 1) + 6] = NULL;
+
+// spivot() -- find the next face in the face ring.
+
+#define spivot(s1, s2) sdecode((s1).sh[(s1).shver >> 1], s2)
+
+#define spivotself(s) \
+  sptr = (s).sh[(s).shver >> 1];\
+  sdecode(sptr, s)
+
+// sspivot() -- find the abutting subsegment (seg) at the face (s).
+
+#define sspivot(s, seg) sdecode((s).sh[((s).shver >> 1) + 6], seg)
+
+// shellmark() -- set or read the shell mark.
+
+#define shellmark(s) ((int *) ((s).sh))[shmarkindex]
+
+// areabound() -- set of read the maximal area bound.
+
+#define areabound(s) ((REAL *) ((s).sh))[areaboundindex]
+
+// sinfect(), sinfected(), suninfect() -- primitives to flag or unflag a
+//   subface. The last third bit of the first subsegment is flaged.
+
+#define sinfect(s) \
+  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] | (unsigned long) 4l)
+
+#define suninfect(s) \
+  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] & ~(unsigned long) 4l)
+
+#define sinfected(s) (((unsigned long) (s).sh[6] & (unsigned long) 4l) != 0)
+
 // farsorg(), farsdest() -- s is a subsegment, return the origin or
 //   destination of the segment containing s.
 // Note: here we assume that two subsegment (a->p) and (p->b) bonded
@@ -1231,25 +1280,6 @@ point farsdest(face& s) {
   }
   return sdest(travesh);
 }
-
-// shellmark() -- set or read the shell mark.
-
-#define shellmark(s) ((int *) ((s).sh))[shmarkindex]
-
-// areabound() -- set of read the maximal area bound.
-
-#define areabound(s) ((REAL *) ((s).sh))[areaboundindex]
-
-// sinfect(), sinfected(), suninfect() -- primitives to flag or unflag a
-//   subface. The last third bit of the first subsegment is flaged.
-
-#define sinfect(s) \
-  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] | (unsigned long) 4l)
-
-#define suninfect(s) \
-  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] & ~(unsigned long) 4l)
-
-#define sinfected(s) (((unsigned long) (s).sh[6] & (unsigned long) 4l) != 0)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
