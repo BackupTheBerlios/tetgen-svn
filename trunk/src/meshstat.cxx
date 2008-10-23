@@ -400,6 +400,7 @@ void tetgenmesh::algorithmstatistics()
   */
 
   printf("Algorithmic statistics:\n\n");
+
   printf("  Number of orient3d tests: %ld\n", orient3dcount);
   printf("  Number of insphere tests: %ld\n", inspherecount);
   printf("  Number of symbolic insphere tests: %ld\n", insphere_sos_count);
@@ -409,18 +410,19 @@ void tetgenmesh::algorithmstatistics()
   printf("  Number of 2-to-6 flips: %ld\n", flip26count);
   printf("  Number of n-t-2n flips: %ld\n", flipn2ncount);
 
-  if (b->bowyerwatson) {
-    printf("  Number of deleted tets: %ld\n", totaldeadtets);
-    printf("  Number of created tets: %ld\n", totalbowatcavsize);
-    printf("  Maximum number of tets per new point: %ld\n", maxbowatcavsize);
-    printf("  Number of 3-to-2 flips: %ld\n", flip32count);
-  } else {
-    printf("  Number of 2-to-3 flips: %ld\n", flip23count);
-    printf("  Number of 3-to-2 flips: %ld\n", flip32count);
-    printf("  Number of n-to-m flips: %ld\n", flipnmcount);
-    printf("  Total number of primitive flips: %ld\n",flip23count+flip32count);
-    printf("  Number of deleted tets: %ld\n", flip23count*2l+flip32count*3l);
-    printf("  Number of created tets: %ld\n", flip23count*3l+flip32count*2l);
+  if (!b->plc) {
+    if (b->bowyerwatson) {
+      printf("  Number of deleted tets: %ld\n", totaldeadtets);
+      printf("  Number of created tets: %ld\n", totalbowatcavsize);
+      printf("  Maximum number of tets per new point: %ld\n", maxbowatcavsize);
+      printf("  Number of 3-to-2 flips: %ld\n", flip32count);
+    } else {
+      printf("  Number of 3-to-2 flips: %ld\n", flip32count);
+      printf("  Number of 2-to-3 flips: %ld\n", flip23count);
+      printf("  Number of n-to-m flips: %ld\n", flipnmcount);
+      printf("  Total number of primitive flips: %ld\n",
+        flip23count + flip32count);
+    }
   }
 
   if (b->plc) {
