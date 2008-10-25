@@ -30,12 +30,32 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   enum {HCOPLANE, RCOPLANE, LCOPLANE, NCOPLANE} cop;
   REAL hori, rori, lori;
   REAL dmin, dist;
+  int i;
 
   tetrahedron ptr;
   int *iptr, tver;
 
   // The origin is fixed.
   pa = org(*searchtet);
+  if ((point) searchtet->tet[7] == dummypoint) {
+    // A hull tet. Choose the neighbor of its base face.
+    searchtet->loc = 0;
+    symself(*searchtet);
+    // Reset the origin to be pa.
+    for (i = 4; i < 8; i++) {
+      if ((point) searchtet->tet[i] == pa) {
+         // Found. Set pa as its origin.
+         switch (i) {
+           case 4: searchtet->loc = 0; searchtet->ver = 0; break;
+           case 5: searchtet->loc = 0; searchtet->ver = 2; break;
+           case 6: searchtet->loc = 0; searchtet->ver = 4; break;
+           case 7: searchtet->loc = 1; searchtet->ver = 2; break;
+         }
+         break;
+      }
+    }
+    assert(i < 8); // SELF_CHECK   
+  }
   if (searchtet->ver & 01) {
     // Switch to the 0th edge ring.
     esymself(*searchtet);
@@ -589,7 +609,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
 void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
 {
   point ei, ej, ek;
-  REAL split, L, d, d1, d2;
+  REAL split, L, d, d1, d2, d3;
   int stype, sign;
   int i;
 
@@ -674,17 +694,25 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
   if (stype == 0) {
     // Use rule-1.
     L = DIST(ei, ej);
-    d = DIST(ei, refpt);
-    if (d < 0.5 * L) {
+    d1 = DIST(ei, refpt);
+    d2 = DIST(ej, refpt);
+    if (d1 < d2) {
       // Choose ei as center.
-      split = d / L;
+      if (d1 < 0.5 * L) {
+        split = d1 / L;
+      } else {
+        split = 0.5;
+      }
       for (i = 0; i < 3; i++) {
         vt[i] = ei[i] + split * (ej[i] - ei[i]);
       }
     } else {
       // Choose ej as center.
-      d = DIST(ej, refpt);
-      split = d / L;
+      if (d2 < 0.5 * L) {
+        split = d2 / L;
+      } else {
+        split = 0.5;
+      }
       for (i = 0; i < 3; i++) {
         vt[i] = ej[i] + split * (ei[i] - ej[i]);
       }
@@ -703,12 +731,12 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
     d2 = DIST(vt, ej);
     if (d1 > d2) {
       // Use rule-3.
-      if (d1 < 0.5 * d) {
-        d -= d1;
+      d3 = DIST(ei, ej);
+      if (d1 < 0.5 * d3) {
+        split = (d - d1) / L;
       } else {
-        d /= 2.0;
+        split = (d - 0.5 * d3) / L;
       }
-      split = d / L;
       for (i = 0; i < 3; i++) {
         vt[i] = ek[i] + split * (ej[i] - ek[i]);
       }
@@ -717,7 +745,7 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
   }
 
   if (b->verbose > 1) {
-    printf("    split = %g.\n", split);
+    printf("    split (%g), vt (%g, %g, %g).\n", split, vt[0], vt[1], vt[2]);
   }
 }
 
@@ -824,13 +852,30 @@ void tetgenmesh::delaunizesegments()
   }
   // Initialize the stack of segments to be recovered.
   subsegstack = new arraypool(sizeof(face), i + 1);
+
   // Put all segments into the list.
-  subsegpool->traversalinit();
-  for (i = 0; i < subsegpool->items; i++) {
-    sseg.sh = shellfacetraverse(subsegpool);
-    sinfect(sseg);  // Only save it once.
-    subsegstack->newindex((void **) &psseg);
-    *psseg = sseg;
+  if (b->order == 4) {  // '-o4' option (for debug)
+    s = idx2seglist[pointpool->items];
+    int j = 0;
+    for (i = 0; i < s; i++) {
+      if (!sinfected(segperverlist[i])) {
+        j++;
+        printf("  %d (%d, %d).\n", j, pointmark(sorg(segperverlist[i])), 
+          pointmark(sdest(segperverlist[i])));
+        sinfect(segperverlist[i]);  // Only save it once.
+        subsegstack->newindex((void **) &psseg);
+        *psseg = segperverlist[i];
+      }
+    }
+    printf("  number of input segment = %ld.\n", insegments);
+  } else {
+    subsegpool->traversalinit();
+    for (i = 0; i < subsegpool->items; i++) {
+      sseg.sh = shellfacetraverse(subsegpool);
+      sinfect(sseg);  // Only save it once.
+      subsegstack->newindex((void **) &psseg);
+      *psseg = sseg;
+    }
   }
 
   delete [] idx2seglist;

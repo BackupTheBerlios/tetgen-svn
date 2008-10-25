@@ -970,7 +970,7 @@ void tetgenmesh::incrementaldelaunay()
   // Form a random permuation (uniformly at random) of the set of vertices.
   permutarray = new point[in->numberofpoints];
   pointpool->traversalinit();
-  if (b->nojettison) { // '-J' option (only for debug)
+  if (b->order == 3) { // '-o3' option (for debug)
     for (i = 0; i < in->numberofpoints; i++) {
       permutarray[i] = (point) pointpool->traverse();
     }

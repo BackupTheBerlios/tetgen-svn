@@ -335,9 +335,15 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
       } else if (argv[i][j] == 'I') {
         noiterationnum = 1;
       } else if (argv[i][j] == 'o') {
-        if (argv[i][j + 1] == '2') {
-          j++;
-          order = 2;
+        if ((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) {
+          k = 0;
+          while ((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) {
+            j++;
+            workstring[k] = argv[i][j];
+            k++;
+          }
+          workstring[k] = '\0';
+          order = (int) strtol(workstring, (char **) NULL, 0);
         }
       } else if (argv[i][j] == 'S') {
         if (((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) ||

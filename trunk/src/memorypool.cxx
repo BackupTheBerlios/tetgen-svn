@@ -824,7 +824,7 @@ void tetgenmesh::makeindex2pointmap(point*& idx2ptmap)
   point pt;
   int idx;
 
-  if (b->verbose) {
+  if (b->verbose> 1) {
     printf("  Making a map from indices to points.\n");
   }
 
@@ -858,7 +858,7 @@ void tetgenmesh::makepoint2submap(memorypool* pool, int*& idx2faclist,
   face shloop;
   int i, j, k;
 
-  if (b->verbose) {
+  if (b->verbose > 1) {
     printf("  Making a map from points to subfaces.\n");
   }
 
@@ -945,7 +945,7 @@ void tetgenmesh::makepoint2tetmap()
   tetrahedron *tptr;
   point *pt;
 
-  if (b->verbose) {
+  if (b->verbose > 1) {
     printf("  Making a map from points to tetrahedra.\n");
   }
 
