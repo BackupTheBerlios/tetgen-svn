@@ -431,7 +431,7 @@ void tetgenmesh::algorithmstatistics()
       triedgcount, triedgcopcount);
     printf("  Number of crossed faces (edges) in scout segs: %ld (%ld)\n",
       across_face_count, across_edge_count);
-    printf("  Maximaul number of crossed faces per segment: %ld\n",
+    printf("  Maximal number of crossed faces per segment: %ld\n",
       across_max_count);
     printf("  Number of forced point locations: %ld\n", force_ptloc_count);
     printf("  Number of rule-1 points: %ld\n", r1count);

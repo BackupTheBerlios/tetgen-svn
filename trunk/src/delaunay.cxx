@@ -796,6 +796,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         } while (neightet.tet[neightet.loc] != NULL);
         bond(newtet, neightet); // Connect newtet <==> neightet.
       }
+      if (checksubsegs) {
+        point2tet(org(*cavetet)) = encode(*cavetet);
+      }
       enextself(*cavetet);
     }
   }

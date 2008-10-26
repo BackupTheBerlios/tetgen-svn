@@ -855,25 +855,26 @@ void tetgenmesh::delaunizesegments()
 
   // Put all segments into the list.
   if (b->order == 4) {  // '-o4' option (for debug)
-    s = idx2seglist[pointpool->items];
-    int j = 0;
-    for (i = 0; i < s; i++) {
-      if (!sinfected(segperverlist[i])) {
-        j++;
-        printf("  %d (%d, %d).\n", j, pointmark(sorg(segperverlist[i])), 
-          pointmark(sdest(segperverlist[i])));
-        sinfect(segperverlist[i]);  // Only save it once.
-        subsegstack->newindex((void **) &psseg);
-        *psseg = segperverlist[i];
-      }
-    }
-    printf("  number of input segment = %ld.\n", insegments);
-  } else {
+    // The sequential order.
     subsegpool->traversalinit();
     for (i = 0; i < subsegpool->items; i++) {
       sseg.sh = shellfacetraverse(subsegpool);
       sinfect(sseg);  // Only save it once.
       subsegstack->newindex((void **) &psseg);
+      *psseg = sseg;
+    }
+  } else {
+    // Randomly order the segments.
+    subsegpool->traversalinit();
+    for (i = 0; i < subsegpool->items; i++) {
+      s = randomnation(i + 1);
+      // Move the s-th seg to the i-th.
+      subsegstack->newindex((void **) &psseg);
+      *psseg = * (face *) fastlookup(subsegstack, s);
+      // Put i-th seg to be the s-th.
+      sseg.sh = shellfacetraverse(subsegpool);
+      sinfect(sseg);  // Only save it once.
+      psseg = (face *) fastlookup(subsegstack, s);
       *psseg = sseg;
     }
   }
@@ -889,7 +890,7 @@ void tetgenmesh::delaunizesegments()
 
   // Loop until 'subsegstack' is empty.
   while (subsegstack->objects > 0l) {
-    // Default seglist is used as a stack.
+    // seglist is used as a stack.
     subsegstack->objects--;
     psseg = (face *) fastlookup(subsegstack, subsegstack->objects);
     sseg = *psseg;
@@ -928,12 +929,27 @@ void tetgenmesh::delaunizesegments()
         lawsonflip();
       }
       // Add two subsegments into the stack.
-      sinfect(sseg);
-      subsegstack->newindex((void **) &psseg);
-      *psseg = sseg;
-      sinfect(nsseg);
-      subsegstack->newindex((void **) &psseg);
-      *psseg = nsseg;
+      if (b->order == 4) {  // '-o4' option (for debug)
+        sinfect(sseg);
+        subsegstack->newindex((void **) &psseg);
+        *psseg = sseg;
+        sinfect(nsseg);
+        subsegstack->newindex((void **) &psseg);
+        *psseg = nsseg;
+      } else {
+        s = randomnation(subsegstack->objects);
+        subsegstack->newindex((void **) &psseg);
+        *psseg = * (face *) fastlookup(subsegstack, s);
+        sinfect(sseg); 
+        psseg = (face *) fastlookup(subsegstack, s);
+        *psseg = sseg;
+        s = randomnation(subsegstack->objects);
+        subsegstack->newindex((void **) &psseg);
+        *psseg = * (face *) fastlookup(subsegstack, s);
+        sinfect(nsseg);
+        psseg = (face *) fastlookup(subsegstack, s);
+        *psseg = nsseg;
+      }
     }
   }
 
