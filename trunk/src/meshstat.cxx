@@ -330,6 +330,7 @@ void tetgenmesh::checksegments()
   triface tetloop, neightet;
   shellface *segs;
   face sseg, checkseg;
+  point pa, pb;
   int horrors, i;
 
   horrors = 0;
@@ -345,20 +346,40 @@ void tetgenmesh::checksegments()
           // Get the edge of the tet.
           tetloop.loc = edge2locver[i][0];
           tetloop.ver = edge2locver[i][1];
-          // Loop all tets sharing at this edge.
-          neightet = tetloop;
-          do {
-            tsspivot1(neightet, checkseg);
-            if (checkseg.sh != sseg.sh) {
-              printf("  !! Mis tet-seg connection at seg (%d, %d).\n",
-                pointmark(sseg.sh[3]), pointmark(sseg.sh[4]));
-              printf("    Tet: (%d, %d, %d, %d).\n", pointmark(org(tetloop)),
-                pointmark(dest(tetloop)), pointmark(apex(tetloop)),
-                pointmark(oppo(tetloop)));
-              horrors++;
-            }
-            fnextself(neightet);
-          } while (neightet.tet != tetloop.tet);
+          // Check if they are the same edge.
+          pa = (point) sseg.sh[3];
+          pb = (point) sseg.sh[4];
+          if (!(((org(tetloop) == pa) && (dest(tetloop) == pb)) ||
+                ((org(tetloop) == pb) && (dest(tetloop) == pa)))) {
+            printf("  !! Wrong tet-seg connection.\n");
+            printf("    Tet: x%lx (%d, %d, %d, %d) - Seg: x%lx (%d, %d).\n", 
+              (unsigned long) tetloop.tet, pointmark(org(tetloop)),
+              pointmark(dest(tetloop)), pointmark(apex(tetloop)),
+              pointmark(oppo(tetloop)), (unsigned long) sseg.sh,
+              pointmark(pa), pointmark(pb));
+            horrors++;
+          } else {
+            // Loop all tets sharing at this edge.
+            neightet = tetloop;
+            do {
+              tsspivot1(neightet, checkseg);
+              if (checkseg.sh != sseg.sh) {
+                printf("  !! Wrong tet-seg connection.\n");
+                printf("    Tet: x%lx (%d, %d, %d, %d) - ", 
+                  (unsigned long) tetloop.tet, pointmark(org(tetloop)),
+                  pointmark(dest(tetloop)), pointmark(apex(tetloop)),
+                  pointmark(oppo(tetloop)));
+                if (checkseg.sh != NULL) {
+                  printf("Seg x%lx (%d, %d).\n", (unsigned long) checkseg.sh,
+                  pointmark(sorg(checkseg)), pointmark(sdest(checkseg))); 
+                } else {
+                  printf("Seg: NULL.\n");
+                }
+                horrors++;
+              }
+              fnextself(neightet);
+            } while (neightet.tet != tetloop.tet);
+          }
         }
       }
     }

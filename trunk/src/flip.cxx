@@ -1043,6 +1043,8 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
   int i;
 
+  face checkseg;
+
   int *iptr; 
 
   if (hullflag > 0) {
@@ -1151,6 +1153,53 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     enext0fnext(fliptets[1], newface);
     bond(newface, botcastets[i]);
     enext2self(fliptets[1]);
+  }
+
+  if (checksubsegs) {
+    // Bond segments to new (flipped) tets.
+    for (i = 0; i < 3; i++) {
+      tssdissolve1(fliptets[0]); // Clear the old bond.
+      tsspivot1(topcastets[i], checkseg);
+      if (checkseg.sh != NULL) {
+        tssbond1(fliptets[0], checkseg);
+      }
+      enextself(fliptets[0]);
+    }
+    // The three top edges.
+    for (i = 0; i < 3; i++) {
+      enext0fnext(fliptets[0], newface);
+      enextself(newface); // edge b->d, c->d, a->d.
+      tssdissolve1(newface);
+      fnext(fliptets[0], casface);
+      enextself(casface);
+      tsspivot1(casface, checkseg);
+      if (checkseg.sh != NULL) {
+        tssbond1(newface, checkseg);
+      }
+      enextself(fliptets[0]);
+    }
+    // Process the bottom tet bace.
+    for (i = 0; i < 3; i++) {
+      tssdissolve1(fliptets[1]); // Clear the old bond.
+      tsspivot1(botcastets[i], checkseg);
+      if (checkseg.sh != NULL) {
+        tssbond1(fliptets[1], checkseg);
+      }
+      enext2self(fliptets[1]);
+    }
+    // The three bot edges.
+    for (i = 0; i < 3; i++) {
+      enext0fnext(fliptets[1], newface);
+      enext2self(newface); // edge b<-e, c<-e, a<-e.
+      tssdissolve1(newface);
+      fnext(fliptets[1], casface);
+      enext2self(casface);
+      tsspivot1(casface, checkseg);
+      if (checkseg.sh != NULL) {
+        tssbond1(newface, checkseg);
+      }
+      enext2self(fliptets[1]);
+    }
   }
 
   if (hullflag > 0) {

@@ -478,6 +478,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     tsspivot1(*searchtet, checkseg);
     if (checkseg.sh != NULL) {
       printf("  Invalid PLC!  Two segments intersect each other.\n");
+      startpt = farsorg(*sseg);
+      endpt = farsdest(*sseg);
+      pa = farsorg(checkseg);
+      pb = farsdest(checkseg);
       printf("    1st: (%d, %d), 2nd: (%d, %d).\n", pointmark(startpt), 
         pointmark(endpt), pointmark(pa), pointmark(pb));
       terminatetetgen(1);
@@ -577,9 +581,12 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       tsspivot1(*searchtet, checkseg);
       if (checkseg.sh != NULL) {
         printf("  Invalid PLC!  Two segments intersect each other.\n");
+        startpt = farsorg(*sseg);
+        endpt = farsdest(*sseg);
+        pa = farsorg(checkseg);
+        pb = farsdest(checkseg);
         printf("    1st: (%d, %d), 2nd: (%d, %d).\n", pointmark(startpt), 
-          pointmark(endpt), pointmark(sorg(checkseg)), 
-          pointmark(sdest(checkseg)));
+          pointmark(endpt), pointmark(pa), pointmark(pb));
         terminatetetgen(1);
       }
       across_edge_count++;

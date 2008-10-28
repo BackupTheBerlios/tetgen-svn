@@ -119,7 +119,7 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
           searchdist = dist;
         }
       } else {
-        j--;
+        if (i != tetblocks - 1) j--;
       }
     }
     sampleblock = (void **) *sampleblock;

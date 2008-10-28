@@ -1302,6 +1302,14 @@ void tssbond1(triface& t, face& s) {
   ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = sencode((s));
 } 
 
+// tssdissolve1() -- dissolve a tet-seg bond at the tet edge.
+
+void tssdissolve1(triface& t) {
+  if ((t).tet[8] != NULL) {
+    ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = NULL;
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Primitives for points                                                     //
