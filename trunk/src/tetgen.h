@@ -1292,7 +1292,7 @@ void tsspivot1(triface& t, face& s) {
 void tssbond1(triface& t, face& s) {
   if ((t).tet[8] == NULL) {
     // Allocate space for this tet.
-    (t).tet[8] = (tetrahedron) tet2subpool->alloc();
+    (t).tet[8] = (tetrahedron) tet2segpool->alloc();
     // NULL all fields in this space.
     for (int i = 0; i < 6; i++) {
       ((shellface *) (t).tet[8])[i] = NULL;
@@ -1352,7 +1352,8 @@ tetgenbehavior *b;
 
 // Pools of tetrahedra, shellfaces, points, etc.
 memorypool *tetrahedronpool;
-memorypool *subfacepool, *subsegpool, *tet2subpool;
+memorypool *subfacepool, *subsegpool;
+memorypool *tet2segpool;
 memorypool *pointpool;
 memorypool *flippool;
 
@@ -1596,7 +1597,7 @@ void initialize()
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
   tetrahedronpool = (memorypool *) NULL;
-  subfacepool = subsegpool = tet2subpool = (memorypool *) NULL;
+  subfacepool = subsegpool = tet2segpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
   flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;

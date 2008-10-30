@@ -595,7 +595,7 @@ void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
   if (b->useshelles) {
     // Dealloc the space to subfaces/subsegments.
     if (dyingtet[8] != NULL) {
-      tet2subpool->dealloc((shellface *) dyingtet[8]);
+      tet2segpool->dealloc((shellface *) dyingtet[8]);
     }
   }
 

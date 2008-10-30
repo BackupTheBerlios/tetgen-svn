@@ -850,7 +850,7 @@ void tetgenmesh::delaunizesegments()
   markacutevertices(idx2seglist, segperverlist);
 
   // Initialize the pool for tet-subseg connections.
-  tet2subpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
+  tet2segpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
 
   // Calculate the log-2 of the number of segments.
   s = 1; i = 0;
@@ -976,7 +976,7 @@ void tetgenmesh::delaunizesegments()
   b->epsilon = bakeps;
 
   delete subsegstack;
-  delete tet2subpool;
+  delete tet2segpool;
 }
 
 #endif // #ifndef constrainCXX
