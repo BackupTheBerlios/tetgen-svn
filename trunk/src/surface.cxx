@@ -39,6 +39,9 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
       ssbond(newsh, newseg);
       senextself(newsh);
     }
+  } else {
+    printf("  This code does not do surface mesh yet.\n");
+    terminatetetgen(1);
   }
 }
 
