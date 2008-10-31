@@ -849,17 +849,6 @@ void tetgenmesh::delaunizesegments()
   // Mark acutes vertices.
   markacutevertices(idx2seglist, segperverlist);
 
-  // Initialize the pool for tet-subseg connections.
-  tet2segpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
-
-  // Calculate the log-2 of the number of segments.
-  s = 1; i = 0;
-  while (s < subsegpool->items) {
-    s <<= 1; i++;
-  }
-  // Initialize the stack of segments to be recovered.
-  subsegstack = new arraypool(sizeof(face), i + 1);
-
   // Put all segments into the list.
   if (b->order == 4) {  // '-o4' option (for debug)
     // The sequential order.
@@ -964,19 +953,8 @@ void tetgenmesh::delaunizesegments()
     printf("  %d protecting points.\n", r1count + r2count + r3count);
   }
 
-  // Clear the pointers from tets to subsegs.
-  tetrahedronpool->traversalinit();
-  searchtet.tet = alltetrahedrontraverse();
-  while (searchtet.tet != NULL) {
-    searchtet.tet[8] = NULL;
-    searchtet.tet = alltetrahedrontraverse();  
-  }
-
   checksubsegs = 0;
   b->epsilon = bakeps;
-
-  delete subsegstack;
-  delete tet2segpool;
 }
 
 #endif // #ifndef constrainCXX

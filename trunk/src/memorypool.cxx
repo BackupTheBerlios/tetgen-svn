@@ -513,7 +513,7 @@ void tetgenmesh::initializepools()
   // The number of bytes occupied by a tetrahedron.  There are 4 pointers
   //   to other tetrahedra, 4 pointers to corners, and possibly 1 pointers
   //   to an array of subfaces/subsegments.
-  elesize = (8 + b->useshelles) * sizeof(tetrahedron);
+  elesize = (8 + b->useshelles ? 2 : 0) * sizeof(tetrahedron);
   // The index within each element at which its attributes are found, where
   //   the index is measured in REALs. 
   elemattribindex = (elesize + sizeof(REAL) - 1) / sizeof(REAL);
@@ -568,6 +568,15 @@ void tetgenmesh::initializepools()
     subfacepool = new memorypool(shsize, SUBPERBLOCK, POINTER, 8);
     // Initialize the pool of subsegments.
     subsegpool = new memorypool(shsize, SUBPERBLOCK, POINTER, 8);
+
+    // Initialize the pool for tet-subseg connections.
+    tet2segpool = new memorypool(6*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
+    // Initialize the pool for tet-subface connections.
+    tet2subpool = new memorypool(4*sizeof(shellface), SUBPERBLOCK, POINTER, 0);
+
+    // Initialize arraypools for segment & facet recovery.
+    subsegstack = new arraypool(sizeof(face), 10);
+    subfacstack = new arraypool(sizeof(face), 10);
   }
 
   // Initialize the pool for flips.
@@ -596,6 +605,9 @@ void tetgenmesh::tetrahedrondealloc(tetrahedron *dyingtet)
     // Dealloc the space to subfaces/subsegments.
     if (dyingtet[8] != NULL) {
       tet2segpool->dealloc((shellface *) dyingtet[8]);
+    }
+    if (dyingtet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) dyingtet[9]);
     }
   }
 
@@ -748,6 +760,7 @@ void tetgenmesh::maketetrahedron(triface *newtet)
   }
   if (b->useshelles) {
     newtet->tet[8] = (tetrahedron) NULL;
+    newtet->tet[9] = (tetrahedron) NULL;
   }
   /*for (i = 0; i < in->numberoftetrahedronattributes; i++) {
     elemattribute(newtet->tet, i) = 0.0;

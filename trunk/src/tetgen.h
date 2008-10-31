@@ -1264,8 +1264,8 @@ point farsdest(face& s) {
 //   abutting subface (or tet).
 
 void tspivot(triface& t, face& s) {
-  if ((t).tet[8] != NULL) {
-    sdecode(((shellface *) (t).tet[8])[(t).loc], s);
+  if ((t).tet[9] != NULL) {
+    sdecode(((shellface *) (t).tet[9])[(t).loc], s);
   } else {
     (s).sh = NULL;
   }
@@ -1274,7 +1274,20 @@ void tspivot(triface& t, face& s) {
 #define stpivot(s, t) decode((tetrahedron) (s).sh[9], t)
 
 // tsbond() -- connect a tet and subface.
- 
+
+void tsbond(triface& t, face& s) {
+  if ((t).tet[9] == NULL) {
+    // Allocate space for this tet.
+    (t).tet[9] = (tetrahedron) tet2subpool->alloc();
+    // NULL all fields in this space.
+    for (int i = 0; i < 4; i++) {
+      ((shellface *) (t).tet[9])[i] = NULL;
+    }
+  }
+  // Bond t <==> s.
+  //((shellface *) (t).tet[9])[locver2edge[(t).loc][(t).ver]] = sencode((s));
+}
+
 // tsspivot1() -- given a tet's edge t, return a subsegment s at this edge.
 //   t and s is bonded through tssbond1(). if s.sh == NULL, the edge is
 //   not a subsegment.
@@ -1352,8 +1365,8 @@ tetgenbehavior *b;
 
 // Pools of tetrahedra, shellfaces, points, etc.
 memorypool *tetrahedronpool;
-memorypool *subfacepool, *subsegpool;
-memorypool *tet2segpool;
+memorypool *subsegpool, *subfacepool;
+memorypool *tet2segpool, *tet2subpool;
 memorypool *pointpool;
 memorypool *flippool;
 
@@ -1368,7 +1381,7 @@ badface *futureflip;
 arraypool *cavetetlist, *cavebdrylist;
 
 // A stack used by the segment recovery algorithm.
-arraypool *subsegstack;
+arraypool *subsegstack, *subfacstack;
 
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
@@ -1597,13 +1610,14 @@ void initialize()
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
   tetrahedronpool = (memorypool *) NULL;
-  subfacepool = subsegpool = tet2segpool = (memorypool *) NULL;
+  subfacepool = subsegpool = (memorypool *) NULL;
+  tet2segpool = tet2subpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
   flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = (arraypool *) NULL;
-  subsegstack = (arraypool *) NULL;
+  subsegstack = subfacstack = (arraypool *) NULL;
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
   elemattribindex = volumeboundindex = highorderindex = 0;
@@ -1632,25 +1646,23 @@ void deinitialize()
 {
   in = (tetgenio *) NULL;
   b = (tetgenbehavior *) NULL;
-  if (tetrahedronpool != (memorypool *) NULL) {
-    delete tetrahedronpool;
-  }
-  if (subfacepool != (memorypool *) NULL) {
-    delete subfacepool;
-    delete subsegpool;
-  }
   if (pointpool != (memorypool *) NULL) {
     delete pointpool;
-  }
-  if (flippool != (memorypool *) NULL) {
-    delete flippool;
-  }
-  if (dummypoint != (point) NULL) {
     delete [] dummypoint;
   }
-  if (cavetetlist != (arraypool *) NULL) {
+  if (tetrahedronpool != (memorypool *) NULL) {
+    delete tetrahedronpool;
     delete cavetetlist;
     delete cavebdrylist;
+    delete flippool;
+  }
+  if (b->useshelles) {
+    delete subfacepool;
+    delete subsegpool;
+    delete tet2segpool;
+    delete tet2subpool;
+    delete subsegstack;
+    delete subfacstack;
   }
   futureflip = (badface *) NULL;
 }
