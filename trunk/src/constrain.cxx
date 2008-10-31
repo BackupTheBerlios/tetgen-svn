@@ -768,7 +768,7 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::markacutevertices(int* idx2seglist, face* segperverlist)
+void tetgenmesh::markacutevertices()
 {
   point pa, pb, pc;
   REAL anglimit, ang;
@@ -776,9 +776,15 @@ void tetgenmesh::markacutevertices(int* idx2seglist, face* segperverlist)
   int acutecount;
   int idx, i, j;
 
+  face* segperverlist;
+  int* idx2seglist;
+
   if (b->verbose) {
     printf("  Marking acute vertices.\n");
   }
+
+  // Construct a map from points to segments.
+  makepoint2submap(subsegpool, idx2seglist, segperverlist);
 
   anglimit = PI / 3.0;  // 60 degree.
   acutecount = 0;
@@ -814,6 +820,9 @@ void tetgenmesh::markacutevertices(int* idx2seglist, face* segperverlist)
   if (b->verbose) {
     printf("  %d acute vertices.\n", acutecount);
   }
+
+  delete [] idx2seglist;
+  delete [] segperverlist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -831,9 +840,6 @@ void tetgenmesh::delaunizesegments()
   REAL bakeps;
   int s, i;
 
-  face *segperverlist;
-  int *idx2seglist;
-
   shellface sptr;
 
   if (!b->quiet) {
@@ -843,11 +849,8 @@ void tetgenmesh::delaunizesegments()
   // Construct a map from point to tets for speeding point location.
   makepoint2tetmap();
 
-  // Construct a map from points to segments.
-  makepoint2submap(subsegpool, idx2seglist, segperverlist);
-
   // Mark acutes vertices.
-  markacutevertices(idx2seglist, segperverlist);
+  markacutevertices();
 
   // Put all segments into the list.
   if (b->order == 4) {  // '-o4' option (for debug)
@@ -874,9 +877,6 @@ void tetgenmesh::delaunizesegments()
       *psseg = sseg;
     }
   }
-
-  delete [] idx2seglist;
-  delete [] segperverlist;
 
   // Segments will be introduced.
   checksubsegs = 1;

@@ -1560,7 +1560,7 @@ void meshsurface();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
-void markacutevertices(int* idx2seglist, face* segperverlist);
+void markacutevertices();
 void delaunizesegments();
 
 ///////////////////////////////////////////////////////////////////////////////
