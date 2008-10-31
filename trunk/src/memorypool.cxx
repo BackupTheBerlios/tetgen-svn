@@ -513,7 +513,7 @@ void tetgenmesh::initializepools()
   // The number of bytes occupied by a tetrahedron.  There are 4 pointers
   //   to other tetrahedra, 4 pointers to corners, and possibly 1 pointers
   //   to an array of subfaces/subsegments.
-  elesize = (8 + b->useshelles ? 2 : 0) * sizeof(tetrahedron);
+  elesize = (8 + (b->useshelles ? 2 : 0)) * sizeof(tetrahedron);
   // The index within each element at which its attributes are found, where
   //   the index is measured in REALs. 
   elemattribindex = (elesize + sizeof(REAL) - 1) / sizeof(REAL);
@@ -755,7 +755,7 @@ void tetgenmesh::maketetrahedron(triface *newtet)
   int i;
 
   newtet->tet = (tetrahedron *) tetrahedronpool->alloc();
-  for (i = 0; i < 4; i++) {
+  for (i = 0; i < 8; i++) {
     newtet->tet[i] = (tetrahedron) NULL;
   }
   if (b->useshelles) {

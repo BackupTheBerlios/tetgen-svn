@@ -1553,7 +1553,7 @@ void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// Segment recovery routines.                                                //
+// Boundary recovery functions.                                              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1562,6 +1562,9 @@ enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void markacutevertices();
 void delaunizesegments();
+
+enum intersection scoutsubface(face* ssub, triface* searchtet);
+void constrainedfacets();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1656,7 +1659,7 @@ void deinitialize()
     delete cavebdrylist;
     delete flippool;
   }
-  if (b->useshelles) {
+  if (subfacepool != (memorypool *) NULL) {
     delete subfacepool;
     delete subsegpool;
     delete tet2segpool;

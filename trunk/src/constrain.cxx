@@ -957,4 +957,57 @@ void tetgenmesh::delaunizesegments()
   b->epsilon = bakeps;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// scoutsubface()    Look for a given subface in the tetrahedralization.     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+/*
+enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
+  triface* searchtet)
+{
+  point pa, pb, pc;
+  bool edgeflag;
+  int shver;
+
+  // Is 'searchtet' a valid handle?
+  if (searchtet->tet == NULL) {
+    edgeflag = false;
+    // Search a tet whose origin is one of the conrners of 'ssub'.
+    for (shver = 0; shver < 3 && !edgeflag; shver++) {
+      pa = (point) ssub->sh[shver + 3];
+      decode(point2tet(pa), *searchtet);
+      if ((searchtet->tet != NULL) && (searchtet->tet[4] != NULL)) {
+        // Check if this tet contains pa.
+        for (i = 4; i < 8 && !edgeflag; i++) {
+          if ((point) searchtet->tet[i] == pa) {
+            // Found. Set pa as its origin.
+            switch (i) {
+              case 4: searchtet->loc = 0; searchtet->ver = 0; break;
+              case 5: searchtet->loc = 0; searchtet->ver = 2; break;
+              case 6: searchtet->loc = 0; searchtet->ver = 4; break;
+              case 7: searchtet->loc = 1; searchtet->ver = 2; break;
+            }
+            ssub->shver = (shver << 1);
+            edgeflag = true;
+          }
+        }
+      }
+    }
+    if (!edgeflag) {
+      // Locate pa in tetrahedralization.
+      pa = sorg(*ssub);
+      randomsample(pa, searchtet);
+      loc = locate(pa, searchtet);
+      assert(loc == ONVERTEX);  // SELF_CHECK
+      force_ptloc_count++;
+    }
+  } else {
+    pa = sorg(*ssub);
+    assert(org(*searchtet) == pa); // SELF_CHECK
+  }
+  pb = sdest(*ssub);
+}
+*/
+
 #endif // #ifndef constrainCXX
