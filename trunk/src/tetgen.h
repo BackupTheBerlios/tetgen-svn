@@ -557,7 +557,8 @@ enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 
 // Labels that signify the result of intersection tests.
 
-enum intersection {DISJOINT, COLLINEAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE};
+enum intersection {DISJOINT, COLLINEAR, COPLANAR, ACROSSVERT, ACROSSEDGE,
+  ACROSSFACE, ACROSSTET};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1285,7 +1286,8 @@ void tsbond(triface& t, face& s) {
     }
   }
   // Bond t <==> s.
-  //((shellface *) (t).tet[9])[locver2edge[(t).loc][(t).ver]] = sencode((s));
+  ((shellface *) (t).tet[9])[(t).loc] = sencode((s));
+  (s).sh[9] = (shellface) encode(t);
 }
 
 // tsspivot1() -- given a tet's edge t, return a subsegment s at this edge.
@@ -1563,7 +1565,7 @@ void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void markacutevertices();
 void delaunizesegments();
 
-enum intersection scoutsubface(face* ssub, triface* searchtet);
+enum intersection scoutsubface(face* ssub, triface* searchtet, point* refpt);
 void constrainedfacets();
 
 ///////////////////////////////////////////////////////////////////////////////

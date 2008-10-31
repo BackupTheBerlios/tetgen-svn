@@ -962,52 +962,86 @@ void tetgenmesh::delaunizesegments()
 // scoutsubface()    Look for a given subface in the tetrahedralization.     //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
-/*
-enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
-  triface* searchtet)
-{
-  point pa, pb, pc;
-  bool edgeflag;
-  int shver;
 
-  // Is 'searchtet' a valid handle?
-  if (searchtet->tet == NULL) {
-    edgeflag = false;
-    // Search a tet whose origin is one of the conrners of 'ssub'.
-    for (shver = 0; shver < 3 && !edgeflag; shver++) {
-      pa = (point) ssub->sh[shver + 3];
-      decode(point2tet(pa), *searchtet);
-      if ((searchtet->tet != NULL) && (searchtet->tet[4] != NULL)) {
-        // Check if this tet contains pa.
-        for (i = 4; i < 8 && !edgeflag; i++) {
-          if ((point) searchtet->tet[i] == pa) {
-            // Found. Set pa as its origin.
-            switch (i) {
-              case 4: searchtet->loc = 0; searchtet->ver = 0; break;
-              case 5: searchtet->loc = 0; searchtet->ver = 2; break;
-              case 6: searchtet->loc = 0; searchtet->ver = 4; break;
-              case 7: searchtet->loc = 1; searchtet->ver = 2; break;
-            }
-            ssub->shver = (shver << 1);
-            edgeflag = true;
-          }
-        }
+enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
+  triface* searchtet, point* refpt)
+{
+  triface spintet;
+  face checksh;
+  point pa, pb, pc, pd;
+  enum intersection dir;
+  int i;
+
+  tetrahedron ptr;
+  int *iptr, tver;
+
+  // Search an edge of 'ssub' in tetrahedralization.
+  for (i = 0; i < 3; i++) {
+    pa = (point) ssub->sh[3 + i];
+    pb = (point) ssub->sh[3 + (i + 1) % 3];
+    
+    // Get a tet whose origin is pa.
+    decode(point2tet(pa), *searchtet);
+    assert(searchtet->tet != NULL); // SELF_CHECK
+    if ((point) searchtet->tet[4] == pa) {
+      searchtet->loc = 0; searchtet->ver = 0;
+    } else if ((point) searchtet->tet[5] == pa) {
+      searchtet->loc = 0; searchtet->ver = 2;
+    } else if ((point) searchtet->tet[6] == pa) {
+      searchtet->loc = 0; searchtet->ver = 4;
+    } else {
+      assert((point) searchtet->tet[7] == pa); // SELF_CHECK
+      searchtet->loc = 1; searchtet->ver = 2;
+    }
+
+    // Search the edge from pa->pb.
+    dir = finddirection(searchtet, pb);
+    if (dir == COLLINEAR) {
+      pd = dest(*searchtet); 
+      if (pd == pb) {
+        // Found the edge. Break the loop.
+        break;
+      } else {
+        // A vertex lies on the search edge. Return it.
+        *refpt = pd;
+        return ACROSSVERT;
       }
     }
-    if (!edgeflag) {
-      // Locate pa in tetrahedralization.
-      pa = sorg(*ssub);
-      randomsample(pa, searchtet);
-      loc = locate(pa, searchtet);
-      assert(loc == ONVERTEX);  // SELF_CHECK
-      force_ptloc_count++;
-    }
-  } else {
-    pa = sorg(*ssub);
-    assert(org(*searchtet) == pa); // SELF_CHECK
   }
-  pb = sdest(*ssub);
+
+  if (i == 3) {
+    // None of the three edges exists.
+    return dir;  // ACROSSEDGE or ACROSSFACE.
+  }
+
+  ssub->shver = (i << 1);
+  pc = sapex(*ssub);
+
+  if (b->verbose > 1) {
+    printf("    Scout subface (%d, %d, %d).\n", pointmark(pa), pointmark(pb),
+      pointmark(pc));
+  }
+
+  // Searchtet holds edge pa->pb. Search a face with apex pc.
+  spintet = *searchtet;
+  do {
+    fnextself(spintet);
+    pd = apex(spintet);
+    if (pd == pc) {
+      // Found! Insert the subface.
+      tspivot(spintet, checksh);
+      assert(checksh.sh == NULL); // SELF_CHECK
+      tsbond(spintet, *ssub);
+      symedgeself(spintet);
+      tspivot(spintet, checksh);
+      assert(checksh.sh == NULL); // SELF_CHECK
+      tsbond(spintet, *ssub);
+      return COPLANAR;
+    }
+  } while (pd != apex(*searchtet));
+
+  // Not found.
+  return ACROSSTET;
 }
-*/
 
 #endif // #ifndef constrainCXX
