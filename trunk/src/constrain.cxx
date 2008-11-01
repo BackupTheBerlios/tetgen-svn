@@ -30,7 +30,6 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   enum {HCOPLANE, RCOPLANE, LCOPLANE, NCOPLANE} cop;
   REAL hori, rori, lori;
   REAL dmin, dist;
-  int i;
 
   tetrahedron ptr;
   int *iptr, tver;
@@ -42,19 +41,16 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
     searchtet->loc = 0;
     symself(*searchtet);
     // Reset the origin to be pa.
-    for (i = 4; i < 8; i++) {
-      if ((point) searchtet->tet[i] == pa) {
-         // Found. Set pa as its origin.
-         switch (i) {
-           case 4: searchtet->loc = 0; searchtet->ver = 0; break;
-           case 5: searchtet->loc = 0; searchtet->ver = 2; break;
-           case 6: searchtet->loc = 0; searchtet->ver = 4; break;
-           case 7: searchtet->loc = 1; searchtet->ver = 2; break;
-         }
-         break;
-      }
+    if ((point) searchtet->tet[4] == pa) {
+      searchtet->loc = 0; searchtet->ver = 0;
+    } else if ((point) searchtet->tet[5] == pa) {
+      searchtet->loc = 0; searchtet->ver = 2;
+    } else if ((point) searchtet->tet[6] == pa) {
+      searchtet->loc = 0; searchtet->ver = 4;
+    } else {
+      assert((point) searchtet->tet[7] == pa); // SELF_CHECK
+      searchtet->loc = 1; searchtet->ver = 2;
     }
-    assert(i < 8); // SELF_CHECK   
   }
   if (searchtet->ver & 01) {
     // Switch to the 0th edge ring.
@@ -968,8 +964,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
 {
   triface spintet;
   face checksh;
-  point pa, pb, pc, pd;
+  point pa, pb, pc, pd, pe;
   enum intersection dir;
+  REAL ori;
   int i;
 
   tetrahedron ptr;
@@ -1024,7 +1021,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
 
   // Searchtet holds edge pa->pb. Search a face with apex pc.
   spintet = *searchtet;
-  do {
+  while (1) {
     fnextself(spintet);
     pd = apex(spintet);
     if (pd == pc) {
@@ -1038,9 +1035,41 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
       tsbond(spintet, *ssub);
       return COPLANAR;
     }
-  } while (pd != apex(*searchtet));
+    if (pd == apex(*searchtet)) break;
+  }
 
-  // Not found.
+  // Search an edge crossing the facet containing abc.
+  if (searchtet->ver & 01) {
+    // Adjust to 0th edge ring.
+    esymself(*searchtet);
+    sesymself(*ssub);
+    pd = pa; pa = pb; pb = pd;
+  }
+
+  // Get a face containing ab and its apex lies below abc.
+  spintet = *searchtet;
+  while (1) {
+    pd = apex(spintet);
+    ori = orient3d(pa, pb, pc, pd);
+    if (ori > 0) break;
+    fnextself(spintet);
+    assert(pd != apex(*searchtet)); // SELF_CHECK
+  }
+  // Search a tet whose apex->oppo crosses the facet containig abc.
+  while (1) {
+    pe = oppo(spintet);
+    ori = orient3d(pa, pb, pc, pe);
+    if (ori <= 0) break;  // stop at pd->pe.    
+    fnextself(spintet);
+  }
+
+  // Return a crossing tet.
+  pd = apex(spintet);
+  if (b->verbose > 1) {
+    printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
+      pointmark(pb), pointmark(pd), pointmark(pe));
+  }
+  *searchtet = spintet;
   return ACROSSTET;
 }
 
