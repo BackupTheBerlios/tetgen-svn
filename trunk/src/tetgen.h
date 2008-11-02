@@ -1565,7 +1565,8 @@ void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void markacutevertices();
 void delaunizesegments();
 
-enum intersection scoutsubface(face* ssub, triface* searchtet, point* refpt);
+enum intersection scoutsubface(face* ssub, triface* searchtet);
+enum intersection scoutcrosstets(face* ssub, triface* crosstet, arraypool*);
 void constrainedfacets();
 
 ///////////////////////////////////////////////////////////////////////////////

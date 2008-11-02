@@ -353,18 +353,23 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// scoutsegment()    Look for a given segment in the tetrahedralization.     //
+// scoutsegment()    Look for a given segment in the tetrahedralization T.   //
 //                                                                           //
 // Search an edge in the tetrahedralization that matches the given segmment. //
-// Return TRUE if such edge exists, and the segment is attached to tets con- //
-// taining it. Otherwise return FALSE.                                       //
+// If such an edge is found, the segment is 'locked' at the edge.            //
 //                                                                           //
 // If 'searchtet' != NULL, it's origin must be the origin of 'sseg'.  It is  //
 // used as the starting tet for searching the edge.                          //
 //                                                                           //
-// If the segment does not exist (return FALSE), 'refpt' returns a reference //
-// point for the segment. 'searchtet' returns a tet containing the 'refpt'.  //
-// It is used for searching the splitting point of the segment.              //
+// The returned value indicates one of the following cases:                  //
+//   - COLLINEAR, the segment exists and is inserted in T;                   //
+//   - ACROSSVERT, a vertex ('refpt') lies on the segment;                   //
+//   - ACROSSEDGE, the segment is missing;                                   //
+//   - ACROSSFACE, the segment is missing;                                   //
+//                                                                           //
+// If the returned value is ACROSSEDGE or ACROSSFACE, i.e., the segment is   //
+// missing, 'refpt' returns the reference point for splitting thus segment,  //
+// 'searchtet' returns a tet containing the 'refpt'.                         //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -955,12 +960,30 @@ void tetgenmesh::delaunizesegments()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// scoutsubface()    Look for a given subface in the tetrahedralization.     //
+// scoutsubface()    Look for a given subface in the tetrahedralization T.   //
+//                                                                           //
+// 'ssub' is the subface, denoted as abc. If abc exists in T, it is 'locked' //
+// at the place where the two tets sharing at it.                            //
+//                                                                           //
+// The returned value indicates onre of the following cases:                 //
+//   - COPLANAR, abc exists and is inserted;                                 //
+//   - ACROSSVERT, a vertex (the origin of 'searchtet') lies on ab;          //
+//   - ACROSSEDGE, an edge (in 'searchtet') intersects ab;                   //
+//   - ACROSSFACE, a face (in 'searchtet') intersects ab;                    //
+//   - ACROSSTET, a tet (in 'searchtet') crosses the facet containg abc.     //
+//                                                                           //
+// If the returned value is ACROSSEDGE or ACROSSFACE, it means none of the   //
+// three edges of abc exists in T.                                           //
+//                                                                           //
+// If the retunred value is ACROSSTET, let 'searchtet' be abde. The edge de  //
+// intersects the facet containing abc. The vertex d lies exactly below the  //
+// facet, while the vertex e may lie exactly on the facet, i.e., a, b, c,    //
+// and e are coplanar.                                                       //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
-  triface* searchtet, point* refpt)
+  triface* searchtet)
 {
   triface spintet;
   face checksh;
@@ -1000,7 +1023,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
         break;
       } else {
         // A vertex lies on the search edge. Return it.
-        *refpt = pd;
+        enextself(*searchtet);
         return ACROSSVERT;
       }
     }
@@ -1064,10 +1087,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
   }
 
   // Return a crossing tet.
-  pd = apex(spintet);
   if (b->verbose > 1) {
     printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
-      pointmark(pb), pointmark(pd), pointmark(pe));
+      pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
   }
   *searchtet = spintet;
   return ACROSSTET;
