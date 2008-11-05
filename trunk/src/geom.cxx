@@ -120,9 +120,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
 enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   point C, point P, point Q, point R, int *pos)
 {
-  REAL PT[3][3], PL[2][2];  // Permutation matrices.
-  REAL sA, sB, sC;
-  int zeros;
+  point A1, B1, C1, P1, Q1;  // The permuted points.
+  REAL PT[3][3], PL[2][2];  // The permutation matrices.
+  REAL sA, sB, sC, s4, s5, s6;
+  int zeros, ppos;
 
   // Test A's, B's, and C's orientations wrt plane PQR. 
   sA = orient3d(P, Q, R, A);
@@ -147,6 +148,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   SETMATRIX3(PT, 1, 0, 0, 0, 1, 0, 0, 0, 1);
   SETMATRIX2(PL, 1, 0, 0, 1);
   zeros = 0;  // Count the number of zero-signs.
+  ppos = 0;  // The unperterbed position of A.
 
   if (sA < 0) { // (-##)
     if (sB < 0) { // (--#)
@@ -269,6 +271,50 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
     }
   }
 
+  // Set the permuted points.
+  A1 = PT[0][0] * A + PT[0][1] * B + PT[0][2] * C;
+  B1 = PT[1][0] * A + PT[1][1] * B + PT[1][2] * C;
+  C1 = PT[2][0] * A + PT[2][1] * B + PT[2][2] * C;
+  P1 = PL[0][0] * P + PL[0][1] * Q;
+  Q1 = PL[1][0] * P + PL[1][1] * Q;
+  // Get the perturbed position of A (0, 1, 2).
+  ppos = (PT[1][0] != 0 ? 1 : ppos);
+  ppos = (PT[2][0] != 0 ? 2 : ppos);
+
+  if (zeros = 0) {
+    // L intersects ABC.  There are 7 cases (shown in Fig.).
+    s4 = orient3d(A1, C1, R, Q1);
+    s5 = orient3d(B1, C1, R, P1);
+    orient3dcount+=2;
+    if (b->epsilon) {
+      // Re-evaluate the sign with respect to the tolerance.
+      if ((s4 != 0) && iscoplanar(A1, C1, R, Q1, s4)) s4 = 0;
+      if ((s5 != 0) && iscoplanar(B1, C1, R, P1, s5)) s5 = 0;
+    }
+    if (s4 > 0) {
+      // Q1 lies below plane (A1, C1, R).
+      return DISJOINT;
+    }
+    if (s5 < 0) {
+      // P1 lies above plane (B1, C1, R).
+      return DISJOINT;
+    }
+    // P1->Q1 crosses (A1, B1, C1).
+    s6 = orient3d(A1, C1, R, P1);
+    orient3dcount++;
+    if (s6 > 0) {
+      // (C1, A1) intersects (P1, Q1).
+      *pos = ((2 + ppos) % 3);
+    } else {
+      // (B1, C1) intersects (P1, Q1).
+      *pos = ((1 + ppos) % 3);
+    }
+    return ACROSSEDGE;
+  }
+
+  if (zeros == 1) {
+  
+  }
 }
 
 /*
