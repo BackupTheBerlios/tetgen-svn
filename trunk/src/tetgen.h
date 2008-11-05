@@ -1466,6 +1466,15 @@ void makepoint2tetmap();
   (n)[1] = -((v1)[0] * (v2)[2] - (v2)[0] * (v1)[2]);\
   (n)[2] =   (v1)[0] * (v2)[1] - (v2)[0] * (v1)[1]
 
+#define SETMATRIX2(T, a00, a01, a10, a11) \
+  (T)[0][0] = (a00); (T)[0][1] = (a01);\
+  (T)[1][0] = (a10); (T)[1][1] = (a11)
+
+#define SETMATRIX3(T, a00, a01, a02, a10, a11, a12, a20, a21, a22) \
+  (T)[0][0] = (a00); (T)[0][1] = (a01); (T)[0][2] = (a02);\
+  (T)[1][0] = (a10); (T)[1][1] = (a11); (T)[1][2] = (a12);\
+  (T)[2][0] = (a20); (T)[2][1] = (a21); (T)[2][2] = (a22)
+
 bool lu_decmp(REAL lu[4][4], int n, int* ps, REAL* d, int N);
 void lu_solve(REAL lu[4][4], int n, int* ps, REAL* b, int N);
 
@@ -1489,6 +1498,7 @@ enum intersection tri_vert_inter(point,point,point,point,point,int*);
 enum intersection tri_edge_inter_cop(point,point,point,point,point,point,int*);
 enum intersection tri_edge_inter_tail(point,point,point,point,point,int*);
 enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
+enum intersection tri_tri_inter(point,point,point,point,point,point,point);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

@@ -967,7 +967,7 @@ void tetgenmesh::delaunizesegments()
 //                                                                           //
 // The returned value indicates onre of the following cases:                 //
 //   - COPLANAR, abc exists and is inserted;                                 //
-//   - ACROSSVERT, a vertex (the origin of 'searchtet') lies on ab;          //
+//   - ACROSSVERT, a vertex (the origin of 'searchtet') lies on the facet.   //
 //   - ACROSSEDGE, an edge (in 'searchtet') intersects ab;                   //
 //   - ACROSSFACE, a face (in 'searchtet') intersects ab;                    //
 //   - ACROSSTET, a tet (in 'searchtet') crosses the facet containg abc.     //
@@ -1086,11 +1086,22 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
     fnextself(spintet);
   }
 
+  if (ori == 0) {
+    if (pointtype(pe) == VOLVERTEX) {
+      // A vertex lies on the facet.
+      enext0fnext(spintet, *searchtet);
+      esymself(*searchtet);  // b->a.
+      enext2self(*searchtet);  // e->a.
+      return ACROSSVERT;
+    }
+  }
+
   // Return a crossing tet.
   if (b->verbose > 1) {
     printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
       pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
   }
+
   *searchtet = spintet;
   return ACROSSTET;
 }
