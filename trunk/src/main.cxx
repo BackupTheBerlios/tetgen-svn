@@ -1060,6 +1060,42 @@ void terminatetetgen(int x)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// test_tri_tri()    Triangle-triangle intersection tests.                   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void test_tri_tri(tetgenbehavior *b, tetgenio *in)
+{
+  tetgenmesh m;
+  tetgenmesh::face s1, s2;
+  tetgenmesh::point A, B, C, P, Q;
+  int pos;
+
+  m.b = b;
+  m.in = in;
+  exactinit();
+  m.initializepools();
+  m.transfernodes();
+  m.meshsurface();
+
+  m.subfacepool->traversalinit();
+  s1.sh = m.shellfacetraverse(m.subfacepool);
+  s2.sh = m.shellfacetraverse(m.subfacepool);
+
+  A = (tetgenmesh::point) s1.sh[3];
+  B = (tetgenmesh::point) s1.sh[4];
+  C = (tetgenmesh::point) s1.sh[5];
+
+  P = (tetgenmesh::point) s2.sh[3];
+  Q = (tetgenmesh::point) s2.sh[4];
+
+  b->epsilon = 0;
+
+  m.tri_edge_inter(A, B, C, P, Q, NULL, &pos);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // tetrahedralize()    The interface for users using TetGen library to       //
 //                     generate tetrahedral meshes with all features.        //
 //                                                                           //
@@ -1273,6 +1309,12 @@ void tetrahedralize(char *switches, tetgenio *in, tetgenio *out,
     if (!bgmin.load_tetmesh(b.bgmeshfilename)) {
       bgmin.numberoftetrahedra = 0l;
     }
+  }
+
+  // FOR DEBUG -S1 option.
+  if (b.steiner > 0) {
+    test_tri_tri(&b, &in);
+    terminatetetgen(0);
   }
 
   if (bgmin.numberoftetrahedra > 0l) {

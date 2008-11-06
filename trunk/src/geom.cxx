@@ -127,6 +127,24 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   int PT[3][3], PL[2][2];  // The permutation matrices.
   int zeros, bflag, ppos;
 
+  if (R == NULL) {
+    REAL n[3], len;
+    // Calculate a lift point, saved in dummypoint.
+    facenormal(A, B, C, n, 1);
+    len = sqrt(DOT(n, n));
+    n[0] /= len;
+    n[1] /= len;
+    n[2] /= len;
+    len = DIST(A, B);
+    len += DIST(B, C);
+    len += DIST(C, A);
+    len /= 3.0;
+    R = dummypoint;
+    R[0] = A[0] + len * n[0];
+    R[1] = A[1] + len * n[1];
+    R[2] = A[2] + len * n[2];
+  }
+
   // Test A's, B's, and C's orientations wrt plane PQR. 
   sA = orient3d(P, Q, R, A);
   sB = orient3d(P, Q, R, B);
