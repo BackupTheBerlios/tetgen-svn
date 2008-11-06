@@ -557,8 +557,8 @@ enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 
 // Labels that signify the result of intersection tests.
 
-enum intersection {DISJOINT, COLLINEAR, COPLANAR, ACROSSVERT, ACROSSEDGE,
-  ACROSSFACE, ACROSSTET};
+enum intersection {DISJOINT, SHAREVERT, SHAREEDGE, SHAREFACE, COLLINEAR, 
+  COPLANAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE, ACROSSTET};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1494,11 +1494,12 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 REAL incircle3d(point pa, point pb, point pc, point pd);
 bool iscoplanar(point k, point l, point m, point n, REAL ori);
 
-enum intersection tri_vert_inter(point,point,point,point,point,int*);
+enum intersection tri_vert_inter(point, point, point, point, point, int*);
 enum intersection tri_edge_inter_cop(point,point,point,point,point,point,int*);
-enum intersection tri_edge_inter_tail(point,point,point,point,point,int*);
+enum intersection tri_edge_inter_tail(point, point, point, point, point, int*);
 enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
-enum intersection tri_tri_inter(point,point,point,point,point,point,point);
+enum intersection tri_tri_inter(point, point, point, point, point, point,
+                                point, int*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
