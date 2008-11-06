@@ -122,9 +122,9 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   point C, point P, point Q, point R, int *pos)
 {
   point A1, B1, C1, P1, Q1;  // The permuted points.
-  REAL PT[3][3], PL[2][2];  // The permutation matrices.
   REAL sA, sB, sC;
   REAL s4, s5, s6, s7;
+  int PT[3][3], PL[2][2];  // The permutation matrices.
   int zeros, bflag, ppos;
 
   // Test A's, B's, and C's orientations wrt plane PQR. 
@@ -153,7 +153,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   bflag = 0;  // Default case.
   ppos = 0;  // The unperterbed position of A.
 
-  /*
   if (sA < 0) { // (-##)
     if (sB < 0) { // (--#)
       if (sC < 0) { // (---).
@@ -292,19 +291,20 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
       }
     }
   }
-  */
 
-  /*
-  // Set the permuted points.
-  A1 = (PT[0][0] * (long) A + PT[0][1] * (long) B + PT[0][2] * (long) C);
-  B1 = PT[1][0] * A + PT[1][1] * B + PT[1][2] * C;
-  C1 = PT[2][0] * A + PT[2][1] * B + PT[2][2] * C;
-  P1 = PL[0][0] * P + PL[0][1] * Q;
-  Q1 = PL[1][0] * P + PL[1][1] * Q;
+  // Get the permuted points.
+  A1 = (point) (PT[0][0] * (unsigned long) A + PT[0][1] * (unsigned long) B + 
+                PT[0][2] * (unsigned long) C);
+  B1 = (point) (PT[1][0] * (unsigned long) A + PT[1][1] * (unsigned long) B + 
+                PT[1][2] * (unsigned long) C);
+  C1 = (point) (PT[2][0] * (unsigned long) A + PT[2][1] * (unsigned long) B + 
+                PT[2][2] * (unsigned long) C);
+  P1 = (point) (PL[0][0] * (unsigned long) P + PL[0][1] * (unsigned long) Q);
+  Q1 = (point) (PL[1][0] * (unsigned long) P + PL[1][1] * (unsigned long) Q);
+
   // Get the perturbed position of A (0, 1, 2).
   ppos = (PT[1][0] != 0 ? 1 : ppos);
   ppos = (PT[2][0] != 0 ? 2 : ppos);
-  */
 
   if (zeros = 0) {
     // L intersects ABC. (see Fig.)
