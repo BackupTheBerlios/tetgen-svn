@@ -20,6 +20,24 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
 {
   REAL s3, s4, s5;
 
+  if (R == NULL) {
+    REAL n[3], len;
+    // Calculate a lift point, saved in dummypoint.
+    facenormal(A, B, C, n, 1);
+    len = sqrt(DOT(n, n));
+    n[0] /= len;
+    n[1] /= len;
+    n[2] /= len;
+    len = DIST(A, B);
+    len += DIST(B, C);
+    len += DIST(C, A);
+    len /= 3.0;
+    R = dummypoint;
+    R[0] = A[0] + len * n[0];
+    R[1] = A[1] + len * n[1];
+    R[2] = A[2] + len * n[2];
+  }
+
   // Test P's orientations wrt edges AB, BC, CA. 
   s3 = orient3d(A, B, R, P);
   s4 = orient3d(B, C, R, P);
@@ -324,7 +342,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   ppos = (PT[1][0] != 0 ? 1 : ppos);
   ppos = (PT[2][0] != 0 ? 2 : ppos);
 
-  if (zeros = 0) {
+  if (zeros == 0) {
     // L intersects ABC. (see Fig.)
     s4 = orient3d(A1, C1, R, Q1);
     s5 = orient3d(B1, C1, R, P1);
