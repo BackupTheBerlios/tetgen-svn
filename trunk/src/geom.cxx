@@ -52,9 +52,11 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-vert cop (%d %d %d)-(%d)-%d, s3=%g, s4=%g, s5=%g.\n",
+    printf("      Tri-vert cop (%d %d %d)-(%d)-(%d), (%c%c%c).\n",
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(R),
-      s3, s4, s5);
+      s3 > 0 ? '+' : (s3 < 0 ? '-' : '0'),
+      s4 > 0 ? '+' : (s4 < 0 ? '-' : '0'),
+      s5 > 0 ? '+' : (s5 < 0 ? '-' : '0'));
   }
   trivercopcount++;
 
@@ -177,8 +179,11 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge cop (%d %d %d)-(%d, %d)-%d.\n", pointmark(A),
+    printf("      Tri-edge cop (%d %d %d)-(%d, %d)-(%d),", pointmark(A),
       pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R));
+    printf(" (%c%c%c)\n", sA > 0 ? '+' : (sA < 0 ? '-' : '0'),
+      sB > 0 ? '+' : (sB < 0 ? '-' : '0'), 
+      sC > 0 ? '+' : (sC < 0 ? '-' : '0'));
   }
   triedgcopcount++;
 
@@ -501,9 +506,11 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge tail (%d %d %d)-(%d, %d), s3=%g, s4=%g, s5=%g.\n",
+    printf("      Tri-edge tail (%d %d %d)-(%d, %d), (%c%c%c).\n",
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
-      s3, s4, s5);
+      s3 > 0 ? '+' : (s3 < 0 ? '-' : '0'), 
+      s4 > 0 ? '+' : (s4 < 0 ? '-' : '0'),
+      s5 > 0 ? '+' : (s5 < 0 ? '-' : '0'));
   }
 
   // Use the signs to decide whether PQ intersects ABC (see Fig. tri_edge).
@@ -677,9 +684,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge test (%d %d %d)-(%d, %d), s1=%g, s2=%g.\n",
+    printf("      Tri-edge test (%d %d %d)-(%d, %d), (%c%c).\n",
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
-      s1, s2);
+      s1 > 0 ? '+' : (s1 < 0 ? '-' : '0'),
+      s2 > 0 ? '+' : (s2 < 0 ? '-' : '0'));
   }
   triedgcount++;
 
