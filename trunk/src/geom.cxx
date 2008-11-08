@@ -52,11 +52,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-vert cop (%d %d %d)-(%d)-(%d), (%c%c%c).\n",
-      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(R),
-      s3 > 0 ? '+' : (s3 < 0 ? '-' : '0'),
-      s4 > 0 ? '+' : (s4 < 0 ? '-' : '0'),
-      s5 > 0 ? '+' : (s5 < 0 ? '-' : '0'));
+    printf("      Tri-vert (%d %d %d)-(%d)-(%d), (%c%c%c).\n", pointmark(A), 
+      pointmark(B), pointmark(C), pointmark(P), pointmark(R),
+      s3>0 ? '+' : (s3<0 ? '-' : '0'), s4>0 ? '+' : (s4<0 ? '-' : '0'),
+      s5>0 ? '+' : (s5<0 ? '-' : '0'));
   }
   trivercopcount++;
 
@@ -179,11 +178,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge cop (%d %d %d)-(%d, %d)-(%d),", pointmark(A),
+    printf("      Tri-edge-cop (%d %d %d)-(%d, %d)-(%d),", pointmark(A),
       pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R));
     printf(" (%c%c%c)\n", sA > 0 ? '+' : (sA < 0 ? '-' : '0'),
-      sB > 0 ? '+' : (sB < 0 ? '-' : '0'), 
-      sC > 0 ? '+' : (sC < 0 ? '-' : '0'));
+      sB>0 ? '+' : (sB<0 ? '-' : '0'), sC>0 ? '+' : (sC<0 ? '-' : '0'));
   }
   triedgcopcount++;
 
@@ -506,11 +504,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge tail (%d %d %d)-(%d, %d), (%c%c%c).\n",
+    printf("      Tri-edge-tail (%d %d %d)-(%d, %d), (%c%c%c).\n",
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
-      s3 > 0 ? '+' : (s3 < 0 ? '-' : '0'), 
-      s4 > 0 ? '+' : (s4 < 0 ? '-' : '0'),
-      s5 > 0 ? '+' : (s5 < 0 ? '-' : '0'));
+      s3>0 ? '+' : (s3<0 ? '-' : '0'), s4>0 ? '+' : (s4<0 ? '-' : '0'),
+      s5>0 ? '+' : (s5<0 ? '-' : '0'));
   }
 
   // Use the signs to decide whether PQ intersects ABC (see Fig. tri_edge).
@@ -684,10 +681,9 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge test (%d %d %d)-(%d, %d), (%c%c).\n",
-      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
-      s1 > 0 ? '+' : (s1 < 0 ? '-' : '0'),
-      s2 > 0 ? '+' : (s2 < 0 ? '-' : '0'));
+    printf("      Tri-edge (%d %d %d)-(%d, %d), (%c%c).\n", pointmark(A),
+      pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
+      s1>0 ? '+' : (s1<0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'));
   }
   triedgcount++;
 
@@ -717,6 +713,392 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
       }
     }
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tri_tri_inter()    Triangle-triangle intersection test.                   //
+//                                                                           //
+// 'O' is point lies strictly above the plane (A, B, C), it may be NULL.     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
+  point C, point P, point Q, point R, point O, int *pos1, int *pos2)
+{
+  point A1, B1, C1, P1, Q1;  // The first permuted points.
+  point A2, B2, P2, Q2, R1;  // The second permuted points. 
+  REAL sA, sB, sC, sP, sQ, sR;
+  int PT[3][3], PL[2][2];  // The permutation matrices.
+  int zeros, bflag, ppos;
+  int zeros2, bflag2, ppos2;
+
+  // Test A's, B's, and C's orientations wrt plane PQR. 
+  sA = orient3d(P, Q, R, A);
+  sB = orient3d(P, Q, R, B);
+  sC = orient3d(P, Q, R, C);
+  orient3dcount+=3;
+
+  if (b->epsilon) {
+    // Re-evaluate the sign with respect to the tolerance.
+    if ((sA != 0) && iscoplanar(P, Q, R, A, sA)) sA = 0;
+    if ((sB != 0) && iscoplanar(P, Q, R, B, sB)) sB = 0;
+    if ((sC != 0) && iscoplanar(P, Q, R, C, sC)) sC = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-tri (%d %d %d)-(%d %d %d), (%c%c%c)\n", pointmark(A),
+      pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R),
+      sA>0 ? '+' : (sA<0 ? '-' : '0'), sB>0 ? '+' : (sB<0 ? '-' : '0'), 
+      sC>0 ? '+' : (sC<0 ? '-' : '0'));
+  }
+  // tritricount++;
+
+  // Initialize the permutation matrices to be indentity matrices.
+  SETMATRIX3(PT, 1, 0, 0, 0, 1, 0, 0, 0, 1);
+  SETMATRIX2(PL, 1, 0, 0, 1);
+  zeros = 0;  // Count the number of zero-signs.
+  bflag = 0;  // Default case.
+  ppos = 0;  // The unperterbed position of A.
+
+  if (sA < 0) { // (-##)
+    if (sB < 0) { // (--#)
+      if (sC < 0) { // (---).
+        return DISJOINT; 
+      } else {
+        if (sC > 0) { // (--+).
+          // All points are in the right positions.
+        } else { // (--0).
+          zeros = 1;
+        }
+      }
+    } else { 
+      if (sB > 0) { // (-+#)
+        if (sC < 0) { // (-+-).
+          // Shift A, B, C => C, A, B.
+          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST 
+        } else {
+          if (sC > 0) { // (-++).
+            // Shift A, B, C => B, C, A
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            // Switch P and Q.
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          } else { // (-+0).
+            zeros = 1; 
+            bflag = 1;
+          }
+        }
+      } else { // (-0#)
+        if (sC < 0) { // (-0-).
+          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+          zeros = 1; 
+        } else {
+          if (sC > 0) { // (-0+).
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros = 1;
+            bflag = 1; 
+          } else { // (-00).
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros = 2; 
+          }
+        }
+      }
+    }
+  } else {
+    if (sA > 0) {  // (+##)
+      if (sB < 0) { // (+-#)
+        if (sC < 0) { // (+--).
+          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+        } else {
+          if (sC > 0) { // (+-+).
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          } else { // (+-0).
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros = 1;
+            bflag = 1; 
+          }
+        }
+      } else { 
+        if (sB > 0) { // (++#)
+          if (sC < 0) { // (++-).
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL 
+          } else {
+            if (sC > 0) { // (+++).
+              return DISJOINT; 
+            } else { // (++0).
+              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              zeros = 1; 
+            }
+          }
+        } else { // (+0#)
+          if (sC < 0) { // (+0-).
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            zeros = 1; 
+            bflag = 1;
+          } else {
+            if (sC > 0) { // (+0+).
+              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL 
+              zeros = 1; 
+            } else { // (+00).
+              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+              zeros = 2; 
+            }
+          }
+        }
+      }
+    } else {  // (0##)
+      if (sB < 0) { // (0-#)
+        if (sC < 0) { // (0--).
+          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+          zeros = 1; 
+        } else {
+          if (sC > 0) { // (0-+).
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            zeros = 1;
+            bflag = 1;
+          } else { // (0-0).
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros = 2; 
+          }
+        }
+      } else { 
+        if (sB > 0) { // (0+#)
+          if (sC < 0) { // (0+-).
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros = 1;
+            bflag = 1;
+          } else {
+            if (sC > 0) { // (0++).
+              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              zeros = 1;
+            } else { // (0+0).
+              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              zeros = 2; 
+            }
+          }
+        } else { // (00#)
+          if (sC < 0) { // (00-).
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros = 2; 
+          } else {
+            if (sC > 0) { // (00+).
+              zeros = 2; 
+            } else { // (000)
+              // ABC and PQR are coplanar.
+              zeros = 3;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (zeros == 3) {
+    // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
+  }
+
+  // Get the permuted points.
+  A1 = (point) (PT[0][0] * (unsigned long) A + PT[0][1] * (unsigned long) B + 
+                PT[0][2] * (unsigned long) C);
+  B1 = (point) (PT[1][0] * (unsigned long) A + PT[1][1] * (unsigned long) B + 
+                PT[1][2] * (unsigned long) C);
+  C1 = (point) (PT[2][0] * (unsigned long) A + PT[2][1] * (unsigned long) B + 
+                PT[2][2] * (unsigned long) C);
+  P1 = (point) (PL[0][0] * (unsigned long) P + PL[0][1] * (unsigned long) Q);
+  Q1 = (point) (PL[1][0] * (unsigned long) P + PL[1][1] * (unsigned long) Q);
+
+  // Get the perturbed position of A (0, 1, 2).
+  ppos = (PT[1][0] != 0 ? 1 : ppos);
+  ppos = (PT[2][0] != 0 ? 2 : ppos);
+
+  // Test P1's, Q1's, and R's orientation wrt the plane of ABC.
+  sP = orient3d(A1, B1, C1, P1);
+  sQ = orient3d(A1, B1, C1, Q1);
+  sR = orient3d(A1, B1, C1, R);
+  orient3dcount+=3;
+
+  if (b->epsilon) {
+    // Re-evaluate the sign with respect to the tolerance.
+    if ((sP != 0) && iscoplanar(A1, B1, C1, P1, sP)) sP = 0;
+    if ((sQ != 0) && iscoplanar(A1, B1, C1, Q1, sQ)) sQ = 0;
+    if ((sR != 0) && iscoplanar(A1, B1, C1, R, sR)) sR = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-tri (%d %d %d)-(%d %d %d), (%c%c%c)\n", pointmark(A1),
+      pointmark(B1), pointmark(C1), pointmark(P1), pointmark(Q1), pointmark(R),
+      sP>0 ? '+' : (sP<0 ? '-' : '0'), sQ>0 ? '+' : (sQ<0 ? '-' : '0'), 
+      sR>0 ? '+' : (sR<0 ? '-' : '0'));
+  }
+
+  // Initialize the permutation matrix (for P1, Q1, R).
+  SETMATRIX3(PT, 1, 0, 0, 0, 1, 0, 0, 0, 1);
+  SETMATRIX2(PL, 1, 0, 0, 1);
+  zeros2 = 0;  // Count the number of zero-signs.
+  bflag2 = 0;  // Default case.
+  ppos2 = 0;  // The unperterbed position of A.
+
+  if (sP < 0) {
+    if (sQ < 0) {
+      if (sR < 0) {  // (---)
+        return DISJOINT;
+      } else {
+        if (sR > 0) { // (--+)
+          // P1->Q1 is opposite to A1->B1. Swicth A1 and B1.
+          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+        } else {  // (--0)
+          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          zeros2 = 1;
+          bflag2 = 0;
+        }
+      }
+    } else {
+      if (sQ > 0) {
+        if (sR < 0) {  // (-+-)
+          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+        } else {
+          if (sR > 0) { // (-++)
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+          } else { // (-+0)
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros2 = 1;
+            bflag2 = 1;
+          }
+        }
+      } else {
+        if (sR < 0) {  // (-0-)
+          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          zeros2 = 1;
+          bflag2 = 0;
+        } else {
+          if (sR > 0) {  // (-0+)
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros2 = 1;
+            bflag2 = 1;
+          } else {  // (-00)
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            zeros2 = 2;
+          }
+        }
+      }
+    }
+  } else {
+    if (sP > 0) {
+      if (sQ < 0) {
+        if (sR < 0) {  // (+--)
+          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+        } else {
+          if (sR > 0) {  // (+-+)
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+          } else {  // (+-0)
+            zeros2 = 1;
+            bflag2 = 1;
+          }
+        }
+      } else {
+        if (sQ > 0) {
+          if (sR < 0) {  // (++-)
+            // Right config.
+          } else {
+            if (sR > 0) {  // (+++)
+              return DISJOINT;
+            } else {  // (++0)
+              zeros2 = 1;
+              bflag2 = 0;
+            }
+          }
+        } else { // sQ == 0
+          if (sR < 0) {  // (+0-)
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros2 = 1;
+            bflag2 = 1;
+          } else {
+            if (sR > 0) {  // (+0+)
+              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              zeros2 = 1;
+              bflag2 = 0;
+            } else {  // (+00)
+              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              zeros2 = 2;
+            }
+          }
+        }
+      }
+    } else { // sP == 0
+      if (sQ < 0) {
+        if (sR < 0) {  // (0--)
+          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          zeros2 = 1;
+          bflag2 = 0;
+        } else {
+          if (sR > 0) {  // (0-+)
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            zeros2 = 1;
+            bflag2 = 1;
+          } else {  // (0-0)
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            zeros2 = 2;
+          }
+        }
+      } else {
+        if (sQ > 0) {
+          if (sR < 0) {  // (0+-)
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            zeros2 = 1;
+            bflag2 = 1;
+          } else {
+            if (sR > 0) {  // (0++)
+              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+              zeros2 = 1;
+              bflag2 = 0;
+            } else {  // (0+0)
+              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              zeros2 = 2;
+            }
+          }
+        } else { // sQ == 0
+          if (sR < 0) {  // (00-)
+            zeros2 = 2;
+          } else {
+            if (sR > 0) {  // (00+)
+              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              zeros2 = 2;
+            } else {  // (000)
+              zeros2 = 3;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Get the permuted points.
+  P2 = (point) (PT[0][0] * (unsigned long) P1 + PT[0][1] * (unsigned long) Q1 
+              + PT[0][2] * (unsigned long) R);
+  Q2 = (point) (PT[1][0] * (unsigned long) P1 + PT[1][1] * (unsigned long) Q1 
+              + PT[1][2] * (unsigned long) R);
+  R1 = (point) (PT[2][0] * (unsigned long) P1 + PT[2][1] * (unsigned long) Q1 
+              + PT[2][2] * (unsigned long) R);
+  A2 = (point) (PL[0][0] * (unsigned long) A1 + PL[0][1] * (unsigned long) B1);
+  B2 = (point) (PL[1][0] * (unsigned long) A1 + PL[1][1] * (unsigned long) B1);
+
+  // Get the perturbed position of P (0, 1, 2).
+  ppos2 = (PT[1][0] != 0 ? 1 : ppos2);
+  ppos2 = (PT[2][0] != 0 ? 2 : ppos2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
