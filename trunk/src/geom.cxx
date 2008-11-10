@@ -116,21 +116,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
 // ABC and PQ are not degenerate.  We know that R lies above ABC, i.e., ABCR //
 // is a valid tetrahedron.                                                   //
 //                                                                           //
-// Let L be the line passing through P and Q, and it is also directed from   //
-//   P to Q. Denote the RIGHT SIDE of L to be the half-space containing all  //
-//   points above (P, Q, R), so the LEFT SIDE of L be the other half-space.  //
-//   If A, B, and C lie on the same side of L, they're disjoint. Otherwise,  //
-//   we will cyclicly perturbed A, B, C, P, and Q into the following cases:  //
-//                                                                           //
-// 1) None of A, B, and C lies on L.  A and B lie at the right side of L, C  //
-//    lies in the left side of L.                                            //
-//                                                                           //
-// 2) One of A, B, and C lies on L.  C lies on L, A lies at the right side   //
-//    of L. B lies at either right or left of L.                             //
-//                                                                           //
-// 3) Two of A, B, and C lies on L.  A and B lie on L, C lies at the left    //
-//    side of L.                                                             //
-//                                                                           //
 // If ABC and PQ intersect each other (the returned value is not DISJOINT),  //
 // 'pos' (ranges from 0 to 2) indicates the position of the first point or   //
 // edge of the triangle ABC which intersects PQ.                             //
@@ -215,6 +200,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
             // Switch P and Q.
             SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
           } else { // (-+0).
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
             zeros = 1; 
             bflag = 1;
           }
@@ -225,10 +211,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           zeros = 1; 
         } else {
           if (sC > 0) { // (-0+).
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
             SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
             zeros = 1;
-            bflag = 1; 
+            bflag = 1;
           } else { // (-00).
             SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
             SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
@@ -247,6 +233,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
             SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
             SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
           } else { // (+-0).
+            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
             SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
             zeros = 1;
             bflag = 1; 
@@ -266,7 +253,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           }
         } else { // (+0#)
           if (sC < 0) { // (+0-).
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
             zeros = 1; 
             bflag = 1;
           } else {
@@ -288,7 +275,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           zeros = 1; 
         } else {
           if (sC > 0) { // (0-+).
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
             zeros = 1;
             bflag = 1;
           } else { // (0-0).
@@ -300,7 +286,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
       } else { 
         if (sB > 0) { // (0+#)
           if (sC < 0) { // (0+-).
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
             SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
             zeros = 1;
             bflag = 1;
@@ -345,135 +330,203 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   ppos = (PT[1][0] != 0 ? 1 : ppos);
   ppos = (PT[2][0] != 0 ? 2 : ppos);
 
-  if (zeros == 0) {
-    // L intersects ABC. (see Fig.)
-    s4 = orient3d(A1, C1, R, Q1);
-    s5 = orient3d(B1, C1, R, P1);
-    orient3dcount+=2;
-    if (b->epsilon) {
-      // Re-evaluate the sign with respect to the tolerance.
-      if ((s4 != 0) && iscoplanar(A1, C1, R, Q1, s4)) s4 = 0;
-      if ((s5 != 0) && iscoplanar(B1, C1, R, P1, s5)) s5 = 0;
-    }
-    if (s4 > 0) {
-      // Q1 lies below plane (A1, C1, R).
-      return DISJOINT;
-    }
-    if (s5 < 0) {
-      // P1 lies above plane (B1, C1, R).
-      return DISJOINT;
-    }
-    // P1->Q1 crosses (A1, B1, C1). Find the first edge it corsses
-    s6 = orient3d(A1, C1, R, P1);
-    orient3dcount++;
-    if (s6 > 0) {
-      // (C1, A1) intersects (P1, Q1).
-      *pos = ((2 + ppos) % 3);
-    } else {
-      // (B1, C1) intersects (P1, Q1).
-      *pos = ((1 + ppos) % 3);
-    }
-    return ACROSSEDGE;
-  }
-
-  if (zeros == 1) {
-    if (bflag == 0) {
-      // Both A1 and B1 lie at the right side of L.
-      s4 = orient3d(A1, C1, R, Q1);
-      s5 = orient3d(B1, C1, R, P1);
-      orient3dcount+=2;
-      if (b->epsilon) {
-        // Re-evaluate the sign with respect to the tolerance.
-        if ((s4 != 0) && iscoplanar(A1, C1, R, Q1, s4)) s4 = 0;
-        if ((s5 != 0) && iscoplanar(B1, C1, R, P1, s5)) s5 = 0;
-      }
-      if (s4 > 0) { // Q1 lies below plane (A1, C1, R).
-        return DISJOINT;
-      }
-      if (s5 < 0) { // P1 lies above plane (B1, C1, R).
-        return DISJOINT;
-      }
-      // C1 is the intersecting point.
-      *pos = ((2 + ppos) % 3);
-      if (s4 == 0) { // Q1 is coincident with C1.
-        return SHAREVERT;
-      }
-      if (s5 == 0) { // P1 is coincident with C1.
-        return SHAREVERT;
-      }
-      // P1->Q1 passes C1.
-      return ACROSSVERT;
-    } else {
-      // L crosses edge (A1, B1).
-      s4 = orient3d(A1, C1, R, Q1);
-      s5 = orient3d(A1, B1, R, P1);
-      orient3dcount+=2;
-      if (b->epsilon) {
-        // Re-evaluate the sign with respect to the tolerance.
-        if ((s4 != 0) && iscoplanar(A1, C1, R, Q1, s4)) s4 = 0;
-        if ((s5 != 0) && iscoplanar(A1, B1, R, P1, s5)) s5 = 0;
-      }
-      if (s4 > 0) { // Q1 lies below plane (A1, C1, R).
-        return DISJOINT;
-      }
-      if (s5 < 0) { // P1 lies above plane (B1, C1, R).
-        return DISJOINT;
-      }
-      if (s4 == 0) { // Q1 is coincident with C1.
-        *pos = ((2 + ppos) % 3);
-        return SHAREVERT;
-      }
-      // s5 may be zero, it is the case when P1 lies on edge (A1, B1).
-      // (**) P1->Q1 may lie inside (A1, B1, C1). NOT check yet.
-      // P1->Q1 crosses A1->B1.
-      *pos = (ppos % 3);
-      return ACROSSEDGE;
-    }
-  }
-
-  // Both A1 and B1 lie on L. C1 lies at the left side of L.
-  assert(zeros == 2);  // SELF_CHECK
-
-  s4 = orient3d(A1, C1, R, Q1);
-  s5 = orient3d(B1, C1, R, P1);
+  // Test if the intervals [P1, Q1] and [i, j] overlap.
+  s4 = orient3d(A1, C1, R, Q1);  // i <-> Q
+  s5 = orient3d(B1, C1, R, P1);  // j <-> P
   orient3dcount+=2;
+  
   if (b->epsilon) {
     // Re-evaluate the sign with respect to the tolerance.
     if ((s4 != 0) && iscoplanar(A1, C1, R, Q1, s4)) s4 = 0;
     if ((s5 != 0) && iscoplanar(B1, C1, R, P1, s5)) s5 = 0;
   }
-  if (s4 > 0) { // Q1 lies below plane (A1, C1, R).
+
+  if (s4 > 0) {
     return DISJOINT;
   }
-  if (s5 < 0) { // P1 lies above plane (B1, C1, R).
+  if (s5 < 0) {
     return DISJOINT;
   }
-  if (s4 == 0) { // Q1 is coincident with A1.
-    *pos = (ppos % 3);
-    return SHAREVERT;
-  }
-  if (s5 == 0) { // P1 is coincident with B1.
-    *pos = ((1 + ppos) % 3);
-    return SHAREVERT;
-  }
-  // Check the case when two edges are coincident.
+
   s6 = orient3d(A1, C1, R, P1);
   s7 = orient3d(B1, C1, R, Q1);
-  orient3dcount+=2;
+  orient3dcount++;
+      
   if (b->epsilon) {
-    // Re-evaluate the sign with respect to the tolerance.
     if ((s6 != 0) && iscoplanar(A1, C1, R, P1, s6)) s6 = 0;
     if ((s7 != 0) && iscoplanar(B1, C1, R, Q1, s7)) s7 = 0;
   }
-  if (s6 == 0) {
-    if (s7 == 0) { // P1->Q1 is coincident with A1->B1.
-      *pos = ppos;
-      return SHAREEDGE;
+
+  if (s4 < 0) {
+    if (s6 > 0) {
+      if (zeros == 0) {
+        // P1->Q1 intersects A1->C1.
+        *pos = ((2 + ppos) % 3);
+        return ACROSSEDGE;
+      }
+      if (zeros == 1) {
+        if (bflag == 0) {
+          // P1->Q1 intersects C1 only.
+          *pos = ((2 + ppos) % 3);
+        } else {  // bflag == 1
+          // P1->Q1 intersects A1.
+          *pos = ((ppos) % 3);
+        }
+        return ACROSSVERT;
+      }
+      if (zeros == 2) {
+        // P1->Q1 is collinear with A1->B1, and intersects A1.
+        *pos = ((ppos) % 3);
+        return COLLINEAR;
+      }
+    } 
+    if (s6 == 0) {
+      if (zeros == 0) {
+        // P1 lies on A1->C1.
+        *pos = ((2 + ppos) % 3);
+        return ACROSSEDGE;
+      }
+      if (zeros == 1) {
+        if (bflag == 0) {
+          // P1 = C1.
+          *pos = ((2 + ppos) % 3);
+          return SHAREVERT;
+        } else {  // bflag == 1
+          // P1 = A1, but P1->Q1 intersects (A, B, C)
+          *pos = ((ppos) % 3);
+          return ACROSSVERT;  // NOT THE PROPER CASE.
+        }
+      }
+      if (zeros == 2) {
+        if (s7 == 0) {
+          // P1->Q1 is coincident with A1->B1.
+          *pos = ((ppos) % 3);
+          return SHAREEDGE;
+        }
+        // P1 = A1, but P1->Q1 is collinear with A1->B1. 
+        *pos = ((ppos) % 3);
+        return COLLINEAR;  // NOT THE PROPER CASE.
+      }
+    }
+    // The remaining case is: s6 < 0.
+    /*if (s6 < 0) {
+      if (s7 > 0) {
+        // P1->Q1 is contained in (A, B, C).
+        // *** This type is not yet defined ***.
+        return COPLANAR;
+      }
+    } */
+  } else {  // s4 == 0
+    if (zeros == 0) {
+      // Q1 lies on A1->C1
+      *pos = ((2 + ppos) % 3);
+      return ACROSSEDGE;
+    }
+    if (zeros == 1) {
+      if (bflag == 0) {
+        // Q1 = C1.
+        *pos = ((2 + ppos) % 3);
+      } else { // bflag == 1
+        // Q1 = A1.
+        *pos = ((ppos) % 3);
+      }
+      return SHAREVERT;
+    }
+    if (zeros == 2) {
+      // Q1 = A1.
+      *pos = ((ppos) % 3);
+      return SHAREVERT;
     }
   }
-  // P1->Q1 is collinearly intersect with A1->B1.
-  *pos = ppos;
-  return COLLINEAR;
+
+  if (s5 > 0) {
+    if (s7 < 0) {
+      if (zeros == 0) {
+        // P1->Q1 intersects B1->C1.
+        *pos = ((1 + ppos) % 3);
+        return ACROSSEDGE;
+      }
+      if (zeros == 1) {
+        if (bflag == 0) {
+          // P1->Q1 intersects C1.
+          *pos = ((2 + ppos) % 3);
+          return ACROSSVERT;
+        } else { // bflag == 1
+          // P1->Q1 intersects B1->C1.
+          *pos = ((1 + ppos) % 3);
+          return ACROSSEDGE;
+        }
+      }
+      if (zeros == 2) {
+        // P1->Q1 is collinear with A1->B1, and intersects B1.
+        *pos = ((ppos) % 3);
+        return COLLINEAR;
+      }
+    }
+    if (s7 == 0) {
+      if (zeros == 0) {
+        // Q1 lies on B1->C1.
+        *pos = ((1 + ppos) % 3);
+        return ACROSSEDGE;
+      }
+      if (zeros == 1) {
+        if (bflag == 0) {
+          // Q1 = C1.
+          *pos = ((2 + ppos) % 3);
+          return SHAREVERT;
+        } else {  // bflag == 1
+          // Q1 lies on B1->C1.
+          *pos = ((1 + ppos) % 3);
+          return ACROSSEDGE;
+        }
+      }
+      if (zeros == 2) {
+        if (s6 == 0) {
+          // P1->Q1 is coincident with A1->B1.
+          *pos = ((ppos) % 3);
+          return SHAREEDGE;
+        }
+        // P1->Q1 is collinear with A1->B1, and Q1 = B1.
+        *pos = ((ppos) % 3);
+        return COLLINEAR;
+      }
+    }
+    // The remaining case is: s7 < 0.
+  } else {  // s5 == 0
+    if (zeros == 0) {
+      // P1 intersects B1->C1.
+      *pos = ((1 + ppos) % 3);
+      return ACROSSEDGE;
+    }
+    if (zeros == 1) {
+      if (bflag == 0) {
+        // P1 = C1.
+        *pos = ((2 + ppos) % 3);
+        return SHAREVERT;
+      } else { // bflag == 1
+        // P1 intersects B1->C1.
+        *pos = ((1 + ppos) % 3);
+        return ACROSSEDGE;
+      }
+    }
+    if (zeros == 2) {
+      // P1 = B1.
+      *pos = ((1 + ppos) % 3);
+      return SHAREVERT;
+    }
+  }
+
+  // The remaining cases: s6 < 0 and s7 > 0;
+  assert(zeros != 1);
+  if (zeros == 2) {
+    // P1->Q1 is contained in A1->B1.
+    *pos = ((ppos) % 3);
+    return COLLINEAR;
+  }
+  // if (zeros == 0) {
+  // P1->Q1 is contained in (A, B, C).
+  return COPLANAR;
+  // }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -900,9 +953,9 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     }
   }
 
-  if (zeros == 3) {
-    // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
-  }
+  // if (zeros == 3) {
+  //   return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
+  // }
 
   // Get the permuted points.
   A1 = (point) (PT[0][0] * (unsigned long) A + PT[0][1] * (unsigned long) B + 
@@ -1099,6 +1152,57 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   // Get the perturbed position of P (0, 1, 2).
   ppos2 = (PT[1][0] != 0 ? 1 : ppos2);
   ppos2 = (PT[2][0] != 0 ? 2 : ppos2);
+
+  // Suppose (P, Q, R) intersects L at [i, j]. 
+  //   1) if zeros == 1 and bflag == 0, [i, j] is only a point R;
+  //   2) if zeros == 1 and bflag == 1, [i, j] is [R, j].
+  //   3) if zeros == 2, [i, j] is [P, Q].
+  // Suppose (A, B, C) intersects L at [k, l].
+  //   1) if zeros2 == 1 and bflag == 0, [k, l] is only a point C;
+  //   2) if zeros2 == 1 and bflag == 1, [k, l] is [C, l].
+  //   3) if zeros2 == 2, [k, l] is [A, B].
+
+  /*if (zeros2 == 0) {
+    // (P, Q, R) intersects L in its interior.
+    if (bflag == 0) {
+      s1 = orient3d(C1, A2, R1, Q2);
+      s2 = orient3d(C1, B2, R1, P2);
+      orient3dcount+=2;
+      if (b->epsilon != 0) {
+        if (s1 != 0) iscoplanar(C1, A2, R1, Q2, s1) s1 = 0;
+        if (s2 != 0) iscoplanar(C1, B2, R1, P2, s2) s2 = 0;
+      }
+      if (s1 > 0) {
+        // l lies at right of (R, P, C).
+        return DISJOINT;
+      }
+      if (s2 < 0) {
+        // k lies at left of (R, Q, C).
+        return DISJOINT;
+      }
+      if (zeros == 1) {
+        return ACROSSVERT;  // C intersects (P, Q, R).
+      }
+      return ACROSSFACE;
+    } else {  // bflag == 1.
+      assert(zeros == 1);  // SELF_CHECK
+      s1 = orient3d(C1, A2, R1, Q2);
+      s2 = orient3d(B2, A2, R1, P2);
+      orient3dcount+=2;
+      if (b->epsilon != 0) {
+        if (s1 != 0) iscoplanar(C1, A2, R1, Q2, s1) s1 = 0;
+        if (s2 != 0) iscoplanar(B2, A2, R1, P2, s2) s2 = 0;
+      }
+      if (s1 < 0) {
+        return DISJOINT;
+      }
+      if (s2 > 0) {
+        return DISJOINT;
+      }
+      return ACROSSFACE;
+    }
+  }
+  */
 }
 
 ///////////////////////////////////////////////////////////////////////////////
