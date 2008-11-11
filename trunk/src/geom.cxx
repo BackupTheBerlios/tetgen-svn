@@ -409,13 +409,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
       }
     }
     // The remaining case is: s6 < 0.
-    /*if (s6 < 0) {
-      if (s7 > 0) {
-        // P1->Q1 is contained in (A, B, C).
-        // *** This type is not yet defined ***.
-        return COPLANAR;
-      }
-    } */
   } else {  // s4 == 0
     if (zeros == 0) {
       // Q1 lies on A1->C1
