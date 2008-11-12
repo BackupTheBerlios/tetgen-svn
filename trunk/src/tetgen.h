@@ -1466,8 +1466,9 @@ void makepoint2tetmap();
   (n)[1] = -((v1)[0] * (v2)[2] - (v2)[0] * (v1)[2]);\
   (n)[2] =   (v1)[0] * (v2)[1] - (v2)[0] * (v1)[1]
 
-#define SETVECTOR3(V, a0, a1, a2)\
-  (V)[0] = (a0); (V)[1] = (a1); (V)[2] = (a2)
+#define SETVECTOR3(V, a0, a1, a2) (V)[0] = (a0); (V)[1] = (a1); (V)[2] = (a2)
+
+#define SWAP2(a0, a1, tmp) (tmp) = (a0); (a0) = (a1); (a1) = (tmp)
 
 bool lu_decmp(REAL lu[4][4], int n, int* ps, REAL* d, int N);
 void lu_solve(REAL lu[4][4], int n, int* ps, REAL* b, int N);

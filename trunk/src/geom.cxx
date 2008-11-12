@@ -52,7 +52,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-vert (%d %d %d)-(%d)-(%d), (%c%c%c).\n", pointmark(A), 
+    printf("      Tri-vert (%d %d %d)-(%d)-(%d) (%c%c%c).\n", pointmark(A), 
       pointmark(B), pointmark(C), pointmark(P), pointmark(R),
       s3>0 ? '+' : (s3<0 ? '-' : '0'), s4>0 ? '+' : (s4<0 ? '-' : '0'),
       s5>0 ? '+' : (s5<0 ? '-' : '0'));
@@ -163,7 +163,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge-cop (%d %d %d)-(%d, %d)-(%d),", pointmark(A),
+    printf("      Tri-edge-cop (%d %d %d)-(%d %d)-(%d)", pointmark(A),
       pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R));
     printf(" (%c%c%c)\n", sA > 0 ? '+' : (sA < 0 ? '-' : '0'),
       sB>0 ? '+' : (sB<0 ? '-' : '0'), sC>0 ? '+' : (sC<0 ? '-' : '0'));
@@ -578,7 +578,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge-tail (%d %d %d)-(%d, %d), (%c%c%c).\n",
+    printf("      Tri-edge-tail (%d %d %d)-(%d %d) (%c%c%c).\n",
       pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
       s3>0 ? '+' : (s3<0 ? '-' : '0'), s4>0 ? '+' : (s4<0 ? '-' : '0'),
       s5>0 ? '+' : (s5<0 ? '-' : '0'));
@@ -755,7 +755,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge (%d %d %d)-(%d, %d), (%c%c).\n", pointmark(A),
+    printf("      Tri-edge (%d %d %d)-(%d %d) (%c%c).\n", pointmark(A),
       pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
       s1>0 ? '+' : (s1<0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'));
   }
@@ -799,13 +799,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
 
 enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   point C, point P, point Q, point R, point O, int *pos1, int *pos2)
-{/*
-  point A1, B1, C1, P1, Q1;  // The first permuted points.
-  point A2, B2, P2, Q2, R1;  // The second permuted points. 
-  REAL sA, sB, sC, sP, sQ, sR;
-  int PT[3][3], PL[2][2];  // The permutation matrices.
-  int zeros, bflag, ppos;
-  int zeros2, bflag2, ppos2;
+{
+  point U[3], V[3], W[3], Ptmp;  // The permuted vectors of points.
+  int pu[3], pv[3], pw[3], itmp;  // The original positions of points.
+  REAL sA, sB, sC;
+  REAL sP, sQ, sR;
+  int zeros, bflag;
+  int zeros2, bflag2;
+  enum intersection inter;
 
   // Test A's, B's, and C's orientations wrt plane PQR. 
   sA = orient3d(P, Q, R, A);
@@ -814,159 +815,219 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   orient3dcount+=3;
 
   if (b->epsilon) {
-    // Re-evaluate the sign with respect to the tolerance.
     if ((sA != 0) && iscoplanar(P, Q, R, A, sA)) sA = 0;
     if ((sB != 0) && iscoplanar(P, Q, R, B, sB)) sB = 0;
     if ((sC != 0) && iscoplanar(P, Q, R, C, sC)) sC = 0;
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-tri (%d %d %d)-(%d %d %d), (%c%c%c)\n", pointmark(A),
+    printf("      Tri-tri (%d %d %d)-(%d %d %d) (%c%c%c)\n", pointmark(A),
       pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R),
-      sA>0 ? '+' : (sA<0 ? '-' : '0'), sB>0 ? '+' : (sB<0 ? '-' : '0'), 
+      sA > 0 ? '+' : (sA < 0 ? '-' : '0'), sB>0 ? '+' : (sB<0 ? '-' : '0'),
       sC>0 ? '+' : (sC<0 ? '-' : '0'));
   }
   // tritricount++;
 
-  // Initialize the permutation matrices to be indentity matrices.
-  SETMATRIX3(PT, 1, 0, 0, 0, 1, 0, 0, 0, 1);
-  SETMATRIX2(PL, 1, 0, 0, 1);
   zeros = 0;  // Count the number of zero-signs.
   bflag = 0;  // Default case.
-  ppos = 0;  // The unperterbed position of A.
 
-  if (sA < 0) { // (-##)
-    if (sB < 0) { // (--#)
+  if (sA < 0) {
+    if (sB < 0) {
       if (sC < 0) { // (---).
         return DISJOINT; 
       } else {
         if (sC > 0) { // (--+).
           // All points are in the right positions.
+          SETVECTOR3(U, A, B, C);  // I3
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 0, 1, 2);
+          SETVECTOR3(pv, 0, 1, 2);
         } else { // (--0).
+          SETVECTOR3(U, A, B, C);  // I3
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 0, 1, 2);
+          SETVECTOR3(pv, 0, 1, 2);
           zeros = 1;
         }
       }
     } else { 
-      if (sB > 0) { // (-+#)
+      if (sB > 0) {
         if (sC < 0) { // (-+-).
-          // Shift A, B, C => C, A, B.
-          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST 
+          SETVECTOR3(U, C, A, B);  // PT = ST
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 2, 0, 1);
+          SETVECTOR3(pv, 0, 1, 2);
         } else {
           if (sC > 0) { // (-++).
-            // Shift A, B, C => B, C, A
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-            // Switch P and Q.
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 1, 0, 2);
           } else { // (-+0).
+            SETVECTOR3(U, C, A, B);  // PT = ST
+            SETVECTOR3(V, P, Q, R);  // I2
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 0, 1, 2);
             zeros = 1; 
             bflag = 1;
           }
         }
-      } else { // (-0#)
+      } else {
         if (sC < 0) { // (-0-).
-          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+          SETVECTOR3(U, C, A, B);  // PT = ST
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 2, 0, 1);
+          SETVECTOR3(pv, 0, 1, 2);
           zeros = 1; 
         } else {
           if (sC > 0) { // (-0+).
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 1, 0, 2);
             zeros = 1;
-            bflag = 1; 
+            bflag = 1;
           } else { // (-00).
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 1, 0, 2);
             zeros = 2; 
           }
         }
       }
     }
   } else {
-    if (sA > 0) {  // (+##)
-      if (sB < 0) { // (+-#)
+    if (sA > 0) {
+      if (sB < 0) {
         if (sC < 0) { // (+--).
-          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+          SETVECTOR3(U, B, C, A);  // PT = ST x ST
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 1, 2, 0);
+          SETVECTOR3(pv, 0, 1, 2);
         } else {
           if (sC > 0) { // (+-+).
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, C, A, B);  // PT = ST
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 1, 0, 2);
           } else { // (+-0).
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, C, A, B);  // PT = ST
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 1, 0, 2);
             zeros = 1;
             bflag = 1; 
           }
         }
       } else { 
-        if (sB > 0) { // (++#)
+        if (sB > 0) {
           if (sC < 0) { // (++-).
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL 
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 1, 0, 2);
           } else {
             if (sC > 0) { // (+++).
               return DISJOINT; 
             } else { // (++0).
-              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              SETVECTOR3(U, A, B, C);  // I3
+              SETVECTOR3(V, Q, P, R);  // PL = SL
+              SETVECTOR3(pu, 0, 1, 2);
+              SETVECTOR3(pv, 1, 0, 2);
               zeros = 1; 
             }
           }
         } else { // (+0#)
           if (sC < 0) { // (+0-).
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(V, P, Q, R);  // I2
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 0, 1, 2);
             zeros = 1; 
             bflag = 1;
           } else {
             if (sC > 0) { // (+0+).
-              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL 
+              SETVECTOR3(U, C, A, B);  // PT = ST
+              SETVECTOR3(V, Q, P, R);  // PL = SL
+              SETVECTOR3(pu, 2, 0, 1);
+              SETVECTOR3(pv, 1, 0, 2); 
               zeros = 1; 
             } else { // (+00).
-              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+              SETVECTOR3(U, B, C, A);  // PT = ST x ST
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 1, 2, 0);
+              SETVECTOR3(pv, 0, 1, 2);
               zeros = 2; 
             }
           }
         }
       }
-    } else {  // (0##)
-      if (sB < 0) { // (0-#)
+    } else { 
+      if (sB < 0) {
         if (sC < 0) { // (0--).
-          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+          SETVECTOR3(U, B, C, A);  // PT = ST x ST
+          SETVECTOR3(V, P, Q, R);  // PL = I2
+          SETVECTOR3(pu, 1, 2, 0);
+          SETVECTOR3(pv, 0, 1, 2);
           zeros = 1; 
         } else {
           if (sC > 0) { // (0-+).
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(V, P, Q, R);  // I2
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 0, 1, 2);
             zeros = 1;
             bflag = 1;
           } else { // (0-0).
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, C, A, B);  // PT = ST
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 1, 0, 2);
             zeros = 2; 
           }
         }
       } else { 
-        if (sB > 0) { // (0+#)
+        if (sB > 0) {
           if (sC < 0) { // (0+-).
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 1, 0, 2);
             zeros = 1;
             bflag = 1;
           } else {
             if (sC > 0) { // (0++).
-              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              SETVECTOR3(U, B, C, A);  // PT = ST x ST
+              SETVECTOR3(V, Q, P, R);  // PL = SL
+              SETVECTOR3(pu, 1, 2, 0);
+              SETVECTOR3(pv, 1, 0, 2);
               zeros = 1;
             } else { // (0+0).
-              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              SETVECTOR3(U, C, A, B);  // PT = ST
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 2, 0, 1);
+              SETVECTOR3(pv, 0, 1, 2);
               zeros = 2; 
             }
           }
         } else { // (00#)
           if (sC < 0) { // (00-).
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(V, Q, P, R);  // PL = SL
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 1, 0, 2);
             zeros = 2; 
           } else {
             if (sC > 0) { // (00+).
+              SETVECTOR3(U, A, B, C);  // I3
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 0, 1, 2);
+              SETVECTOR3(pv, 0, 1, 2);
               zeros = 2; 
             } else { // (000)
-              // ABC and PQR are coplanar.
-              zeros = 3;
+              // (A, B, C) is coplanar with (P, Q, R).
+              zeros == 3; 
             }
           }
         }
@@ -974,50 +1035,26 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     }
   }
 
-  // if (zeros == 3) {
-  //   return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
-  // }
-
-  // Get the permuted points.
-  A1 = (point) (PT[0][0] * (unsigned long) A + PT[0][1] * (unsigned long) B + 
-                PT[0][2] * (unsigned long) C);
-  B1 = (point) (PT[1][0] * (unsigned long) A + PT[1][1] * (unsigned long) B + 
-                PT[1][2] * (unsigned long) C);
-  C1 = (point) (PT[2][0] * (unsigned long) A + PT[2][1] * (unsigned long) B + 
-                PT[2][2] * (unsigned long) C);
-  P1 = (point) (PL[0][0] * (unsigned long) P + PL[0][1] * (unsigned long) Q);
-  Q1 = (point) (PL[1][0] * (unsigned long) P + PL[1][1] * (unsigned long) Q);
-
-  // Get the perturbed position of A (0, 1, 2).
-  ppos = (PT[1][0] != 0 ? 1 : ppos);
-  ppos = (PT[2][0] != 0 ? 2 : ppos);
-
-  // Test P1's, Q1's, and R's orientation wrt the plane of ABC.
-  sP = orient3d(A1, B1, C1, P1);
-  sQ = orient3d(A1, B1, C1, Q1);
-  sR = orient3d(A1, B1, C1, R);
+  sP = orient3d(U[0], U[1], U[2], V[0]);
+  sQ = orient3d(U[0], U[1], U[2], V[1]);
+  sR = orient3d(U[0], U[1], U[2], V[2]);
   orient3dcount+=3;
 
   if (b->epsilon) {
-    // Re-evaluate the sign with respect to the tolerance.
-    if ((sP != 0) && iscoplanar(A1, B1, C1, P1, sP)) sP = 0;
-    if ((sQ != 0) && iscoplanar(A1, B1, C1, Q1, sQ)) sQ = 0;
-    if ((sR != 0) && iscoplanar(A1, B1, C1, R, sR)) sR = 0;
+    if ((sP != 0) && iscoplanar(U[0], U[1], U[2], V[0], sP)) sP = 0;
+    if ((sQ != 0) && iscoplanar(U[0], U[1], U[2], V[1], sQ)) sQ = 0;
+    if ((sR != 0) && iscoplanar(U[0], U[1], U[2], V[2], sR)) sR = 0;
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-tri (%d %d %d)-(%d %d %d), (%c%c%c)\n", pointmark(A1),
-      pointmark(B1), pointmark(C1), pointmark(P1), pointmark(Q1), pointmark(R),
-      sP>0 ? '+' : (sP<0 ? '-' : '0'), sQ>0 ? '+' : (sQ<0 ? '-' : '0'), 
-      sR>0 ? '+' : (sR<0 ? '-' : '0'));
+    printf("      Tri-tri (%d %d %d)-(%d %d %d) (%c%c%c)\n", pointmark(U[0]),
+      pointmark(U[1]), pointmark(U[2]), pointmark(V[0]), pointmark(V[1]), 
+      pointmark(V[2]), sP>0 ? '+' : (sP<0 ? '-' : '0'), 
+      sQ>0 ? '+' : (sQ<0 ? '-' : '0'), sR>0 ? '+' : (sR<0 ? '-' : '0'));
   }
 
-  // Initialize the permutation matrix (for P1, Q1, R).
-  SETMATRIX3(PT, 1, 0, 0, 0, 1, 0, 0, 0, 1);
-  SETMATRIX2(PL, 1, 0, 0, 1);
   zeros2 = 0;  // Count the number of zero-signs.
   bflag2 = 0;  // Default case.
-  ppos2 = 0;  // The unperterbed position of A.
 
   if (sP < 0) {
     if (sQ < 0) {
@@ -1026,40 +1063,54 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       } else {
         if (sR > 0) { // (--+)
           // P1->Q1 is opposite to A1->B1. Swicth A1 and B1.
-          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+          SWAP2(U[0], U[1], Ptmp);  // PL = SL
+          SETVECTOR3(pw, pv[0], pv[1], pv[2]);
+          SWAP2(pu[0], pu[1], itmp);
         } else {  // (--0)
-          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+          SWAP2(U[0], U[1], Ptmp);  // PL = SL
+          SETVECTOR3(pw, pv[0], pv[1], pv[2]);
+          SWAP2(pu[0], pu[1], itmp);
           zeros2 = 1;
-          bflag2 = 0;
         }
       }
     } else {
       if (sQ > 0) {
         if (sR < 0) {  // (-+-)
-          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+          SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+          SWAP2(U[0], U[1], Ptmp);  // PL = SL
+          SETVECTOR3(pw, pv[2], pv[0], pv[1]);
+          SWAP2(pu[0], pu[1], itmp);
         } else {
           if (sR > 0) { // (-++)
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+            SETVECTOR3(pw, pv[1], pv[2], pv[0]);
           } else { // (-+0)
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+            SWAP2(U[0], U[1], Ptmp); // PL = SL
+            SETVECTOR3(pw, pv[2], pv[0], pv[1]);
+            SWAP2(pu[0], pu[1], itmp);
             zeros2 = 1;
             bflag2 = 1;
           }
         }
       } else {
         if (sR < 0) {  // (-0-)
-          SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+          SWAP2(U[0], U[1], Ptmp); // PL = SL
+          SETVECTOR3(pw, pv[2], pv[0], pv[1]);
+          SWAP2(pu[0], pu[1], itmp);
           zeros2 = 1;
-          bflag2 = 0;
         } else {
           if (sR > 0) {  // (-0+)
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+            SETVECTOR3(pw, pv[1], pv[2], pv[0]);
             zeros2 = 1;
             bflag2 = 1;
           } else {  // (-00)
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+            SETVECTOR3(pw, pv[1], pv[2], pv[0]);
             zeros2 = 2;
           }
         }
@@ -1069,12 +1120,17 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     if (sP > 0) {
       if (sQ < 0) {
         if (sR < 0) {  // (+--)
-          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+          SWAP2(U[0], U[1], Ptmp); // PL = SL
+          SETVECTOR3(pw, pv[1], pv[2], pv[0]);
+          SWAP2(pu[0], pu[1], itmp);
         } else {
           if (sR > 0) {  // (+-+)
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+            SETVECTOR3(pw, pv[2], pv[0], pv[1]);
           } else {  // (+-0)
+            SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+            SETVECTOR3(pw, pv[2], pv[0], pv[1]);
             zeros2 = 1;
             bflag2 = 1;
           }
@@ -1082,29 +1138,35 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       } else {
         if (sQ > 0) {
           if (sR < 0) {  // (++-)
-            // Right config.
+            SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+            SETVECTOR3(pw, pv[0], pv[1], pv[2]);
           } else {
             if (sR > 0) {  // (+++)
               return DISJOINT;
             } else {  // (++0)
+              SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+              SETVECTOR3(pw, pv[0], pv[1], pv[2]);
               zeros2 = 1;
-              bflag2 = 0;
             }
           }
         } else { // sQ == 0
           if (sR < 0) {  // (+0-)
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+            SWAP2(U[0], U[1], Ptmp); // PL = SL
+            SETVECTOR3(pw, pv[1], pv[2], pv[0]);
+            SWAP2(pu[0], pu[1], itmp);
             zeros2 = 1;
             bflag2 = 1;
           } else {
             if (sR > 0) {  // (+0+)
-              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+              SETVECTOR3(pw, pv[2], pv[0], pv[1]);
               zeros2 = 1;
-              bflag2 = 0;
             } else {  // (+00)
-              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+              SWAP2(U[0], U[1], Ptmp); // PL = SL
+              SETVECTOR3(pw, pv[1], pv[2], pv[0]);
+              SWAP2(pu[0], pu[1], itmp);
               zeros2 = 2;
             }
           }
@@ -1113,43 +1175,57 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     } else { // sP == 0
       if (sQ < 0) {
         if (sR < 0) {  // (0--)
-          SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-          SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+          SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+          SWAP2(U[0], U[1], Ptmp); // PL = SL
+          SETVECTOR3(pw, pv[1], pv[2], pv[0]);
+          SWAP2(pu[0], pu[1], itmp);
           zeros2 = 1;
           bflag2 = 0;
         } else {
           if (sR > 0) {  // (0-+)
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
-            SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+            SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+            SWAP2(U[0], U[1], Ptmp); // PL = SL
+            SETVECTOR3(pw, pv[0], pv[1], pv[2]);
+            SWAP2(pu[0], pu[1], itmp);
             zeros2 = 1;
             bflag2 = 1;
           } else {  // (0-0)
-            SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+            SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+            SETVECTOR3(pw, pv[2], pv[0], pv[1]);
             zeros2 = 2;
           }
         }
       } else {
         if (sQ > 0) {
           if (sR < 0) {  // (0+-)
-            SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+            SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+            SETVECTOR3(pw, pv[0], pv[1], pv[2]);
             zeros2 = 1;
             bflag2 = 1;
           } else {
             if (sR > 0) {  // (0++)
-              SETMATRIX3(PT, 0, 1, 0, 0, 0, 1, 1, 0, 0);  // PT = ST x ST
+              SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
+              SETVECTOR3(pw, pv[1], pv[2], pv[0]);
               zeros2 = 1;
-              bflag2 = 0;
             } else {  // (0+0)
-              SETMATRIX3(PT, 0, 0, 1, 1, 0, 0, 0, 1, 0);  // PT = ST
+              SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
+              SWAP2(U[0], U[1], Ptmp); // PL = SL
+              SETVECTOR3(pw, pv[2], pv[0], pv[1]);
+              SWAP2(pu[0], pu[1], itmp);
               zeros2 = 2;
             }
           }
         } else { // sQ == 0
           if (sR < 0) {  // (00-)
+            SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+            SETVECTOR3(pw, pv[0], pv[1], pv[2]);
             zeros2 = 2;
           } else {
             if (sR > 0) {  // (00+)
-              SETMATRIX2(PL, 0, 1, 1, 0); // PL = SL
+              SETVECTOR3(W, V[0], V[1], V[2]);  // I3
+              SWAP2(U[0], U[1], Ptmp); // PL = SL
+              SETVECTOR3(pw, pv[0], pv[1], pv[2]);
+              SWAP2(pu[0], pu[1], itmp);
               zeros2 = 2;
             } else {  // (000)
               zeros2 = 3;
@@ -1160,71 +1236,127 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     }
   }
 
-  // Get the permuted points.
-  P2 = (point) (PT[0][0] * (unsigned long) P1 + PT[0][1] * (unsigned long) Q1 
-              + PT[0][2] * (unsigned long) R);
-  Q2 = (point) (PT[1][0] * (unsigned long) P1 + PT[1][1] * (unsigned long) Q1 
-              + PT[1][2] * (unsigned long) R);
-  R1 = (point) (PT[2][0] * (unsigned long) P1 + PT[2][1] * (unsigned long) Q1 
-              + PT[2][2] * (unsigned long) R);
-  A2 = (point) (PL[0][0] * (unsigned long) A1 + PL[0][1] * (unsigned long) B1);
-  B2 = (point) (PL[1][0] * (unsigned long) A1 + PL[1][1] * (unsigned long) B1);
+  if (zeros == 3) {
+    assert(zeros2 == 3);  // SELF_CHECK
+    // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
+  }
 
-  // Get the perturbed position of P (0, 1, 2).
-  ppos2 = (PT[1][0] != 0 ? 1 : ppos2);
-  ppos2 = (PT[2][0] != 0 ? 2 : ppos2);
+  s4 = orient3d(U[0], U[2], W[2], W[1]);
+  s5 = orient3d(U[1], U[2], W[2], W[0]);
+  orient3dcount+=2;
 
-  // Suppose (P, Q, R) intersects L at [i, j]. 
-  //   1) if zeros == 1 and bflag == 0, [i, j] is only a point R;
-  //   2) if zeros == 1 and bflag == 1, [i, j] is [R, j].
-  //   3) if zeros == 2, [i, j] is [P, Q].
-  // Suppose (A, B, C) intersects L at [k, l].
-  //   1) if zeros2 == 1 and bflag == 0, [k, l] is only a point C;
-  //   2) if zeros2 == 1 and bflag == 1, [k, l] is [C, l].
-  //   3) if zeros2 == 2, [k, l] is [A, B].
-  */
+  if (b->epsilon > 0) {
+    if (s4 != 0) iscoplanar(U[0], U[2], W[2], W[1], s4) s4 = 0;
+    if (s5 != 0) iscoplanar(U[1], U[2], W[2], W[0], s5) s5 = 0;
+  }
 
-  /*if (zeros2 == 0) {
-    // (P, Q, R) intersects L in its interior.
-    if (bflag == 0) {
-      s1 = orient3d(C1, A2, R1, Q2);
-      s2 = orient3d(C1, B2, R1, P2);
-      orient3dcount+=2;
-      if (b->epsilon != 0) {
-        if (s1 != 0) iscoplanar(C1, A2, R1, Q2, s1) s1 = 0;
-        if (s2 != 0) iscoplanar(C1, B2, R1, P2, s2) s2 = 0;
-      }
-      if (s1 > 0) {
-        // l lies at right of (R, P, C).
-        return DISJOINT;
-      }
-      if (s2 < 0) {
-        // k lies at left of (R, Q, C).
-        return DISJOINT;
-      }
-      if (zeros == 1) {
-        return ACROSSVERT;  // C intersects (P, Q, R).
-      }
-      return ACROSSFACE;
-    } else {  // bflag == 1.
-      assert(zeros == 1);  // SELF_CHECK
-      s1 = orient3d(C1, A2, R1, Q2);
-      s2 = orient3d(B2, A2, R1, P2);
-      orient3dcount+=2;
-      if (b->epsilon != 0) {
-        if (s1 != 0) iscoplanar(C1, A2, R1, Q2, s1) s1 = 0;
-        if (s2 != 0) iscoplanar(B2, A2, R1, P2, s2) s2 = 0;
-      }
-      if (s1 < 0) {
-        return DISJOINT;
-      }
-      if (s2 > 0) {
-        return DISJOINT;
-      }
+  if (s4 > 0) {
+    return DISJOINT;
+  }
+  if (s5 < 0) {
+    return DISJOINT;
+  }
+
+  s6 = orient3d(U[0], U[2], W[2], W[0]);
+  s7 = orient3d(U[1], U[2], W[2], W[1]);
+  orient3dcount+=2;
+
+  if (b->epsilon > 0) {
+    if (s6 != 0) iscoplanar(U[0], U[2], W[2], W[0], s6) s6 = 0;
+    if (s7 != 0) iscoplanar(U[1], U[2], W[2], W[1], s7) s7 = 0;
+  }
+
+  if (s4 < 0) {
+    if (s6 > 0) {
+      assert(zeros2 != 1); // SELF_CHECK
+      *pos1 = 3;  // The interior of (A, B, C).
+      *pos2 = 3;  // The interior of (P, Q, R).
       return ACROSSFACE;
     }
+    if (s6 == 0) {
+      if (zeros == 0) {
+        *pos1 = 3;  // The interior of (A, B, C).
+        *pos3 = 3;  // The interior of (P, Q, R).
+        return ACROSSFACE;
+      } 
+      if (zeros == 1) {
+        if (bflag == 0) {
+          if (zeros2 == 0) {
+            // C lies on R->P.
+            *pos1 = pu[2];  // point C.
+            *pos2 = pw[2];  // edge R->P.
+            return ACROSSFACE;
+          }
+          if (zeros2 == 1) {
+            *pos1 = pu[2];  // point C.
+            if (bflag2 == 0) {
+              *pos2 = pw[2];  // point R.
+            } else {
+              *pos2 = pw[0];  // point P.
+            }
+            return SHAREVERT;
+          }
+          if (zeros2 == 2) {
+            *pos1 = pu[2];  // point C.
+            *pos2 = pw[0];  // point P.
+            return SHAREVERT;
+          }
+        } else { // bflag == 1
+          if (zeros2 == 0) {
+            // A lies on R->P.
+            *pos1 = pu[0];  // point A.
+            *pos2 = 3; // Interior of (P, Q, R).
+            return ACROSSFACE;
+          }
+          if (zeros2 == 1) {
+            *pos1 = pu[0];  // point A.
+            if (bflag2 == 0) {
+              *pos2 = pw[2];  // point R.
+              return SHAREVERT;
+            } else {  // bflag2 == 1
+              *pos2 = pw[0];  // point P.
+              return ACROSSFACE;
+            }
+          }
+          if (zeros2 == 2) {
+            *pos1 = pw[0];  // point P.
+            *pos2 = 3; // Interior of (P, Q, R).
+            return ACROSSFACE;
+          }
+        }
+      }
+      if (zeros == 2) {
+        if (zeros2 == 0) {
+          *pos1 = 3;
+          *pos2 = 3;
+          return ACROSSFACE;
+        }
+        if (zeros2 == 1) {
+          if (bflag2 == 0) {
+            *pos1 = pu[0] // point A.
+            *pos2 = pw[2] // point R.
+            return SHAREVERT;
+          } else {  // bflag2 == 1
+            *pos1 = 3;
+            *pos2 = 3;
+            return ACROSSFACE;
+          }
+        }
+        if (zeros2 == 2) {
+          *pos1 = pu[0];  // edge A->B.
+          if (s7 == 0) {
+            *pos2 = pw[0]  // edge P->Q.
+            return SHAREEDGE;
+          }
+          *pos2 = 3;
+          return ACROSSFACE;
+        }
+      }
+    }
+    // Remaining case s6 < 0
+  } else {  // s4 == 0
+    
   }
-  */
 }
 
 ///////////////////////////////////////////////////////////////////////////////
