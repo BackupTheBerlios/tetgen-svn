@@ -804,9 +804,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   int pu[3], pv[3], pw[3], itmp;  // The original positions of points.
   REAL sA, sB, sC;
   REAL sP, sQ, sR;
-  int zeros, bflag;
-  int zeros2, bflag2;
-  enum intersection inter;
+  int z1, z2;
 
   // Test A's, B's, and C's orientations wrt plane PQR. 
   sA = orient3d(P, Q, R, A);
@@ -828,9 +826,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   }
   // tritricount++;
 
-  zeros = 0;  // Count the number of zero-signs.
-  bflag = 0;  // Default case.
-
   if (sA < 0) {
     if (sB < 0) {
       if (sC < 0) { // (---).
@@ -842,12 +837,13 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SETVECTOR3(V, P, Q, R);  // I2
           SETVECTOR3(pu, 0, 1, 2);
           SETVECTOR3(pv, 0, 1, 2);
+          z1 = 0;
         } else { // (--0).
           SETVECTOR3(U, A, B, C);  // I3
           SETVECTOR3(V, P, Q, R);  // I2
           SETVECTOR3(pu, 0, 1, 2);
           SETVECTOR3(pv, 0, 1, 2);
-          zeros = 1;
+          z1 = 1;
         }
       }
     } else { 
@@ -857,19 +853,20 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SETVECTOR3(V, P, Q, R);  // I2
           SETVECTOR3(pu, 2, 0, 1);
           SETVECTOR3(pv, 0, 1, 2);
+          z1 = 0;
         } else {
           if (sC > 0) { // (-++).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 1, 2, 0);
             SETVECTOR3(pv, 1, 0, 2);
+            z1 = 0;
           } else { // (-+0).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, P, Q, R);  // I2
             SETVECTOR3(pu, 2, 0, 1);
             SETVECTOR3(pv, 0, 1, 2);
-            zeros = 1; 
-            bflag = 1;
+            z1 = 2;
           }
         }
       } else {
@@ -878,21 +875,20 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SETVECTOR3(V, P, Q, R);  // I2
           SETVECTOR3(pu, 2, 0, 1);
           SETVECTOR3(pv, 0, 1, 2);
-          zeros = 1; 
+          z1 = 1;
         } else {
           if (sC > 0) { // (-0+).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 1, 2, 0);
             SETVECTOR3(pv, 1, 0, 2);
-            zeros = 1;
-            bflag = 1;
+            z1 = 2;
           } else { // (-00).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 1, 2, 0);
             SETVECTOR3(pv, 1, 0, 2);
-            zeros = 2; 
+            z1 = 3;
           }
         }
       }
@@ -905,19 +901,20 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SETVECTOR3(V, P, Q, R);  // I2
           SETVECTOR3(pu, 1, 2, 0);
           SETVECTOR3(pv, 0, 1, 2);
+          z1 = 0;
         } else {
           if (sC > 0) { // (+-+).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 2, 0, 1);
             SETVECTOR3(pv, 1, 0, 2);
+            z1 = 0;
           } else { // (+-0).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 2, 0, 1);
             SETVECTOR3(pv, 1, 0, 2);
-            zeros = 1;
-            bflag = 1; 
+            z1 = 2;
           }
         }
       } else { 
@@ -927,6 +924,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 0, 1, 2);
             SETVECTOR3(pv, 1, 0, 2);
+            z1 = 0;
           } else {
             if (sC > 0) { // (+++).
               return DISJOINT; 
@@ -935,30 +933,29 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
               SETVECTOR3(V, Q, P, R);  // PL = SL
               SETVECTOR3(pu, 0, 1, 2);
               SETVECTOR3(pv, 1, 0, 2);
-              zeros = 1; 
+              z1 = 1; 
             }
           }
-        } else { // (+0#)
+        } else {
           if (sC < 0) { // (+0-).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, P, Q, R);  // I2
             SETVECTOR3(pu, 1, 2, 0);
             SETVECTOR3(pv, 0, 1, 2);
-            zeros = 1; 
-            bflag = 1;
+            z1 = 2;
           } else {
             if (sC > 0) { // (+0+).
               SETVECTOR3(U, C, A, B);  // PT = ST
               SETVECTOR3(V, Q, P, R);  // PL = SL
               SETVECTOR3(pu, 2, 0, 1);
               SETVECTOR3(pv, 1, 0, 2); 
-              zeros = 1; 
+              z1 = 1;
             } else { // (+00).
               SETVECTOR3(U, B, C, A);  // PT = ST x ST
               SETVECTOR3(V, P, Q, R);  // I2
               SETVECTOR3(pu, 1, 2, 0);
               SETVECTOR3(pv, 0, 1, 2);
-              zeros = 2; 
+              z1 = 3; 
             }
           }
         }
@@ -970,21 +967,20 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SETVECTOR3(V, P, Q, R);  // PL = I2
           SETVECTOR3(pu, 1, 2, 0);
           SETVECTOR3(pv, 0, 1, 2);
-          zeros = 1; 
+          z1 = 1;
         } else {
           if (sC > 0) { // (0-+).
             SETVECTOR3(U, A, B, C);  // I3
             SETVECTOR3(V, P, Q, R);  // I2
             SETVECTOR3(pu, 0, 1, 2);
             SETVECTOR3(pv, 0, 1, 2);
-            zeros = 1;
-            bflag = 1;
+            z1 = 2;
           } else { // (0-0).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 2, 0, 1);
             SETVECTOR3(pv, 1, 0, 2);
-            zeros = 2; 
+            z1 = 3; 
           }
         }
       } else { 
@@ -994,40 +990,39 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 0, 1, 2);
             SETVECTOR3(pv, 1, 0, 2);
-            zeros = 1;
-            bflag = 1;
+            z1 = 2;
           } else {
             if (sC > 0) { // (0++).
               SETVECTOR3(U, B, C, A);  // PT = ST x ST
               SETVECTOR3(V, Q, P, R);  // PL = SL
               SETVECTOR3(pu, 1, 2, 0);
               SETVECTOR3(pv, 1, 0, 2);
-              zeros = 1;
+              z1 = 1;
             } else { // (0+0).
               SETVECTOR3(U, C, A, B);  // PT = ST
               SETVECTOR3(V, P, Q, R);  // I2
               SETVECTOR3(pu, 2, 0, 1);
               SETVECTOR3(pv, 0, 1, 2);
-              zeros = 2; 
+              z1 = 3; 
             }
           }
-        } else { // (00#)
+        } else {
           if (sC < 0) { // (00-).
             SETVECTOR3(U, A, B, C);  // I3
             SETVECTOR3(V, Q, P, R);  // PL = SL
             SETVECTOR3(pu, 0, 1, 2);
             SETVECTOR3(pv, 1, 0, 2);
-            zeros = 2; 
+            z1 = 3; 
           } else {
             if (sC > 0) { // (00+).
               SETVECTOR3(U, A, B, C);  // I3
               SETVECTOR3(V, P, Q, R);  // I2
               SETVECTOR3(pu, 0, 1, 2);
               SETVECTOR3(pv, 0, 1, 2);
-              zeros = 2; 
+              z1 = 3; 
             } else { // (000)
               // (A, B, C) is coplanar with (P, Q, R).
-              zeros == 3; 
+              z1 = 4;
             }
           }
         }
@@ -1053,9 +1048,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       sQ>0 ? '+' : (sQ<0 ? '-' : '0'), sR>0 ? '+' : (sR<0 ? '-' : '0'));
   }
 
-  zeros2 = 0;  // Count the number of zero-signs.
-  bflag2 = 0;  // Default case.
-
   if (sP < 0) {
     if (sQ < 0) {
       if (sR < 0) {  // (---)
@@ -1067,12 +1059,13 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SWAP2(U[0], U[1], Ptmp);  // PL = SL
           SETVECTOR3(pw, pv[0], pv[1], pv[2]);
           SWAP2(pu[0], pu[1], itmp);
+          z2 = 0;
         } else {  // (--0)
           SETVECTOR3(W, V[0], V[1], V[2]);  // I3
           SWAP2(U[0], U[1], Ptmp);  // PL = SL
           SETVECTOR3(pw, pv[0], pv[1], pv[2]);
           SWAP2(pu[0], pu[1], itmp);
-          zeros2 = 1;
+          z2 = 1;
         }
       }
     } else {
@@ -1082,17 +1075,18 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SWAP2(U[0], U[1], Ptmp);  // PL = SL
           SETVECTOR3(pw, pv[2], pv[0], pv[1]);
           SWAP2(pu[0], pu[1], itmp);
+          z2 = 0;
         } else {
           if (sR > 0) { // (-++)
             SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
             SETVECTOR3(pw, pv[1], pv[2], pv[0]);
+            z2 = 0;
           } else { // (-+0)
             SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
             SWAP2(U[0], U[1], Ptmp); // PL = SL
             SETVECTOR3(pw, pv[2], pv[0], pv[1]);
             SWAP2(pu[0], pu[1], itmp);
-            zeros2 = 1;
-            bflag2 = 1;
+            z2 = 2;
           }
         }
       } else {
@@ -1101,17 +1095,16 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SWAP2(U[0], U[1], Ptmp); // PL = SL
           SETVECTOR3(pw, pv[2], pv[0], pv[1]);
           SWAP2(pu[0], pu[1], itmp);
-          zeros2 = 1;
+          z2 = 1;
         } else {
           if (sR > 0) {  // (-0+)
             SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
             SETVECTOR3(pw, pv[1], pv[2], pv[0]);
-            zeros2 = 1;
-            bflag2 = 1;
+            z2 = 2;
           } else {  // (-00)
             SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
             SETVECTOR3(pw, pv[1], pv[2], pv[0]);
-            zeros2 = 2;
+            z2 = 3;
           }
         }
       }
@@ -1124,15 +1117,16 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SWAP2(U[0], U[1], Ptmp); // PL = SL
           SETVECTOR3(pw, pv[1], pv[2], pv[0]);
           SWAP2(pu[0], pu[1], itmp);
+          z2 = 0;
         } else {
           if (sR > 0) {  // (+-+)
             SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
             SETVECTOR3(pw, pv[2], pv[0], pv[1]);
+            z2 = 0;
           } else {  // (+-0)
             SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
             SETVECTOR3(pw, pv[2], pv[0], pv[1]);
-            zeros2 = 1;
-            bflag2 = 1;
+            z2 = 2;
           }
         }
       } else {
@@ -1140,13 +1134,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           if (sR < 0) {  // (++-)
             SETVECTOR3(W, V[0], V[1], V[2]);  // I3
             SETVECTOR3(pw, pv[0], pv[1], pv[2]);
+            z2 = 0;
           } else {
             if (sR > 0) {  // (+++)
               return DISJOINT;
             } else {  // (++0)
               SETVECTOR3(W, V[0], V[1], V[2]);  // I3
               SETVECTOR3(pw, pv[0], pv[1], pv[2]);
-              zeros2 = 1;
+              z2 = 1;
             }
           }
         } else { // sQ == 0
@@ -1155,19 +1150,18 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             SWAP2(U[0], U[1], Ptmp); // PL = SL
             SETVECTOR3(pw, pv[1], pv[2], pv[0]);
             SWAP2(pu[0], pu[1], itmp);
-            zeros2 = 1;
-            bflag2 = 1;
+            z2 = 2;
           } else {
             if (sR > 0) {  // (+0+)
               SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
               SETVECTOR3(pw, pv[2], pv[0], pv[1]);
-              zeros2 = 1;
+              z2 = 1;
             } else {  // (+00)
               SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
               SWAP2(U[0], U[1], Ptmp); // PL = SL
               SETVECTOR3(pw, pv[1], pv[2], pv[0]);
               SWAP2(pu[0], pu[1], itmp);
-              zeros2 = 2;
+              z2 = 3;
             }
           }
         }
@@ -1179,20 +1173,18 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           SWAP2(U[0], U[1], Ptmp); // PL = SL
           SETVECTOR3(pw, pv[1], pv[2], pv[0]);
           SWAP2(pu[0], pu[1], itmp);
-          zeros2 = 1;
-          bflag2 = 0;
+          z2 = 1;
         } else {
           if (sR > 0) {  // (0-+)
             SETVECTOR3(W, V[0], V[1], V[2]);  // I3
             SWAP2(U[0], U[1], Ptmp); // PL = SL
             SETVECTOR3(pw, pv[0], pv[1], pv[2]);
             SWAP2(pu[0], pu[1], itmp);
-            zeros2 = 1;
-            bflag2 = 1;
+            z2 = 2;
           } else {  // (0-0)
             SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
             SETVECTOR3(pw, pv[2], pv[0], pv[1]);
-            zeros2 = 2;
+            z2 = 3;
           }
         }
       } else {
@@ -1200,35 +1192,34 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           if (sR < 0) {  // (0+-)
             SETVECTOR3(W, V[0], V[1], V[2]);  // I3
             SETVECTOR3(pw, pv[0], pv[1], pv[2]);
-            zeros2 = 1;
-            bflag2 = 1;
+            z2 = 2;
           } else {
             if (sR > 0) {  // (0++)
               SETVECTOR3(W, V[1], V[2], V[0]);  // PT = ST x ST
               SETVECTOR3(pw, pv[1], pv[2], pv[0]);
-              zeros2 = 1;
+              z2 = 1;
             } else {  // (0+0)
               SETVECTOR3(W, V[2], V[0], V[1]);  // PT = ST
               SWAP2(U[0], U[1], Ptmp); // PL = SL
               SETVECTOR3(pw, pv[2], pv[0], pv[1]);
               SWAP2(pu[0], pu[1], itmp);
-              zeros2 = 2;
+              z2 = 3;
             }
           }
         } else { // sQ == 0
           if (sR < 0) {  // (00-)
             SETVECTOR3(W, V[0], V[1], V[2]);  // I3
             SETVECTOR3(pw, pv[0], pv[1], pv[2]);
-            zeros2 = 2;
+            z2 = 3;
           } else {
             if (sR > 0) {  // (00+)
               SETVECTOR3(W, V[0], V[1], V[2]);  // I3
               SWAP2(U[0], U[1], Ptmp); // PL = SL
               SETVECTOR3(pw, pv[0], pv[1], pv[2]);
               SWAP2(pu[0], pu[1], itmp);
-              zeros2 = 2;
+              z2 = 3;
             } else {  // (000)
-              zeros2 = 3;
+              z2 = 4;
             }
           }
         }
@@ -1236,8 +1227,8 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     }
   }
 
-  if (zeros == 3) {
-    assert(zeros2 == 3);  // SELF_CHECK
+  if (z1 == 4) {
+    assert(z2 == 4);  // SELF_CHECK
     // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
   }
 
@@ -1266,6 +1257,66 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     if (s7 != 0) iscoplanar(U[1], U[2], W[2], W[1], s7) s7 = 0;
   }
 
+  if (b->verbose > 2) {
+    printf("      Tri-tri (%d %d %d)-(%d %d %d) (%c%c) (%c%c)\n",
+      pointmark(U[0]), pointmark(U[1]), pointmark(U[2]), pointmark(W[0]), 
+      pointmark(W[1]), pointmark(W[2]), s4>0 ? '+' : (s4<0 ? '-' : '0'), 
+      s5>0 ? '+' : (s5<0 ? '-' : '0'), s6>0 ? '+' : (s6<0 ? '-' : '0'),
+      s7>0 ? '+' : (s7<0 ? '-' : '0'));
+  }
+
+  if (z1 == 0) {
+    if (z2 == 0) {
+      if (s4 < 0) {
+        if (s6 > 0) {
+          // P->R intersects A->C (see fig. tritri-00s4-s6+).
+          *pos1 = pu[2];
+          *pos2 = pw[2];
+          return ACROSSFACE;  
+        }
+        if (s6 == 0) {
+          // P->R intersects A->C (see fig. tritri-00s4-s60).
+          *pos1 = pu[2];
+          *pos2 = pw[2];
+          return ACROSSFACE; 
+        }
+        // Depends on s5 and s7.                
+      } else { // s4 == 0
+        // Q->R intersects A->C (see fig. tritri-00s40).
+        *pos1 = pu[2];
+        *pos2 = pw[1];
+        return ACROSSFACE;
+      }
+      if (s5 > 0) {
+        if (s7 < 0) {
+          // Q->R intersects B->C (see fig tritri-00s5+s7-).
+          *pos1 = pu[1];
+          *pos2 = pu[1];
+          return ACROSSFACE;
+        }
+        if (s7 == 0) {
+          // Q->R intersects B->C.
+          *pos1 = pu[1];
+          *pos2 = pu[1];
+          return ACROSSFACE;
+        }
+        // [i, j] contained in (A, B, C) (see fig tritri-00-int).
+        *pos1 = 3;
+        *pos2 = 3;
+        return ACROSSFACE;
+      } else { // s5 == 0
+        // P->R intersects B->C (symmetric to fig tritri-00s40).
+        *pos1 = pu[1];
+        *pos2 = pw[2];
+        return ACROSSFACE;
+      }
+    }
+    if (z2 == 1) {
+    
+    }
+  }
+
+  /*
   if (s4 < 0) {
     if (s6 > 0) {
       assert(zeros2 != 1); // SELF_CHECK
@@ -1357,6 +1408,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   } else {  // s4 == 0
     
   }
+  */
 }
 
 ///////////////////////////////////////////////////////////////////////////////
