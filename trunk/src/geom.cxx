@@ -1233,11 +1233,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       pointmark(W[1]), pointmark(W[2]), z1, z2);
   }
 
-  if (z1 == 4) {
-    assert(z2 == 4);  // SELF_CHECK
-    // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
-  }
-
   if (z1 == 0) {
 
     if (z2 == 1) {  // (01) (tritri-01####)
@@ -1246,8 +1241,8 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
       orient3dcount+=2;
       if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
+        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
+        if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
       }
       if (s1 < 0) {
         return DISJOINT;
@@ -1460,8 +1455,8 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
       orient3dcount+=2;
       if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
+        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
+        if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
       }
       if (s1 < 0) {
         return DISJOINT;
@@ -1562,17 +1557,210 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
         // [P, j] is contained in [A, l] (tritri-22-+-+).
         return ACROSSFACE;
       } else { // (tritri-22#0##)
-        // A lies on Q->R.
+        // P lies on B->C.
         return ACROSSFACE;
       }
     }
 
     if (z2 == 3) {  // (tritri-23####)
-    
+      if (s1 < 0) {
+        if (s3 > 0) {  // (tritri-23-#+#)
+          // [i, j] overlaps [k, l].
+          return ACROSSFACE;
+        }
+        if (s3 == 0) {  // (tritri-23-#0#)
+          // P is coincident with A. [P, j] overlaps [A, l].
+          return ACROSSFACE;
+        }
+        // s3 < 0, check s2 and s4.
+      } else { // (tritri-230###)
+        // A is coincident with Q.
+        *pos1 = pu[0];
+        *pos2 = pw[1];
+        return SHAREVERT;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (tritri-23#+#-)
+          // [P, j] overlaps [A, l].
+          return ACROSSFACE;
+        }
+        if (s4 == 0) {  // (tritri-23#+#0)
+          // P lies on B->C.
+          return ACROSSFACE;
+        }
+        // [i, j] is contained in [k, l] (tritri-23-+-+).
+        return ACROSSFACE;
+      } else { // (tritri-23#0##)
+        // P lies on B->C.
+        return ACROSSFACE;
+      }
     }
 
   } // if (z1 == 2)
 
+  if (z1 == 3) {
+
+    if (z2 == 1) {  // (tritri-31####)
+      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
+      s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
+      orient3dcount+=2;
+      if (b->epsilon > 0) {
+        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
+        if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
+      }
+      if (s1 < 0) {
+        return DISJOINT;
+      }
+      if (s2 > 0) {
+        return DISJOINT;
+      }
+      if (s1 == 0) {
+        // R and A are coincident.
+        *pos1 = pu[0];
+        *pos2 = pw[2];
+        return SHAREVERT;
+      }
+      if (s2 == 0) {
+        // R and B are coincident.
+        *pos1 = pu[1];
+        *pos2 = pw[2];
+        return SHAREVERT;
+      }
+      // R lies on A->B.
+      return ACROSSFACE;
+    }
+
+    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
+    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
+      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
+    }
+    if (s1 > 0) {
+      return DISJOINT;
+    }
+    if (s2 < 0) {
+      return DISJOINT;
+    }
+    s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
+    s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
+      if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
+    }
+
+    if (z2 == 0) {  // (30####)
+      if (s1 < 0) {
+        if (s3 > 0) {  // (tritri-30-#+#)
+          // [i, j] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        if (s3 == 0) {  // (tritri-30-#0#)
+          // A lies on P->R.
+          return ACROSSFACE;
+        }
+        // s3 < 0, check s2 and s4.
+      } else {  // (tritri-300###)
+        // A lies on P->R.
+        return ACROSSFACE;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (tritri-30#+#-)
+          // [i, j] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        if (s4 == 0) { // (tritri-30#+#0)
+          // B lies on Q->R.
+          return ACROSSFACE;
+        }
+        // [i, j] is contained in [A, B] (tritri-30-+-+).
+        return ACROSSFACE;
+      } else {  // (tritri-30#0##)
+        // B lies on Q->R.
+        return ACROSSFACE;
+      }
+    }
+
+    if (z2 == 2) {  // (32####)
+      if (s1 < 0) {
+        if (s3 > 0) {  // (tritri-32-#+#)
+          // [P, j] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        if (s3 == 0) {  // (tritri-32-#0#)
+          // P = A, [P, j] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        // s3 < 0, check s2 and s4.
+      } else {  // (tritri-320###)
+        // A lies on Q->R.
+        return ACROSSFACE;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (tritri-32#+#-)
+          // [P, j] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        if (s4 == 0) {  // (tritri-32#+#0)
+          // B lies on P->Q.
+          return ACROSSFACE;
+        }
+        // [P, j] is contained in [A, B] (tritri-32-+-+).
+        return ACROSSFACE;
+      } else {  // (tritri-32#0##)
+        // P is coincident with B.
+        *pos1 = pu[1];
+        *pos2 = pw[0];
+        return SHAREVERT;
+      }
+    }
+
+    if (z2 == 3) {  // (33####)
+      if (s1 < 0) {
+        if (s3 > 0) {  // (tritri-33-#+#)
+          // [P, Q] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        if (s3 == 0) {
+          if (s4 == 0) {  // (tritri-33-#00)
+            // [P, Q] is coincident with [A, B].
+            return SHAREEDGE;
+          }
+          // P = A, [P, Q] overlaps [A, B] (tritri-33-#0#).
+          return ACROSSFACE;
+        }
+      } else {  // (tritri-330###)
+        // Q = A.
+        *pos1 = pu[0];
+        *pos2 = pw[1];
+        return SHAREVERT;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (tritri-33#+#-)
+          // [P, Q] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        if (s4 == 0) { // (tritri-33#+#0)
+          // Q = B, [P, Q] overlaps [A, B].
+          return ACROSSFACE;
+        }
+        // [P, Q] is contained in [A, B] (tritri-33-+-+).
+        return ACROSSFACE;
+      } else {  // (tritri-33#0##)
+        // P = B.
+        *pos1 = pu[1];
+        *pos2 = pw[0];
+        return SHAREVERT;
+      }
+    }
+
+  } // if (z1 == 3)
+
+  assert(z1 == 4);  // SELF_CHECK
+  assert(z2 == 4);  // SELF_CHECK
+  // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
