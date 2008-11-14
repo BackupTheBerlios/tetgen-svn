@@ -1239,57 +1239,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   }
 
   if (z1 == 0) {
-    if (z2 == 0) {  // (00)
-      s1 = orient3d(U[0], U[2], W[2], W[1]);
-      s2 = orient3d(U[1], U[2], W[2], W[0]);
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
-      }
-      if (s1 > 0) {
-        return DISJOINT;
-      }
-      if (s2 < 0) {
-        return DISJOINT;
-      }
-      s3 = orient3d(U[0], U[2], W[2], W[0]);
-      s4 = orient3d(U[1], U[2], W[2], W[1]);
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
-        if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
-      }
-      if (s1 < 0) {
-        if (s3 > 0) { // (-#+#)
-          // P->R intersects A->C (tritri-00-#+#).
-          return ACROSSFACE;  
-        }
-        if (s3 == 0) { // (-#0#)
-          // P->R intersects A->C (tritri-00-#0#).
-          return ACROSSFACE; 
-        }
-        // s3 < 0. Depends on s2 and s4.                
-      } else { // (0###)
-        // Q->R intersects A->C (tritri-000###).
-        return ACROSSFACE;
-      }
-      if (s2 > 0) {
-        if (s4 < 0) {  // (#+#-)
-          // Q->R intersects B->C (tritri-00#+#-).
-          return ACROSSFACE;
-        }
-        if (s4 == 0) {  // (#+#0) 
-          // Q->R intersects B->C (symmetric to tritri-00-#0#).
-          return ACROSSFACE;
-        }
-        // [i, j] contained in (A, B, C) (tritri-00--++).
-        return ACROSSFACE;
-      } else { // (#0##)
-        // P->R intersects B->C (symmetric to tritri-000###).
-        return ACROSSFACE;
-      }
-    }
+
     if (z2 == 1) {  // (01) (tritri-01####)
       // Test if R lies between [k, l].
       s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
@@ -1314,44 +1264,76 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       // R lies in (A, B, C).
       return ACROSSFACE;
     }
-    if (z2 == 2) {  // (02)
-      s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
-      s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P 
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
-      }
-      if (s1 > 0) {
-        return DISJOINT;
-      }
-      if (s2 < 0) {
-        return DISJOINT;
-      }
-      s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
-      s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
-        if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
-      }
+    
+    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
+    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
+      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
+    }
+    if (s1 > 0) {
+      return DISJOINT;
+    }
+    if (s2 < 0) {
+      return DISJOINT;
+    }
+    s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
+    s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
+      if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
+    }
+    
+    if (z2 == 0) {  // (00)
       if (s1 < 0) {
-        if (s3 > 0) { // (-#+#)
-          // (tritri-02-#+#).
+        if (s3 > 0) { // (tritri-00-#+#)
+          // P->R intersects A->C.
           return ACROSSFACE;  
         }
-        if (s3 == 0) { // (-#0#)
-          // P lies on A->C (tritri-02-#0#).
+        if (s3 == 0) { // (tritri-00-#0#)
+          // P->R intersects A->C.
           return ACROSSFACE; 
         }
         // s3 < 0. Depends on s2 and s4.                
-      } else { // (0###)
-        // Q->R intersects A->C (tritri-020###).
+      } else { // (tritri-000###)
+        // Q->R intersects A->C.
         return ACROSSFACE;
       }
       if (s2 > 0) {
-        if (s4 < 0) {  // (#+#-)
-          // (see tritri-02#+#-).
+        if (s4 < 0) {  // (tritri-00#+#-)
+          // Q->R intersects B->C.
+          return ACROSSFACE;
+        }
+        if (s4 == 0) {  // (#+#0) (symmetric to tritri-00-#0#)
+          // Q->R intersects B->C.
+          return ACROSSFACE;
+        }
+        // [i, j] contained in (A, B, C) (tritri-00--++).
+        return ACROSSFACE;
+      } else { // (#0##) (symmetric to tritri-000###)
+        // P->R intersects B->C.
+        return ACROSSFACE;
+      }
+    }
+
+    if (z2 == 2) {  // (02)
+      if (s1 < 0) {
+        if (s3 > 0) { // (tritri-02-#+#)
+          return ACROSSFACE;  
+        }
+        if (s3 == 0) { // (tritri-02-#0#)
+          // P lies on A->C.
+          return ACROSSFACE; 
+        }
+        // s3 < 0. Depends on s2 and s4.                
+      } else { // (tritri-020###)
+        // Q->R intersects A->C.
+        return ACROSSFACE;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (#+#-) (see tritri-02#+#-)
           return ACROSSFACE;
         }
         if (s4 == 0) {  // (#+#0) 
@@ -1360,63 +1342,200 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
         }
         // [P, j] contained in (A, B, C).
         return ACROSSFACE;
-      } else { // (#0##)
-        // P lies on B->C (tritri-02#0##).
+      } else { // (tritri-02#0##)
+        // P lies on B->C.
         return ACROSSFACE;
       }
     }
+
     if (z2 == 3) {  // (03)
-      s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
-      s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P 
+      if (s1 < 0) {
+        if (s3 > 0) {  // (tritri-03-#+#)
+          return ACROSSFACE;
+        }
+        if (s3 == 0) {  // (tritri-03-#0#)
+          // P lies on A->C.
+          return ACROSSFACE;
+        }
+        // s3 < 0. Depends on s2 and s4. 
+      } else {  // (tritri-030###)
+        // Q lies on A->C.
+        return ACROSSFACE;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (tritri-03#+#-)
+          return ACROSSFACE;
+        }
+        if (s4 == 0) { // (tritri-03#+#0)
+          // Q lies on B->C.
+          return ACROSSFACE;
+        }
+        // P->Q lies in [k, l] (tritri-03--++).
+        return ACROSSFACE;
+      } else { // (tritri-03#0##)
+        // P lies on B->C.
+        return ACROSSFACE;
+      }
+    }
+
+  } // if (z1 == 0)
+
+  if (z1 == 1) {
+
+    if (z2 == 1) {  // (11) (tritri-11####)
+      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
+      orient3dcount++;
+      if (b->epsilon > 0) {
+        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
+      }
+      if (s1 != 0) {
+        return DISJOINT;
+      }
+      // C and R are coincident (tritri-110###)
+      *pos1 = pu[2];
+      *pos2 = pw[2];
+      return SHAREVERT;
+    }
+
+    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
+    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
+      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
+    }
+    if (s1 > 0) {
+      return DISJOINT;
+    }
+    if (s2 < 0) {
+      return DISJOINT;
+    }
+
+    if (z2 == 0) { // (10) (tritri-10####)
+      if (s1 == 0) {
+        // C lies on Q->R.
+      }
+      if (s2 == 0) {
+        // C lies on P->R.
+      }
+      return ACROSSFACE;
+    }
+
+    if (z2 == 2) {  // (12) (tritri-12####)
+      if (s1 == 0) {
+        // C lies on Q->R.
+      }
+      if (s2 == 0) {
+        // C and P are coincident (tritri-12#0##)
+        *pos1 = pu[2];
+        *pos2 = pw[0];
+        return SHAREVERT;
+      }
+      return ACROSSFACE;
+    }
+
+    if (z2 == 3) {  // (13) (tritri-13####)
+      if (s1 == 0) {
+        // C and Q are coincident.
+        *pos1 = pu[2];
+        *pos2 = pw[1];
+        return SHAREVERT;
+      }
+      if (s2 == 0) {
+        // C and P are coincident.
+        *pos1 = pu[2];
+        *pos2 = pw[0];
+        return SHAREVERT;
+      }
+      // C lies on P->Q.
+      return ACROSSFACE;
+    }
+  
+  } // if (z1 == 1)
+
+  if (z1 == 2) {
+
+    if (z2 == 1) {  // (tritri-21####)
+      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
+      s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
       orient3dcount+=2;
       if (b->epsilon > 0) {
         if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
         if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
       }
-      if (s1 > 0) {
-        return DISJOINT;
-      }
-      if (s2 < 0) {
-        return DISJOINT;
-      }
-      s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
-      s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
-        if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
-      }
       if (s1 < 0) {
-        if (s3 > 0) {  // (03-#+#)
-          // (tritri-03-#+#)
+        return DISJOINT;
+      }
+      if (s2 > 0) {
+        return DISJOINT;
+      }
+      if (s1 == 0) {
+        // R and A are coincident.
+        *pos1 = pu[0];
+        *pos2 = pw[2];
+        return SHAREVERT;
+      }
+      if (s2 == 0) {
+        // R lies on B->C.
+      }
+      // R lies in (A, B, C).
+      return ACROSSFACE;
+    }
+
+    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
+    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
+      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
+    }
+    if (s1 > 0) {
+      return DISJOINT;
+    }
+    if (s2 < 0) {
+      return DISJOINT;
+    }
+    s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
+    s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
+      if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
+    }
+
+    if (z2 == 0) {  // (20) (tritri-20####)
+      if (s1 < 0) {
+        if (s3 > 0) {  // (20-#+#)
+          // P->R intersects (A, B, C).
           return ACROSSFACE;
         }
-        if (s3 == 0) {  // (03-#0#)
-          // P lies on A->C (tritri-03-#0#)
+        if (s3 == 0) { // (tritri-20-#0#)
+          // A lies on P->R
           return ACROSSFACE;
         }
-        // s3 < 0. Depends on s2 and s4. 
-      } else {  // (030###)
-        // Q lies on A->C (tritri-030###)
+        // s3 < 0, check for s2 and s4.
+      } else {  // (tritri-200###)
+        // A lies on Q->R.
         return ACROSSFACE;
       }
       if (s2 > 0) {
-        if (s4 < 0) {  // (03#+#-)
-          // (tritri-03#+#-)
+        if (s4 < 0) {  // (20#+#-)
+          // Q->R intersects (A, B, C).
           return ACROSSFACE;
         }
-        if (s4 == 0) { // (03#+#0)
-          // Q lies on B->C (tritri-03#+#0)
+        if (s4 == 0) {  // (20#+#0)
+          // Q->R intersects B->C.
           return ACROSSFACE;
         }
-        // P->Q lies in [k, l] (tritri-03--++).
+        // [A, j] is contained in (A, B, C) (tritri-20-+-+).
         return ACROSSFACE;
-      } else {
-        // P lies on B->C (tritri-03#0##).
+      } else {  // (tritri-20#0##)
+        // P->R intersects B->C.
         return ACROSSFACE;
       }
     }
-  }
+
+  } // if (z1 == 2)
 
 }
 
