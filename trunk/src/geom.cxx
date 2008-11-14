@@ -1535,6 +1535,42 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       }
     }
 
+    if (z2 == 2) {  // (tritri-22####)
+      if (s1 < 0) {
+        if (s3 > 0) {  // (tritri-22-#+#)
+          // [P, j] overlaps [A, l].
+          return ACROSSFACE;
+        }
+        if (s3 == 0) {  // (22-#0#)
+          // P is coincident with A. [P, j] overlaps [A, l].
+          return ACROSSFACE;
+        }
+        // s3 < 0, check s2 and s4.
+      } else { // (tritri-220###)
+        // A lies on Q->R.
+        return ACROSSFACE;
+      }
+      if (s2 > 0) {
+        if (s4 < 0) {  // (tritri-22#+#-)
+          // [P, j] overlaps [A, l].
+          return ACROSSFACE;
+        }
+        if (s4 == 0) {  // (tritri-22#+#0)
+          // P->Q intersects B->C.
+          return ACROSSFACE;
+        }
+        // [P, j] is contained in [A, l] (tritri-22-+-+).
+        return ACROSSFACE;
+      } else { // (tritri-22#0##)
+        // A lies on Q->R.
+        return ACROSSFACE;
+      }
+    }
+
+    if (z2 == 3) {  // (tritri-23####)
+    
+    }
+
   } // if (z1 == 2)
 
 }
