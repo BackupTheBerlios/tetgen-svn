@@ -1235,7 +1235,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
 
   if (z1 == 0) {
 
-    if (z2 == 1) {  // (01) (tritri-01####)
+    if (z2 == 1) {  // (01)
       // Test if R lies between [k, l].
       s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
       s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
@@ -1251,12 +1251,12 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
         return DISJOINT;
       }
       if (s1 == 0) {
-        // R lies on A->C.
+        // R = k in [A, C] (tritri-010###).
       }
       if (s2 == 0) {
-        // R lies on B->C.
+        // R = l in [B, C] (tritri-01#0##).
       }
-      // R lies in (A, B, C).
+      // R in [k, l] in [A, B, C] (tritri-01+-##).
       return ACROSSFACE;
     }
     
@@ -1284,31 +1284,31 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     if (z2 == 0) {  // (00)
       if (s1 < 0) {
         if (s3 > 0) { // (tritri-00-#+#)
-          // P->R intersects A->C.
-          return ACROSSFACE;  
+          // [i, j] overlaps [k, l].
+          return ACROSSFACE;
         }
         if (s3 == 0) { // (tritri-00-#0#)
-          // P->R intersects A->C.
+          // i = k, [i, j] overlaps [k, l].
           return ACROSSFACE; 
         }
         // s3 < 0. Depends on s2 and s4.                
       } else { // (tritri-000###)
-        // Q->R intersects A->C.
+        // j = k, [Q, R] intersects [A, B].
         return ACROSSFACE;
       }
       if (s2 > 0) {
         if (s4 < 0) {  // (tritri-00#+#-)
-          // Q->R intersects B->C.
+          // [i, j] overlaps [k, l].
           return ACROSSFACE;
         }
-        if (s4 == 0) {  // (#+#0) (symmetric to tritri-00-#0#)
-          // Q->R intersects B->C.
+        if (s4 == 0) {  // (tritri-00#+#0)
+          // j = l, [i, j] overlaps [k, l].
           return ACROSSFACE;
         }
-        // [i, j] contained in (A, B, C) (tritri-00--++).
+        // [i, j] in [k, l] in [A, B, C] (tritri-00-+-+).
         return ACROSSFACE;
-      } else { // (#0##) (symmetric to tritri-000###)
-        // P->R intersects B->C.
+      } else { // (tritri-00#0##)
+        // i = l, [P, R] intersects [B, C].
         return ACROSSFACE;
       }
     }
@@ -1726,6 +1726,8 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
         if (s3 == 0) {
           if (s4 == 0) {  // (tritri-33-#00)
             // [P, Q] is coincident with [A, B].
+            *pos1 = pu[0];
+            *pos2 = pw[0];
             return SHAREEDGE;
           }
           // P = A, [P, Q] overlaps [A, B] (tritri-33-#0#).
