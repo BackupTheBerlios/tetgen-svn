@@ -1251,12 +1251,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       }
       if (s1 == 0) {
         // R = k in [A, C] (tritri-010###).
+        *pos1 = 0;
       }
       if (s2 == 0) {
         // R = l in [B, C] (tritri-01#0##).
+        *pos1 = 0;
       }
       // R in [k, l] in [A, B, C] (tritri-01+-##).
-      return ACROSSFACE;
+      return INTERSECT;
     }
     
     s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
@@ -1282,98 +1284,178 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     
     if (z2 == 0) {  // (00)
       if (s1 < 0) {
-        if (s3 > 0) { // (tritri-00-#+#)
-          // [i, j] overlaps [k, l].
-          return ACROSSFACE;
+        if (s3 > 0) {
+          ssert(s2 > 0); // SELF_CHECK.
+          if (s4 > 0) {
+            // [i, j] overlaps [k, l] (tritri-00-+++).
+            *pos1 = 0;
+          } else {
+            if (s4 == 0) {
+              // j = l, [i, j] contains [k, l] (tritri-00-++0).
+              *pos1 = 0;
+            } else {
+              // [i, j] contains [k, l] (tritri-00-++-).
+              *pos1 = 0;
+            }
+          }
+        } else {
+          if (s3 == 0) { // (00-+0#)
+            ssert(s2 > 0); // SELF_CHECK.
+            if (s4 > 0) {
+              // i = k, [i, j] overlaps [k, l] (tritri-00-+0+).
+              *pos1 = 0;
+            } else {
+              if (s4 == 0) {
+                // [i, j] = [k, l] (tritri-00-+00).
+                *pos1 = 0;
+              } else {
+                // i = k, [i, j] contains [k, l] (tritri-00-+0-).
+                *pos1 = 0;  
+              }
+            }
+          } else { // s3 < 0
+            if (s2 > 0) {
+              if (s4 > 0) {
+                // [i, j] in [k, l] in [A, B, C] (tritri-00-+-+).
+                *pos1 = 0;
+              } else {
+                if (s4 == 0) {
+                  // j = l, [i, j] in [k, l] (tritri-00-+-0)
+                  *pos1 = 0;
+                } else { // s4 < 0
+                  // [i, j] overlaps [k, l] (tritri-00-+--)
+                  *pos1 = 0;
+                }
+              }
+            } else { // s2 == 0
+              assert(s4 < 0); // SELF_CHECK
+              // i = l, [P, R] intersects [B, C] (tritri-00#0##).
+              *pos1 = 0;
+            }
+          }
         }
-        if (s3 == 0) { // (tritri-00-#0#)
-          // i = k, [i, j] overlaps [k, l].
-          return ACROSSFACE; 
-        }
-        // s3 < 0. Depends on s2 and s4.                
-      } else { // (tritri-000###)
-        // j = k, [Q, R] intersects [A, B].
-        return ACROSSFACE;
+      } else { // s1 == 0
+        // j = k, [Q, R] intersects [A, B] (tritri-000###).
+        *pos1 = 0;
       }
-      if (s2 > 0) {
-        if (s4 < 0) {  // (tritri-00#+#-)
-          // [i, j] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        if (s4 == 0) {  // (tritri-00#+#0)
-          // j = l, [i, j] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        // [i, j] in [k, l] in [A, B, C] (tritri-00-+-+).
-        return ACROSSFACE;
-      } else { // (tritri-00#0##)
-        // i = l, [P, R] intersects [B, C].
-        return ACROSSFACE;
-      }
+      return INTERSECT;
     }
 
     if (z2 == 2) {  // (02)
       if (s1 < 0) {
-        if (s3 > 0) { // (tritri-02-#+#)
-          // [P, j] overlaps [k, l].
-          return ACROSSFACE;
+        if (s3 > 0) { // (02-#+#)
+          assert(s2 > 0); // SELF_CHECK;
+          if (s4 > 0) {
+            // [P, j] overlaps [k, l] (tritri-02-+++).
+            *pos1 = 0;
+          } else {
+            if (s4 == 0) {
+              // j = k, [i, j] contains [k, l] (tritri-02-++0).
+              *pos1 = 0;
+            } else { // s4 < 0
+              // [i, j] contains [k, l] (tritri-02-++-).
+              *pos1 = 0;
+            }
+          }
+        } else {
+          if (s3 == 0) { // (02-#0#)
+            assert(s2 > 0); // SELF_CHECK
+            if (s4 > 0) {
+              // P = k, [P, j] in [k, l] (tritri-02-+0+).
+              *pos1 = 0;
+            } else {
+              if (s4 == 0) {
+                // [P, j] = [k, l] (tritri-02-+00).
+                *pos1 = 0;
+              } else {  // s4 < 0
+                // P = k, [P, j] contains [k, l] (tritri-02-+0-).
+                *pos1 = 0;
+              }
+            }
+          } else { // s3 < 0.
+            if (s2 > 0) {
+              if (s4 > 0) {
+                // [P, j] in [k, l] in [A, B, C] (tritri-02-+-+).
+                *pos1 = 0;
+              } else {
+                if (s4 == 0) {
+                  // j = l, [P, j] overlaps [k, l] (tritri-02-+-0).
+                  *pos1 = 0;
+                } else { // s4 < 0
+                  // [P, j] overlaps [k, l] (tritri-02-+--).
+                  *pos1 = 0;
+                }
+              }
+            } else {  // s2 == 0
+              assert(s4 < 0); // SELF_CHECK
+              // P = k, P in [B, C] (tritri-02#0##).
+              *pos1 = 0;
+            }
+          }
         }
-        if (s3 == 0) { // (tritri-02-#0#)
-          // P = k, [P, j] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        // s3 < 0. Depends on s2 and s4.                
-      } else { // (tritri-020###)
-        // j = k, [Q, R] intersects [A, C].
-        return ACROSSFACE;
+      } else { // s1 == 0
+        // j = k, [Q, R] intersects [A, C] (tritri-020###).
+        *pos1 = 0;
       }
-      if (s2 > 0) {
-        if (s4 < 0) {  // (tritri-02#+#-)
-          // [P, j] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        if (s4 == 0) {  // (tritri-02#+#0) 
-          // j = l, [P, j] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        // [P, j] in [k, l] in [A, B, C] (tritri-02-+-+).
-        return ACROSSFACE;
-      } else { // (tritri-02#0##)
-        // P = l, P in [B, C].
-        return ACROSSFACE;
-      }
+      return INTERSECT;
     }
 
     if (z2 == 3) {  // (03)
       if (s1 < 0) {
-        if (s3 > 0) {  // (tritri-03-#+#)
-          // [P, Q] overlaps [k, l].
-          return ACROSSFACE;
+        if (s3 > 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // [P, Q] overlaps [k, l] (tritri-03-+++).
+            *pos1 = 0;  
+          } else {
+            if (s4 == 0) {
+              // Q = l, [P, Q] contains [k, l] (tritri-03-++0).
+              *pos1 = 0;
+            } else { // s4 < 0
+              // [P, Q] contains [k, l] (tritri-03-++-).
+              *pos1 = 0;
+            }
+          }
+        } else {
+          if (s3 == 0) {
+            assert(s2 > 0);  // SELF_CHECK
+            if (s4 > 0) {
+              // P = k, [P, Q] in [k, l] (tritri-03-+0+).
+              *pos1 = 0;
+            } else {
+              if (s4 == 0) {
+                // [P, Q] = [k, l] (tritri-03-+00).
+                *pos1 = 0;
+              } else {  // s4 < 0
+                // P = k, [P, Q] contains [k, l] (tritri-03-+0-).
+                *pos1 = 0;
+              }
+            }
+          } else { // s3 < 0
+            if (s2 > 0) {
+              if (s4 > 0) {
+                // [P, Q] in [k, l] (tritri-03-+-+).
+                *pos1 = 0;
+              } else {
+                if (s4 == 0) {
+                  // Q = l, [P, Q] in [k, l] (tritri-03-+-0).
+                  *pos1 = 0;
+                } else { // s4 < 0
+                  // [P, Q] overlaps [k, l] (tritri-03-+--).
+                  *pos1 = 0;
+                }
+              }
+            } else {  // s2 == 0
+              // P = l in [B, C] (tritri-03#0##).
+              *pos1 = 0;
+            }
+          }
         }
-        if (s3 == 0) {  // (tritri-03-#0#)
-          // P = k, [P, Q] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        // s3 < 0. Depends on s2 and s4. 
-      } else {  // (tritri-030###)
-        // Q = k, Q in [A, C].
-        return ACROSSFACE;
+      } else {
+        // Q = k in [A, C] (tritri-030###).
+        *pos1 = 0;
       }
-      if (s2 > 0) {
-        if (s4 < 0) {  // (tritri-03#+#-)
-          // [P, Q] overlaps [k, l].
-          return ACROSSFACE;
-        }
-        if (s4 == 0) { // (tritri-03#+#0)
-          // Q = l, Q in [B, C].
-          return ACROSSFACE;
-        }
-        // [P, Q] in [k, l] in [A, B, C] (tritri-03-+-+).
-        return ACROSSFACE;
-      } else { // (tritri-03#0##)
-        // P = j, P in [B, C].
-        return ACROSSFACE;
-      }
+      return INTERSECT;
     }
 
   } // if (z1 == 0)
