@@ -1316,29 +1316,31 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     if (z2 == 2) {  // (02)
       if (s1 < 0) {
         if (s3 > 0) { // (tritri-02-#+#)
-          return ACROSSFACE;  
+          // [P, j] overlaps [k, l].
+          return ACROSSFACE;
         }
         if (s3 == 0) { // (tritri-02-#0#)
-          // P lies on A->C.
-          return ACROSSFACE; 
+          // P = k, [P, j] overlaps [k, l].
+          return ACROSSFACE;
         }
         // s3 < 0. Depends on s2 and s4.                
       } else { // (tritri-020###)
-        // Q->R intersects A->C.
+        // j = k, [Q, R] intersects [A, C].
         return ACROSSFACE;
       }
       if (s2 > 0) {
-        if (s4 < 0) {  // (#+#-) (see tritri-02#+#-)
+        if (s4 < 0) {  // (tritri-02#+#-)
+          // [P, j] overlaps [k, l].
           return ACROSSFACE;
         }
-        if (s4 == 0) {  // (#+#0) 
-          // Q->R intersects B->C.
+        if (s4 == 0) {  // (tritri-02#+#0) 
+          // j = l, [P, j] overlaps [k, l].
           return ACROSSFACE;
         }
-        // [P, j] contained in (A, B, C).
+        // [P, j] in [k, l] in [A, B, C] (tritri-02-+-+).
         return ACROSSFACE;
       } else { // (tritri-02#0##)
-        // P lies on B->C.
+        // P = l, P in [B, C].
         return ACROSSFACE;
       }
     }
@@ -1346,29 +1348,31 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     if (z2 == 3) {  // (03)
       if (s1 < 0) {
         if (s3 > 0) {  // (tritri-03-#+#)
+          // [P, Q] overlaps [k, l].
           return ACROSSFACE;
         }
         if (s3 == 0) {  // (tritri-03-#0#)
-          // P lies on A->C.
+          // P = k, [P, Q] overlaps [k, l].
           return ACROSSFACE;
         }
         // s3 < 0. Depends on s2 and s4. 
       } else {  // (tritri-030###)
-        // Q lies on A->C.
+        // Q = k, Q in [A, C].
         return ACROSSFACE;
       }
       if (s2 > 0) {
         if (s4 < 0) {  // (tritri-03#+#-)
+          // [P, Q] overlaps [k, l].
           return ACROSSFACE;
         }
         if (s4 == 0) { // (tritri-03#+#0)
-          // Q lies on B->C.
+          // Q = l, Q in [B, C].
           return ACROSSFACE;
         }
-        // P->Q lies in [k, l] (tritri-03--++).
+        // [P, Q] in [k, l] in [A, B, C] (tritri-03-+-+).
         return ACROSSFACE;
       } else { // (tritri-03#0##)
-        // P lies on B->C.
+        // P = j, P in [B, C].
         return ACROSSFACE;
       }
     }
@@ -1377,7 +1381,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
 
   if (z1 == 1) {
 
-    if (z2 == 1) {  // (11) (tritri-11####)
+    if (z2 == 1) {  // (11)
       s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
       orient3dcount++;
       if (b->epsilon > 0) {
@@ -1386,7 +1390,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       if (s1 != 0) {
         return DISJOINT;
       }
-      // C and R are coincident (tritri-110###)
+      // C = R (tritri-110###).
       *pos1 = pu[2];
       *pos2 = pw[2];
       return SHAREVERT;
@@ -1406,43 +1410,45 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       return DISJOINT;
     }
 
-    if (z2 == 0) { // (10) (tritri-10####)
+    if (z2 == 0) { // (10)
       if (s1 == 0) {
-        // C lies on Q->R.
+        // C = j, C in [Q, R] (tritri-100###).
       }
       if (s2 == 0) {
-        // C lies on P->R.
+        // C = i, C in [P, R] (tritri-10#0##).
       }
+      // C in [i, j] in [P, Q, R] (tritri-10-+##).
       return ACROSSFACE;
     }
 
-    if (z2 == 2) {  // (12) (tritri-12####)
-      if (s1 == 0) {
-        // C lies on Q->R.
+    if (z2 == 2) {  // (12)
+      if (s1 == 0) { // 
+        // C = j, C in [Q, R] (tritri-120###).
       }
       if (s2 == 0) {
-        // C and P are coincident (tritri-12#0##)
+        // C = P (tritri-12#0##).
         *pos1 = pu[2];
         *pos2 = pw[0];
         return SHAREVERT;
       }
+      // C in [i, j] in [P, Q, R] (tritri-12-+##).
       return ACROSSFACE;
     }
 
-    if (z2 == 3) {  // (13) (tritri-13####)
+    if (z2 == 3) {  // (13)
       if (s1 == 0) {
-        // C and Q are coincident.
+        // C = Q (tritri-130###).
         *pos1 = pu[2];
         *pos2 = pw[1];
         return SHAREVERT;
       }
       if (s2 == 0) {
-        // C and P are coincident.
+        // C = P (tritri-13#0##).
         *pos1 = pu[2];
         *pos2 = pw[0];
         return SHAREVERT;
       }
-      // C lies on P->Q.
+      // C in [P, Q] (tritri-13-+##).
       return ACROSSFACE;
     }
   
