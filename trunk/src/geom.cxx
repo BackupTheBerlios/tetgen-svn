@@ -126,10 +126,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   point C, point P, point Q, point R, int *pos)
 {
   point U[3], V[3];  // The permuted vectors of points.
-  int ppos[3];  // The original positions of points.
+  int pu[3], pv[3];  // The original positions of points.
   REAL sA, sB, sC;
-  REAL s4, s5, s6, s7;
-  int zeros, bflag;
+  REAL s1, s2, s3, s4;
+  int z1;
 
   if (R == NULL) {
     REAL n[3], len;
@@ -170,9 +170,6 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   }
   triedgcopcount++;
 
-  zeros = 0;  // Count the number of zero-signs.
-  bflag = 0;  // Default case.
-
   if (sA < 0) {
     if (sB < 0) {
       if (sC < 0) { // (---).
@@ -182,51 +179,59 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           // All points are in the right positions.
           SETVECTOR3(U, A, B, C);  // I3
           SETVECTOR3(V, P, Q, R);  // I2
-          SETVECTOR3(ppos, 0, 1, 2);
+          SETVECTOR3(pu, 0, 1, 2);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 0;
         } else { // (--0).
           SETVECTOR3(U, A, B, C);  // I3
           SETVECTOR3(V, P, Q, R);  // I2
-          SETVECTOR3(ppos, 0, 1, 2);
-          zeros = 1;
+          SETVECTOR3(pu, 0, 1, 2);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 1;
         }
       }
     } else { 
       if (sB > 0) {
         if (sC < 0) { // (-+-).
           SETVECTOR3(U, C, A, B);  // PT = ST
-          SETVECTOR3(V, P, Q, R);  // PL = I2
-          SETVECTOR3(ppos, 2, 0, 1);
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 2, 0, 1);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 0;
         } else {
           if (sC > 0) { // (-++).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 1, 2, 0);
+            SETVECTOR3(pu, 1, 2, 0);
+            z1 = 0;
           } else { // (-+0).
             SETVECTOR3(U, C, A, B);  // PT = ST
-            SETVECTOR3(V, P, Q, R);  // PL = I2
-            SETVECTOR3(ppos, 2, 0, 1);
-            zeros = 1; 
-            bflag = 1;
+            SETVECTOR3(V, P, Q, R);  // I2
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 0, 1, 2);
+            z1 = 2;
           }
         }
       } else {
         if (sC < 0) { // (-0-).
           SETVECTOR3(U, C, A, B);  // PT = ST
-          SETVECTOR3(V, P, Q, R);  // PL = I2
-          SETVECTOR3(ppos, 2, 0, 1);
-          zeros = 1; 
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 2, 0, 1);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 1;
         } else {
           if (sC > 0) { // (-0+).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 1, 2, 0);
-            zeros = 1;
-            bflag = 1;
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 2;
           } else { // (-00).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 1, 2, 0);
-            zeros = 2; 
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 3; 
           }
         }
       }
@@ -236,19 +241,23 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
       if (sB < 0) {
         if (sC < 0) { // (+--).
           SETVECTOR3(U, B, C, A);  // PT = ST x ST
-          SETVECTOR3(V, P, Q, R);  // PL = I2
-          SETVECTOR3(ppos, 1, 2, 0);
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 1, 2, 0);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 0;
         } else {
           if (sC > 0) { // (+-+).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 2, 0, 1);
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 0;
           } else { // (+-0).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 2, 0, 1);
-            zeros = 1;
-            bflag = 1; 
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 2;
           }
         }
       } else { 
@@ -256,35 +265,40 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           if (sC < 0) { // (++-).
             SETVECTOR3(U, A, B, C);  // I3
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 0, 1, 2);
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 0;
           } else {
             if (sC > 0) { // (+++).
               return DISJOINT; 
             } else { // (++0).
               SETVECTOR3(U, A, B, C);  // I3
               SETVECTOR3(V, Q, P, R);  // PL = SL
-              SETVECTOR3(ppos, 0, 1, 2);
-              zeros = 1; 
+              SETVECTOR3(pu, 0, 1, 2);
+              SETVECTOR3(pv, 1, 0, 2);
+              z1 = 1; 
             }
           }
         } else { // (+0#)
           if (sC < 0) { // (+0-).
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
-            SETVECTOR3(V, P, Q, R);  // PL = I2
-            SETVECTOR3(ppos, 1, 2, 0);
-            zeros = 1; 
-            bflag = 1;
+            SETVECTOR3(V, P, Q, R);  // I2
+            SETVECTOR3(pu, 1, 2, 0);
+            SETVECTOR3(pv, 0, 1, 2);
+            z1 = 2;
           } else {
             if (sC > 0) { // (+0+).
               SETVECTOR3(U, C, A, B);  // PT = ST
               SETVECTOR3(V, Q, P, R);  // PL = SL
-              SETVECTOR3(ppos, 2, 0, 1); 
-              zeros = 1; 
+              SETVECTOR3(pu, 2, 0, 1);
+              SETVECTOR3(pv, 1, 0, 2);
+              z1 = 1;
             } else { // (+00).
               SETVECTOR3(U, B, C, A);  // PT = ST x ST
-              SETVECTOR3(V, P, Q, R);  // PL = I2
-              SETVECTOR3(ppos, 1, 2, 0);
-              zeros = 2; 
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 1, 2, 0);
+              SETVECTOR3(pv, 0, 1, 2);
+              z1 = 3; 
             }
           }
         }
@@ -293,21 +307,23 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
       if (sB < 0) {
         if (sC < 0) { // (0--).
           SETVECTOR3(U, B, C, A);  // PT = ST x ST
-          SETVECTOR3(V, P, Q, R);  // PL = I2
-          SETVECTOR3(ppos, 1, 2, 0);
-          zeros = 1; 
+          SETVECTOR3(V, P, Q, R);  // I2
+          SETVECTOR3(pu, 1, 2, 0);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 1;
         } else {
           if (sC > 0) { // (0-+).
             SETVECTOR3(U, A, B, C);  // I3
-            SETVECTOR3(V, P, Q, R);  // PL = I2
-            SETVECTOR3(ppos, 0, 1, 2);
-            zeros = 1;
-            bflag = 1;
+            SETVECTOR3(V, P, Q, R);  // I2
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 0, 1, 2);
+            z1 = 2;
           } else { // (0-0).
             SETVECTOR3(U, C, A, B);  // PT = ST
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 2, 0, 1);
-            zeros = 2; 
+            SETVECTOR3(pu, 2, 0, 1);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 3; 
           }
         }
       } else { 
@@ -315,37 +331,41 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           if (sC < 0) { // (0+-).
             SETVECTOR3(U, A, B, C);  // I3
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 0, 1, 2);
-            zeros = 1;
-            bflag = 1;
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 2;
           } else {
             if (sC > 0) { // (0++).
               SETVECTOR3(U, B, C, A);  // PT = ST x ST
               SETVECTOR3(V, Q, P, R);  // PL = SL
-              SETVECTOR3(ppos, 1, 2, 0);
-              zeros = 1;
+              SETVECTOR3(pu, 1, 2, 0);
+              SETVECTOR3(pv, 1, 0, 2);
+              z1 = 1;
             } else { // (0+0).
               SETVECTOR3(U, C, A, B);  // PT = ST
-              SETVECTOR3(V, P, Q, R);  // PL = I2
-              SETVECTOR3(ppos, 2, 0, 1);
-              zeros = 2; 
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 2, 0, 1);
+              SETVECTOR3(pv, 0, 1, 2);
+              z1 = 3; 
             }
           }
         } else { // (00#)
           if (sC < 0) { // (00-).
             SETVECTOR3(U, A, B, C);  // I3
             SETVECTOR3(V, Q, P, R);  // PL = SL
-            SETVECTOR3(ppos, 0, 1, 2);
-            zeros = 2; 
+            SETVECTOR3(pu, 0, 1, 2);
+            SETVECTOR3(pv, 1, 0, 2);
+            z1 = 3; 
           } else {
             if (sC > 0) { // (00+).
               SETVECTOR3(U, A, B, C);  // I3
-              SETVECTOR3(V, P, Q, R);  // PL = I2
-              SETVECTOR3(ppos, 0, 1, 2);
-              zeros = 2; 
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 0, 1, 2);
+              SETVECTOR3(pv, 0, 1, 2);
+              z1 = 3; 
             } else { // (000)
               // Not possible unless ABC is degenerate.
-              assert(zeros != 3); 
+              z1 = 4;
             }
           }
         }
@@ -353,201 +373,232 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
     }
   }
 
-  // Test if the intervals [V[0], V[1]] and [i, j] overlap.
-  s4 = orient3d(U[0], U[2], R, V[1]);  // A, C, R, Q
-  s5 = orient3d(U[1], U[2], R, V[0]);  // B, C, R, P
+  s1 = orient3d(U[0], U[2], R, V[1]);  // A, C, R, Q
+  s2 = orient3d(U[1], U[2], R, V[0]);  // B, C, R, P
   orient3dcount+=2;
-  
+
   if (b->epsilon) {
-    if ((s4 != 0) && iscoplanar(U[0], U[2], R, V[1], s4)) s4 = 0;
-    if ((s5 != 0) && iscoplanar(U[1], U[2], R, V[0], s5)) s5 = 0;
+    if ((s1 != 0) && iscoplanar(U[0], U[2], R, V[1], s1)) s1 = 0;
+    if ((s2 != 0) && iscoplanar(U[1], U[2], R, V[0], s2)) s2 = 0;
   }
 
-  if (s4 > 0) {
+  if (b->verbose > 2) {
+    printf("      Tri-tri (%d %d %d)-(%d %d %d) z1(%d) (%c%c)\n",
+      pointmark(U[0]), pointmark(U[1]), pointmark(U[2]), pointmark(V[0]),
+      pointmark(V[1]), pointmark(V[2]), z1, s1>0 ? '+' : (s1<0 ? '-' : '0'),
+      s2>0 ? '+' : (s2<0 ? '-' : '0'));
+  }
+  assert(z1 != 4); // SELF_CHECK
+
+  if (s1 > 0) {
     return DISJOINT;
   }
-  if (s5 < 0) {
+  if (s2 < 0) {
     return DISJOINT;
   }
 
-  s6 = orient3d(U[0], U[2], R, V[0]);  // A, C, R, P
-  s7 = orient3d(U[1], U[2], R, V[1]);  // B, C, R, Q
-  orient3dcount++;
+  if (z1 == 1) {
+    *pos = pu[2];
+    if (s1 == 0) {
+      // C = Q.
+      return SHAREVERT;
+    }
+    if (s2 == 0) {
+      // C = P.
+      return SHAREVERT;
+    }
+    // C in [P, Q].
+    return ACROSSVERT;
+  }
+
+  s3 = orient3d(U[0], U[2], R, V[0]);  // A, C, R, P
+  s4 = orient3d(U[1], U[2], R, V[1]);  // B, C, R, Q
+  orient3dcount+=2;
       
   if (b->epsilon) {
-    if ((s6 != 0) && iscoplanar(U[0], U[2], R, V[0], s6)) s6 = 0;
-    if ((s7 != 0) && iscoplanar(U[1], U[2], R, V[1], s7)) s7 = 0;
+    if ((s3 != 0) && iscoplanar(U[0], U[2], R, V[0], s3)) s3 = 0;
+    if ((s4 != 0) && iscoplanar(U[1], U[2], R, V[1], s4)) s4 = 0;
   }
 
-  if (s4 < 0) {
-    if (s6 > 0) {
-      if (zeros == 0) {
-        // P1->Q1 intersects A1->C1.
-        if ((s5 > 0) && (s7 < 0)) {
-          // P1->Q1 intersects B1->C1 as well.
-          // Return the first edge that P1->Q1 intersects.
-          *pos = ppos[1] < ppos[2] ? ppos[1] : ppos[2];
+  if (z1 == 0) {
+    if (s1 < 0) {
+      if (s3 > 0) {
+        assert(s2 > 0); // SELF_CHECK
+        if (s4 > 0) {
+          // [P, Q] overlaps [k, l] (-+++).
+          *pos = pu[2]; // C->A.
         } else {
-          *pos = ppos[2];
+          if (s4 == 0) {
+            // Q = l, [P, Q] contains [k, l] (-++0).
+          } else { // s4 < 0
+            // [P, Q] contains [k, l] (-++-).
+          }
+          // Return the first edge that P->Q intersects.
+          if (pv[0] == 0) {
+            // P->Q does not reverse.
+            *pos = pu[1] < pu[2] ? pu[1] : pu[2];
+          } else {
+            *pos = pu[1] > pu[2] ? pu[1] : pu[2];
+          }
         }
-        return ACROSSEDGE;
+      } else {
+        if (s3 == 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // P = k, [P, Q] in [k, l] (-+0+).
+            *pos = pu[2];
+          } else {
+            if (s4 == 0) {
+              // [P, Q] = [k, l] (-+00).
+            } else {
+              // P = k, [P, Q] contains [k, l] (-+0-).
+            }
+            // Return the first edge that P->Q intersects.
+            if (pv[0] == 0) {
+              // P->Q does not reverse.
+              *pos = pu[1] < pu[2] ? pu[1] : pu[2];
+            } else {
+              *pos = pu[1] > pu[2] ? pu[1] : pu[2];
+            }
+          }
+        } else { // s3 < 0
+          if (s2 > 0) {
+            if (s4 > 0) {
+              // [P, Q] in [k, l] (-+-+).
+              *pos = 3;
+            } else {
+              if (s4 == 0) {
+                // Q = l, [P, Q] in [k, l] (-+-0).
+                *pos = pu[1];
+              } else { // s4 < 0
+                // [P, Q] overlaps [k, l] (-+--).
+                *pos = pu[1];
+              }
+            }
+          } else { // s2 == 0
+            // P = l (#0##).
+            *pos = pu[1];
+          }
+        }
       }
-      if (zeros == 1) {
-        if (bflag == 0) {
-          // P1->Q1 intersects C1 only.
-          *pos = ppos[2];
-        } else {  // bflag == 1
-          // P1->Q1 intersects A1.
-          *pos = ppos[0];
+    } else { // s1 == 0
+      // Q = k (0####)
+      *pos = pu[2];
+    }
+    return ACROSSEDGE;
+  }
+
+  if (z1 == 2) {
+    if (s1 < 0) {
+      if (s3 > 0) {
+        assert(s2 > 0); // SELF_CHECK
+        if (s4 > 0) {
+          // [P, Q] overlaps [A, l] (-+++).
+        } else {
+          if (s4 == 0) {
+            // Q = l, [P, Q] contains [A, l] (-++0).
+          } else { // s4 < 0
+            // [P, Q] contains [A, l] (-++-).
+          }
         }
+        *pos = pu[0];  // P->Q pass A
         return ACROSSVERT;
-      }
-      if (zeros == 2) {
-        // P1->Q1 is collinear with A1->B1, and intersects A1.
-        *pos = ppos[0];
-        return COLLINEAR;
-      }
-    } 
-    if (s6 == 0) {
-      if (zeros == 0) {
-        // P1 lies on A1->C1.
-        *pos = ppos[2];
-        return ACROSSEDGE;
-      }
-      if (zeros == 1) {
-        if (bflag == 0) {
-          // P1 = C1.
-          *pos = ppos[2];
-          return SHAREVERT;
-        } else {  // bflag == 1
-          // P1 = A1, but P1->Q1 intersects (A, B, C)
-          *pos = ppos[0];
-          return ACROSSVERT;  // NOT THE PROPER CASE.
+      } else {
+        if (s3 == 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // P = A, [P, Q] in [A, l] (-+0+).
+            *pos = pu[0];
+            return SHAREVERT;
+          } else {
+            if (s4 == 0) {
+              // [P, Q] = [A, l] (-+00).
+              *pos = pu[0];
+              return SHAREVERT;
+            } else { // s4 < 0
+              // Q = l, [P, Q] in [A, l] (-+0-).
+              *pos = pu[1]; // P->Q intersects B->C.
+            }
+          }
+        } else { // s3 < 0
+          if (s2 > 0) {
+            if (s4 > 0) {
+              // [P, Q] in [A, l] (-+-+).
+              *pos = 3;
+            } else {
+              if (s4 == 0) {
+                // Q = l, [P, Q] in [A, l] (-+-0).
+                *pos = pu[1];
+              } else { // s4 < 0
+                // [P, Q] overlaps [A, l] (-+--).
+                *pos = pu[1];
+              }
+            }
+          } else { // s2 == 0
+            // P = l (#0##).
+            *pos = pu[1];
+          }
         }
       }
-      if (zeros == 2) {
-        if (s7 == 0) {
-          // P1->Q1 is coincident with A1->B1.
-          *pos = ppos[0];
-          return SHAREEDGE;
-        }
-        // P1 = A1, but P1->Q1 is collinear with A1->B1. 
-        *pos = ppos[0];
-        return COLLINEAR;  // NOT THE PROPER CASE.
-      }
-    }
-    // The remaining case is: s6 < 0.
-  } else {  // s4 == 0
-    if (zeros == 0) {
-      // Q1 lies on A1->C1
-      *pos = ppos[2];
-      return ACROSSEDGE;
-    }
-    if (zeros == 1) {
-      if (bflag == 0) {
-        // Q1 = C1.
-        *pos = ppos[2];
-      } else { // bflag == 1
-        // Q1 = A1.
-        *pos = ppos[0];
-      }
+    } else { // s1 == 0
+      // Q = A (0###).
+      *pos = pu[0];
       return SHAREVERT;
     }
-    if (zeros == 2) {
-      // Q1 = A1.
-      *pos = ppos[0];
-      return SHAREVERT;
-    }
+    return ACROSSEDGE;
   }
 
-  if (s5 > 0) {
-    if (s7 < 0) {
-      if (zeros == 0) {
-        // P1->Q1 intersects B1->C1.
-        *pos = ppos[1];
-        return ACROSSEDGE;
-      }
-      if (zeros == 1) {
-        if (bflag == 0) {
-          // P1->Q1 intersects C1.
-          *pos = ppos[2];
-          return ACROSSVERT;
-        } else { // bflag == 1
-          // P1->Q1 intersects B1->C1.
-          *pos = ppos[1];
-          return ACROSSEDGE;
+  if (z1 == 3) {
+    if (s1 < 0) {
+      if (s3 > 0) {
+        assert(s2 > 0); // SELF_CHECK
+        if (s4 > 0) {
+          // [P, Q] overlaps [A, B] (-+++).
+        } else {
+          if (s4 == 0) {
+            // Q = B, [P, Q] contains [A, B] (-++0).
+          } else { // s4 < 0
+            // [P, Q] contains [A, B] (-++-).
+          }
+        }
+      } else {
+        if (s3 == 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // P = A, [P, Q] in [A, B] (-+0+).
+          } else {
+            if (s4 == 0) {
+              // [P, Q] = [A, B] (-+00).
+            } else { // s4 < 0
+              // P= A, [P, Q] in [A, B] (-+0-).
+            }
+          }
+        } else { // s3 < 0
+          if (s2 > 0) {
+            if (s4 > 0) {
+              // [P, Q] in [A, B] (-+-+).
+            } else {
+              if (s4 == 0) {
+                // Q = B, [P, Q] in [A, B] (-+-0).
+              } else { // s4 < 0
+                // [P, Q] overlaps [A, B] (-+--).
+              }
+            }
+          } else { // s2 == 0
+            // P = B (#0##).
+            *pos = pu[1];
+            return SHAREVERT;
+          }
         }
       }
-      if (zeros == 2) {
-        // P1->Q1 is collinear with A1->B1, and intersects B1.
-        *pos = ppos[0];
-        return COLLINEAR;
-      }
+    } else { // s1 == 0
+      // Q = A (0###).
+      *pos = pu[0];
+      return SHAREVERT; 
     }
-    if (s7 == 0) {
-      if (zeros == 0) {
-        // Q1 lies on B1->C1.
-        *pos = ppos[1];
-        return ACROSSEDGE;
-      }
-      if (zeros == 1) {
-        if (bflag == 0) {
-          // Q1 = C1.
-          *pos = ppos[2];
-          return SHAREVERT;
-        } else {  // bflag == 1
-          // Q1 lies on B1->C1.
-          *pos = ppos[1];
-          return ACROSSEDGE;
-        }
-      }
-      if (zeros == 2) {
-        if (s6 == 0) {
-          // P1->Q1 is coincident with A1->B1.
-          *pos = ppos[0];
-          return SHAREEDGE;
-        }
-        // P1->Q1 is collinear with A1->B1, and Q1 = B1.
-        *pos = ppos[0];
-        return COLLINEAR;
-      }
-    }
-    // The remaining case is: s7 < 0.
-  } else {  // s5 == 0
-    if (zeros == 0) {
-      // P1 intersects B1->C1.
-      *pos = ppos[1];
-      return ACROSSEDGE;
-    }
-    if (zeros == 1) {
-      if (bflag == 0) {
-        // P1 = C1.
-        *pos = ppos[2];
-        return SHAREVERT;
-      } else { // bflag == 1
-        // P1 intersects B1->C1.
-        *pos = ppos[1];
-        return ACROSSEDGE;
-      }
-    }
-    if (zeros == 2) {
-      // P1 = B1.
-      *pos = ppos[1];
-      return SHAREVERT;
-    }
-  }
-
-  // The remaining cases: s6 < 0 and s7 > 0;
-  assert(zeros != 1);
-  if (zeros == 2) {
-    // P1->Q1 is contained in A1->B1.
-    *pos = ppos[0];
+    *pos = pu[0];
     return COLLINEAR;
   }
-  // if (zeros == 0) {
-  // P1->Q1 is contained in (A, B, C).
-  return COPLANAR;
-  // }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1285,7 +1336,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     if (z2 == 0) {  // (00)
       if (s1 < 0) {
         if (s3 > 0) {
-          ssert(s2 > 0); // SELF_CHECK.
+          assert(s2 > 0); // SELF_CHECK.
           if (s4 > 0) {
             // [i, j] overlaps [k, l] (tritri-00-+++).
             *pos1 = 0;
@@ -1300,7 +1351,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           }
         } else {
           if (s3 == 0) { // (00-+0#)
-            ssert(s2 > 0); // SELF_CHECK.
+            assert(s2 > 0); // SELF_CHECK.
             if (s4 > 0) {
               // i = k, [i, j] overlaps [k, l] (tritri-00-+0+).
               *pos1 = 0;
@@ -1599,7 +1650,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [A, l] (tritri-20-++0).
-              *pos1 = 0;rr
+              *pos1 = 0;
             } else {  // s4 < 0
               // [i, j] contains [A, l] (tritri-20-++-).
               *pos1 = 0;
