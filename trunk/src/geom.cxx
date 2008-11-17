@@ -842,17 +842,30 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// tri_tri_inter()    Triangle-triangle intersection test.                   //
+// tri_tri_test3d()    3D triangle-triangle intersection test.               //
 //                                                                           //
-// 'O' is point lies strictly above the plane (A, B, C), it may be NULL.     //
+// This routine takes two triangles T1 (with vertices A, B, C) and T2 (with  //
+// vertices P, Q, R) in 3D, and test if they intersect each other.  Return 1 //
+// if they are intersected, otherwise, return 0.                             //
+//                                                                           //
+// We say that two triangles T1 and T2 intersect each other if T1 \cap T2 is //
+// not empty, otherwise, they are disjoint.                                  //
+//                                                                           //
+// If the point 'O' is not NULL, it lies strictly above the plane defined by //
+// A, B, C. It is used in test when T1 and T2 are coplanar.                  //
+//                                                                           //
+// If T1 and T2 intersect each other (return 1), they may intersect in diff- //
+// erent ways. If 'level' > 0, their intersection type will be reported in   //
+// 'pu', 'pw', and 'icode'.  'pu' and 'pw' return the permutations of [A, B, //
+// C] and [P, Q, R], respectively; 'icode' encodes the intersection type.    //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
-  point C, point P, point Q, point R, point O, int *pos1, int *pos2)
+int tetgenmesh::tri_tri_test3d(point A, point B, point C, point P, point Q, 
+  point R, point O, int level, int *pu, int *pw, int *icode)
 {
   point U[3], V[3], W[3], Ptmp;  // The permuted vectors of points.
-  int pu[3], pv[3], pw[3], itmp;  // The original positions of points.
+  int pv[3], itmp;  // The original positions of points.
   REAL sA, sB, sC, sP, sQ, sR;
   REAL s1, s2, s3, s4;
   int z1, z2;
@@ -1278,40 +1291,15 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
     }
   }
 
-  if (b->verbose > 2) {
-    printf("      Tri-tri (%d %d %d)-(%d %d %d) z1(%d) z2(%d)\n",
-      pointmark(U[0]), pointmark(U[1]), pointmark(U[2]), pointmark(W[0]), 
-      pointmark(W[1]), pointmark(W[2]), z1, z2);
-  }
-
-  if (z1 == 0) {
-
-    if (z2 == 1) {  // (01)
-      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
-      s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
-      }
-      if (s1 < 0) {
-        return DISJOINT;
-      }
-      if (s2 > 0) {
-        return DISJOINT;
-      }
-      if (s1 == 0) {
-        // R = k in [A, C] (tritri-010###).
-        *pos1 = 0;
-      }
-      if (s2 == 0) {
-        // R = l in [B, C] (tritri-01#0##).
-        *pos1 = 0;
-      }
-      // R in [k, l] in [A, B, C] (tritri-01+-##).
-      return INTERSECT;
+  if (z2 == 1) {
+    s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
+    s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
+    orient3dcount+=2;
+    if (b->epsilon > 0) {
+      if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
+      if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
     }
-    
+  } else {
     s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
     s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
     orient3dcount+=2;
@@ -1319,19 +1307,162 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
       if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
       if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
     }
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-tri (%d %d %d)-(%d %d %d) (%d-%d) (%c%c)\n",
+      pointmark(U[0]), pointmark(U[1]), pointmark(U[2]), pointmark(W[0]), 
+      pointmark(W[1]), pointmark(W[2]), z1, z2,
+      s1>0 ? '+' : (s1<0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'));
+  }
+
+  if (z2 == 1) {
+    if (s1 < 0) {
+      return 0;
+    }
+    if (s2 > 0) {
+      return 0;
+    }
+  } else {
     if (s1 > 0) {
-      return DISJOINT;
+      return 0;
     }
     if (s2 < 0) {
-      return DISJOINT;
+      return 0;
     }
-    s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
-    s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
-    orient3dcount+=2;
-    if (b->epsilon > 0) {
-      if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
-      if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
+  }
+
+  // Do we need to classify the intersection type of T1 and T2?
+  if (level == 0) {
+    return 1;
+  }
+
+  if (z2 == 1) {
+
+    if (z1 == 0) {  // (01)
+      if (s1 == 0) {
+        // R = k in [A, C] (tritri-010###).
+        *icode = 0;
+      } else {
+        if (s2 == 0) {
+          // R = l in [B, C] (tritri-01#0##).
+          *icode = 0;
+        } else {
+          // R in [k, l] in [A, B, C] (tritri-01+-##).
+          *icode = 0;
+        }
+      }
+      return 1;
     }
+
+    if (z1 == 1) {  // (11)
+      assert(s1 == 0); // SELF_CHECK
+      // C = R (tritri-110###).
+      *icode = 1;
+      return 1;
+    }
+
+    if (z1 == 2) {  // (21)
+      if (s1 == 0) {
+        // R = A (tritri-210###).
+        *icode = 1;
+      } else {
+        if (s2 == 0) {
+          // R = l, R in [B, C] (tritri-21#0##).
+          *icode = 0;
+        } else {
+          // R in [k, l] in [A, B, C] (tritri-21+-##).
+          *icode = 0;
+        }
+      }
+      return 1;
+    }
+
+    if (z1 == 3) {  // (31)
+      if (s1 == 0) {
+        // R = A (tritri-310###).
+        *icode = 1;
+      } else {
+        if (s2 == 0) {
+          // R = B (tritri-31#0##).
+          *icode = 2;
+        } else {
+          // R in [A, B] (tritri-31+-##).
+          *icode = 0;
+        }
+      }
+      return 1;
+    }
+
+  } // z2 == 1
+
+  if (z1 == 1) {
+  
+    if (z2 == 0) { // (10)
+      if (s1 == 0) {
+        // C = j, C in [Q, R] (tritri-100###).
+        *icode = 0;
+      } else {
+        if (s2 == 0) {
+          // C = i, C in [P, R] (tritri-10#0##).
+          *icode = 0;
+        } else {
+          // C in [i, j] in [P, Q, R] (tritri-10-+##).
+          *icode = 0;
+        }
+      }
+      return 1;
+    }
+
+    if (z2 == 2) {  // (12)
+      if (s1 == 0) { // 
+        // C = j, C in [Q, R] (tritri-120###).
+        *icode = 0;
+      } else {
+        if (s2 == 0) {
+          // C = P (tritri-12#0##).
+          *icode = 1;
+        } else {
+          // C in [i, j] in [P, Q, R] (tritri-12-+##).
+          *icode = 0;
+        }
+      }
+      return 1;
+    }
+
+    if (z2 == 3) {  // (13)
+      if (s1 == 0) {
+        // C = Q (tritri-130###).
+        *icode = 2;
+      } else {
+        if (s2 == 0) {
+          // C = P (tritri-13#0##).
+          *icode = 1;
+        } else {
+          // C in [P, Q] (tritri-13-+##).
+          *icode = 0;
+        }
+      }
+      return 1;
+    }
+
+  } // if (z1 == 1)
+
+  // Two additional orientation tests are needed.
+  s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
+  s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
+  orient3dcount+=2;
+  if (b->epsilon > 0) {
+    if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
+    if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("        s3s4 (%c%c)\n", s3>0 ? '+' : (s3<0 ? '-' : '0'), 
+      s4>0 ? '+' : (s4<0 ? '-' : '0'));
+  }
+
+  if (z1 == 0) {
     
     if (z2 == 0) {  // (00)
       if (s1 < 0) {
@@ -1339,14 +1470,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK.
           if (s4 > 0) {
             // [i, j] overlaps [k, l] (tritri-00-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [k, l] (tritri-00-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               // [i, j] contains [k, l] (tritri-00-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1354,42 +1485,42 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK.
             if (s4 > 0) {
               // i = k, [i, j] overlaps [k, l] (tritri-00-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [i, j] = [k, l] (tritri-00-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 // i = k, [i, j] contains [k, l] (tritri-00-+0-).
-                *pos1 = 0;  
+                *icode = 0; 
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [i, j] in [k, l] in [A, B, C] (tritri-00-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // j = l, [i, j] in [k, l] (tritri-00-+-0)
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [i, j] overlaps [k, l] (tritri-00-+--)
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               assert(s4 < 0); // SELF_CHECK
               // i = l, [P, R] intersects [B, C] (tritri-00#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else { // s1 == 0
         // j = k, [Q, R] intersects [A, B] (tritri-000###).
-        *pos1 = 0;
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
     if (z2 == 2) {  // (02)
@@ -1398,14 +1529,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK;
           if (s4 > 0) {
             // [P, j] overlaps [k, l] (tritri-02-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // j = k, [i, j] contains [k, l] (tritri-02-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [i, j] contains [k, l] (tritri-02-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1413,42 +1544,42 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = k, [P, j] in [k, l] (tritri-02-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [P, j] = [k, l] (tritri-02-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else {  // s4 < 0
                 // P = k, [P, j] contains [k, l] (tritri-02-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0.
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, j] in [k, l] in [A, B, C] (tritri-02-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // j = l, [P, j] overlaps [k, l] (tritri-02-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [P, j] overlaps [k, l] (tritri-02-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else {  // s2 == 0
               assert(s4 < 0); // SELF_CHECK
               // P = k, P in [B, C] (tritri-02#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else { // s1 == 0
         // j = k, [Q, R] intersects [A, C] (tritri-020###).
-        *pos1 = 0;
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
     if (z2 == 3) {  // (03)
@@ -1457,14 +1588,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, Q] overlaps [k, l] (tritri-03-+++).
-            *pos1 = 0;  
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // Q = l, [P, Q] contains [k, l] (tritri-03-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [P, Q] contains [k, l] (tritri-03-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1472,173 +1603,46 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0);  // SELF_CHECK
             if (s4 > 0) {
               // P = k, [P, Q] in [k, l] (tritri-03-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [P, Q] = [k, l] (tritri-03-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else {  // s4 < 0
                 // P = k, [P, Q] contains [k, l] (tritri-03-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, Q] in [k, l] (tritri-03-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // Q = l, [P, Q] in [k, l] (tritri-03-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [P, Q] overlaps [k, l] (tritri-03-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else {  // s2 == 0
               // P = l in [B, C] (tritri-03#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else {
         // Q = k in [A, C] (tritri-030###).
-        *pos1 = 0;
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
   } // if (z1 == 0)
 
-  if (z1 == 1) {
-
-    if (z2 == 1) {  // (11)
-      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
-      orient3dcount++;
-      if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
-      }
-      if (s1 != 0) {
-        return DISJOINT;
-      }
-      // C = R (tritri-110###).
-      *pos1 = pu[2];
-      *pos2 = pw[2];
-      return SHAREVERT;
-    }
-
-    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
-    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
-    orient3dcount+=2;
-    if (b->epsilon > 0) {
-      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
-    }
-    if (s1 > 0) {
-      return DISJOINT;
-    }
-    if (s2 < 0) {
-      return DISJOINT;
-    }
-
-    if (z2 == 0) { // (10)
-      if (s1 == 0) {
-        // C = j, C in [Q, R] (tritri-100###).
-        *pos1 = 0;
-      }
-      if (s2 == 0) {
-        // C = i, C in [P, R] (tritri-10#0##).
-        *pos1 = 0;
-      }
-      // C in [i, j] in [P, Q, R] (tritri-10-+##).
-      return INTERSECT;
-    }
-
-    if (z2 == 2) {  // (12)
-      if (s1 == 0) { // 
-        // C = j, C in [Q, R] (tritri-120###).
-        *pos1 = 0;
-      }
-      if (s2 == 0) {
-        // C = P (tritri-12#0##).
-        *pos1 = pu[2];
-        *pos2 = pw[0];
-        return SHAREVERT;
-      }
-      // C in [i, j] in [P, Q, R] (tritri-12-+##).
-      return INTERSECT;
-    }
-
-    if (z2 == 3) {  // (13)
-      if (s1 == 0) {
-        // C = Q (tritri-130###).
-        *pos1 = pu[2];
-        *pos2 = pw[1];
-        return SHAREVERT;
-      }
-      if (s2 == 0) {
-        // C = P (tritri-13#0##).
-        *pos1 = pu[2];
-        *pos2 = pw[0];
-        return SHAREVERT;
-      }
-      // C in [P, Q] (tritri-13-+##).
-      return INTERSECT;
-    }
-
-  } // if (z1 == 1)
-
   if (z1 == 2) {
-
-    if (z2 == 1) {  // (21)
-      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
-      s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
-      }
-      if (s1 < 0) {
-        return DISJOINT;
-      }
-      if (s2 > 0) {
-        return DISJOINT;
-      }
-      if (s1 == 0) {
-        // R = A (tritri-210###).
-        *pos1 = pu[0];
-        *pos2 = pw[2];
-        return SHAREVERT;
-      }
-      if (s2 == 0) {
-        // R = l, R in [B, C] (tritri-21#0##).
-        *pos1 = 0;
-      }
-      // R in [k, l] in [A, B, C] (tritri-21+-##).
-      return INTERSECT;
-    }
-
-    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
-    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
-    orient3dcount+=2;
-    if (b->epsilon > 0) {
-      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
-    }
-    if (s1 > 0) {
-      return DISJOINT;
-    }
-    if (s2 < 0) {
-      return DISJOINT;
-    }
-    s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
-    s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
-    orient3dcount+=2;
-    if (b->epsilon > 0) {
-      if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
-      if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
-    }
 
     if (z2 == 0) {  // (20)
       if (s1 < 0) {
@@ -1646,14 +1650,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0);  // SELF_CHECK
           if (s4 > 0) {
             // [i, j] overlaps [A, l] (tritri-20-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [A, l] (tritri-20-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else {  // s4 < 0
               // [i, j] contains [A, l] (tritri-20-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1661,41 +1665,41 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // i = A, [i, j] overlaps [A, l] (tritri-20-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [i, j] = [A, l] (tritri-20-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else { // s4 < 0
                 // i = A, [i, j] contains [A, l] (tritri-20-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [i, j] in [A, l] in [A, B, C] (tritri-20-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // j = l, [i, j] in [A, l] (tritri-20-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [i, j] overlaps [A, l] (tritri-20-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               // i = l, [P, R] intersects [B, C] (tritri-20#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else { // s1 == 0
         // j = A in [Q, R] (tritri-200###).
-        *pos1 = 0;
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
     if (z2 == 2) {  // (22)
@@ -1704,14 +1708,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, j] overlaps [A, l] (tritri-22-+++).
-            *pos1 = 0;  
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // j = l, [P, j] contains [A, l] (tritri-22-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [P, j] contains [A, l] (tritri-22-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1719,40 +1723,41 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, j] in [A, l] (tritri-22-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [P, j] = [A, l] (tritri-22-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else { // s4 < 0
                 // P = A, [P, j] contains [A, l] (tritri-22-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, j] in [A, l] in [A, B, C] (tritri-22-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // j = l, [P, j] in [A, l] (tritri-22-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // P, j] overlaps [A, l] (tritri-22-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               // P = l, P in [B, C] (tritri-22#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else {
         // j = A in [Q, R] (tritri-220###).
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
     if (z2 == 3) {  // (23)
@@ -1761,14 +1766,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, Q] overlaps [A, l] (tritri-23-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // Q = l, [P, Q] contains [A, l] (tritri-23-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [P, Q] contains [A, l] (tritri-23-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1776,99 +1781,46 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, Q] in [A, l] (tritri-23-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [P, Q] = [A, l] (tritri-23-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else {  // s4 < 0
                 // [P, Q] contains [A, l] (tritri-23-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, Q] in [A, l] (tritri-23-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // Q = l, [P, Q] in [A, l] (tritri-23-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [P, Q] overlaps [A, l] (tritri-23-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               // P = l in [B, C] (tritri-23#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else {
         // Q = A (tritri-230###).
-        *pos1 = pu[0];
-        *pos2 = pw[1];
-        return SHAREVERT;
+        *icode = 2;
       }
-      return INTERSECT;
+      return 1;
     }
 
   } // if (z1 == 2)
 
   if (z1 == 3) {
-
-    if (z2 == 1) {  // (31)
-      s1 = orient3d(U[0], U[2], W[0], W[2]);  // A, C, P, R
-      s2 = orient3d(U[1], U[2], W[1], W[2]);  // B, C, Q, R
-      orient3dcount+=2;
-      if (b->epsilon > 0) {
-        if ((s1 != 0) && iscoplanar(U[0], U[2], W[0], W[2], s1)) s1 = 0;
-        if ((s2 != 0) && iscoplanar(U[1], U[2], W[1], W[2], s2)) s2 = 0;
-      }
-      if (s1 < 0) {
-        return DISJOINT;
-      }
-      if (s2 > 0) {
-        return DISJOINT;
-      }
-      if (s1 == 0) {
-        // R = A (tritri-310###).
-        *pos1 = pu[0];
-        *pos2 = pw[2];
-        return SHAREVERT;
-      }
-      if (s2 == 0) {
-        // R = B (tritri-31#0##).
-        *pos1 = pu[1];
-        *pos2 = pw[2];
-        return SHAREVERT;
-      }
-      // R in [A, B] (tritri-31+-##).
-      return ACROSSFACE;
-    }
-
-    s1 = orient3d(U[0], U[2], W[2], W[1]);  // A, C, R, Q
-    s2 = orient3d(U[1], U[2], W[2], W[0]);  // B, C, R, P
-    orient3dcount+=2;
-    if (b->epsilon > 0) {
-      if ((s1 != 0) && iscoplanar(U[0], U[2], W[2], W[1], s1)) s1 = 0;
-      if ((s2 != 0) && iscoplanar(U[1], U[2], W[2], W[0], s2)) s2 = 0;
-    }
-    if (s1 > 0) {
-      return DISJOINT;
-    }
-    if (s2 < 0) {
-      return DISJOINT;
-    }
-    s3 = orient3d(U[0], U[2], W[2], W[0]);  // A, C, R, P
-    s4 = orient3d(U[1], U[2], W[2], W[1]);  // B, C, R, Q
-    orient3dcount+=2;
-    if (b->epsilon > 0) {
-      if ((s3 != 0) && iscoplanar(U[0], U[2], W[2], W[0], s3)) s3 = 0;
-      if ((s4 != 0) && iscoplanar(U[1], U[2], W[2], W[1], s4)) s4 = 0;
-    }
 
     if (z2 == 0) {  // (30)
       if (s1 < 0) {
@@ -1876,14 +1828,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [i, j] overlaps [A, B] (tritri-30-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // j = B, [i, j] contains [A, B] (tritri-30-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [i, j] contains [A, B] (tritri-30-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1891,41 +1843,41 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // i = A, [i, j] in [A, B] (tritri-30-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [i, j] = [A, B] (tritri-30-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else { // s4 < 0
                 // i = A, [i, j] contains [A, B] (tritri-30-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [i, j] in [A, B] (tritri-30-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // j = B, [i, j] in [A, B] (tritri-30-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [i, j] overlaps [A, B] (tritri-30-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               // i = B in [P, R] (tritri-30#0##).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         }
       } else {
         // j = A in [Q, R] (tritri-300###).
-        *pos1 = 0;
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
     if (z2 == 2) {  // (32)
@@ -1934,14 +1886,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, j] overlaps [A, B] (tritri-32-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // j = B, [P, j] contains [A, B] (tritri-32-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [P, j] contains [A, B] (tritri-32-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -1949,43 +1901,41 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, j] in [A, B] (tritri-32-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [P, j] = [A, B] (tritri-32-+00).
-                *pos1 = 0;
+                *icode = 0;
               } else { // s4 < 0
                 // P = A, [P, j] contains [A, B] (tritri-32-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, j] in [A, B] (tritri-32-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // j = B, [P, j] in [A, B] (tritri-32-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [P, j] overlaps [A, B] (tritri-32-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               // P = B (tritri-32#0##).
-              *pos1 = pu[1];
-              *pos2 = pw[0];
-              return SHAREVERT;
+              *icode = 2;
             }
           }
         }
       } else {
         // j = A in [Q, R] (tritri-320###).
-        *pos1 = 0;
+        *icode = 0;
       }
-      return INTERSECT;
+      return 1;
     }
 
     if (z2 == 3) {  // (33)
@@ -1994,14 +1944,14 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, Q] overlaps [A, B] (tritri-33-+++).
-            *pos1 = 0;
+            *icode = 0;
           } else {
             if (s4 == 0) {
               // Q = B, [P, Q] contains [A, B] (tritri-33-++0).
-              *pos1 = 0;
+              *icode = 0;
             } else { // s4 < 0
               // [P, Q] contains [A, B] (tritri-33-++-).
-              *pos1 = 0;
+              *icode = 0;
             }
           }
         } else {
@@ -2009,47 +1959,41 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, Q] in [A, B] (tritri-33-+0+).
-              *pos1 = 0;
+              *icode = 0;
             } else {
               if (s4 == 0) {
                 // [P, Q] = [A, B] (tritri-33-+00).
-                *pos1 = pu[0];
-                *pos2 = pw[0];
-                return SHAREEDGE;
+                *icode = 5;
               } else { // s4 < 0
                 // P = A, [P, Q] contains [A, B] (tritri-33-+0-).
-                *pos1 = 0;
+                *icode = 0;
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, Q] in [A, B] (tritri-33-+-+).
-                *pos1 = 0;
+                *icode = 0;
               } else {
                 if (s4 == 0) {
                   // Q = B, [P, Q] overlaps [A, B] (tritri-33-+-0).
-                  *pos1 = 0;
+                  *icode = 0;
                 } else { // s4 < 0
                   // [P, Q] overlaps [A, B] (tritri-33-+--).
-                  *pos1 = 0;
+                  *icode = 0;
                 }
               }
             } else { // s2 == 0
               // P = B (tritri-33#0##).
-              *pos1 = pu[1];
-              *pos2 = pw[0];
-              return SHAREVERT;
+              *icode = 2;
             }
           }
         }
       } else {
         // Q = A (tritri-330###).
-        *pos1 = pu[0];
-        *pos2 = pw[1];
-        return SHAREVERT;
+        *icode = 1;
       }
-      return INTERSECT;
+      return 1;
     }
 
   } // if (z1 == 3)
@@ -2057,6 +2001,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_tri_inter(point A, point B,
   assert(z1 == 4);  // SELF_CHECK
   assert(z2 == 4);  // SELF_CHECK
   // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
+  return 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1493,8 +1493,8 @@ enum intersection tri_vert_inter(point, point, point, point, point, int*);
 enum intersection tri_edge_inter_cop(point,point,point,point,point,point,int*);
 enum intersection tri_edge_inter_tail(point, point, point, point, point, int*);
 enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
-enum intersection tri_tri_inter(point, point, point, point, point, point,
-                                point, int*, int*);
+int tri_tri_test3d(point, point, point, point, point, point, point, int, int*,
+                   int*, int*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
