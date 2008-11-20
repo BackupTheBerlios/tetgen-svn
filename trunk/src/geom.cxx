@@ -1083,6 +1083,8 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
     }
   }
 
+  types[1] = (int) DISJOINT; // No second intersection point.
+
   return 1;
 }
 
@@ -1105,10 +1107,10 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
 ///////////////////////////////////////////////////////////////////////////////
 
 int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q, 
-  point R, point O, int level, int *pu, int *pw, int *icode)
+  point R, point O, int level, int *types, int *pos)
 {
   point U[3], V[3], W[3], Ptmp;  // The permuted vectors of points.
-  int pv[3], itmp;  // The original positions of points.
+  int pu[3], pv[3], pw[3], itmp;  // The original positions of points.
   REAL sA, sB, sC, sP, sQ, sR;
   REAL s1, s2, s3, s4;
   int z1, z2;
@@ -1590,58 +1592,79 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
     if (z1 == 0) {  // (01)
       if (s1 == 0) {
         // R = k in [A, C] (tritri-010###).
-        *icode = 0;
+        types[0] = (int) TOUCHEDGE;
+        pos[0] = pu[2]; // [C, A]
+        pos[1] = pw[2]; // R
+        types[1] = (int) DISJOINT; // No 2nd inter-point.
       } else {
         if (s2 == 0) {
           // R = l in [B, C] (tritri-01#0##).
-          *icode = 0;
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[1]; // [B, C]
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         } else {
           // R in [k, l] in [A, B, C] (tritri-01+-##).
-          *icode = 0;
+          types[0] = (int) TOUCHFACE;
+          pos[0] = 3; // Interior of [A, B, C]
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
       }
-      return 1;
-    }
-
-    if (z1 == 1) {  // (11)
+    } else if (z1 == 1) {  // (11)
       assert(s1 == 0); // SELF_CHECK
       // C = R (tritri-110###).
-      *icode = 1;
-      return 1;
-    }
-
-    if (z1 == 2) {  // (21)
+      types[0] = (int) SHAREVERT;
+      pos[0] = pu[2]; // C
+      pos[1] = pw[2]; // R
+      types[1] = (int) DISJOINT; // No 2nd inter-point.
+    } else if (z1 == 2) {  // (21)
       if (s1 == 0) {
         // R = A (tritri-210###).
-        *icode = 1;
+        types[0] = (int) SHAREVERT;
+        pos[0] = pu[0]; // A
+        pos[1] = pw[2]; // R
+        types[1] = (int) DISJOINT; // No 2nd inter-point.
       } else {
         if (s2 == 0) {
           // R = l, R in [B, C] (tritri-21#0##).
-          *icode = 0;
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[1]; // [B, C]
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         } else {
           // R in [k, l] in [A, B, C] (tritri-21+-##).
-          *icode = 0;
+          types[0] = (int) TOUCHFACE;
+          pos[0] = 3; // Interior of [A, B, C]
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
       }
-      return 1;
-    }
-
-    if (z1 == 3) {  // (31)
+    } else if (z1 == 3) {  // (31)
       if (s1 == 0) {
         // R = A (tritri-310###).
-        *icode = 1;
+        types[0] = (int) SHAREVERT;
+        pos[0] = pu[0]; // A
+        pos[1] = pw[2]; // R
+        types[1] = (int) DISJOINT; // No 2nd inter-point.
       } else {
         if (s2 == 0) {
           // R = B (tritri-31#0##).
-          *icode = 2;
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[1]; // B
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         } else {
           // R in [A, B] (tritri-31+-##).
-          *icode = 0;
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[0]; // [A, B]
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
       }
-      return 1;
     }
 
+    return 1;
   } // z2 == 1
 
   if (z1 == 1) {
@@ -1649,51 +1672,72 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
     if (z2 == 0) { // (10)
       if (s1 == 0) {
         // C = j, C in [Q, R] (tritri-100###).
-        *icode = 0;
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[2]; // C
+        pos[1] = pw[1]; // [Q, R]
+        types[1] = (int) DISJOINT; // No 2nd inter-point.
       } else {
         if (s2 == 0) {
           // C = i, C in [P, R] (tritri-10#0##).
-          *icode = 0;
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = pw[2]; // [R, P]
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         } else {
           // C in [i, j] in [P, Q, R] (tritri-10-+##).
-          *icode = 0;
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = 3; // Interior of [P, Q, R]
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
       }
-      return 1;
-    }
-
-    if (z2 == 2) {  // (12)
+    } else if (z2 == 2) {  // (12)
       if (s1 == 0) { // 
         // C = j, C in [Q, R] (tritri-120###).
-        *icode = 0;
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[2]; // C
+        pos[1] = pw[1]; // [Q, R]
+        types[1] = (int) DISJOINT; // No 2nd inter-point.
       } else {
         if (s2 == 0) {
           // C = P (tritri-12#0##).
-          *icode = 1;
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = pw[0]; // P
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         } else {
           // C in [i, j] in [P, Q, R] (tritri-12-+##).
-          *icode = 0;
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = 3; // Interior of [P, Q, R]
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
       }
-      return 1;
-    }
-
-    if (z2 == 3) {  // (13)
+    } else if (z2 == 3) {  // (13)
       if (s1 == 0) {
         // C = Q (tritri-130###).
-        *icode = 2;
+        types[0] = (int) SHAREVERT;
+        pos[0] = pu[2]; // C
+        pos[1] = pw[1]; // Q
+        types[1] = (int) DISJOINT; // No 2nd inter-point.
       } else {
         if (s2 == 0) {
           // C = P (tritri-13#0##).
-          *icode = 1;
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = pw[0]; // P
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         } else {
           // C in [P, Q] (tritri-13-+##).
-          *icode = 0;
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = pw[0]; // [P, Q]
+          types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
       }
-      return 1;
     }
 
+    return 1;
   } // if (z1 == 1)
 
   // Two additional orientation tests are needed.
@@ -1768,10 +1812,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = k, [Q, R] intersects [A, B] (tritri-000###).
         *icode = 0;
       }
-      return 1;
-    }
-
-    if (z2 == 2) {  // (02)
+    } else if (z2 == 2) {  // (02)
       if (s1 < 0) {
         if (s3 > 0) { // (02-#+#)
           assert(s2 > 0); // SELF_CHECK;
@@ -1827,10 +1868,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = k, [Q, R] intersects [A, C] (tritri-020###).
         *icode = 0;
       }
-      return 1;
-    }
-
-    if (z2 == 3) {  // (03)
+    } else if (z2 == 3) {  // (03)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
@@ -1885,9 +1923,9 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // Q = k in [A, C] (tritri-030###).
         *icode = 0;
       }
-      return 1;
     }
 
+    return 1;
   } // if (z1 == 0)
 
   if (z1 == 2) {
@@ -1947,10 +1985,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-200###).
         *icode = 0;
       }
-      return 1;
-    }
-
-    if (z2 == 2) {  // (22)
+    } else if (z2 == 2) {  // (22)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
@@ -2005,10 +2040,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-220###).
         *icode = 0;
       }
-      return 1;
-    }
-
-    if (z2 == 3) {  // (23)
+    } else if (z2 == 3) {  // (23)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
@@ -2063,9 +2095,9 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // Q = A (tritri-230###).
         *icode = 2;
       }
-      return 1;
     }
 
+    return 1;
   } // if (z1 == 2)
 
   if (z1 == 3) {
@@ -2125,10 +2157,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-300###).
         *icode = 0;
       }
-      return 1;
-    }
-
-    if (z2 == 2) {  // (32)
+    } else if (z2 == 2) {  // (32)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
@@ -2183,10 +2212,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-320###).
         *icode = 0;
       }
-      return 1;
-    }
-
-    if (z2 == 3) {  // (33)
+    } else if (z2 == 3) {  // (33)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
@@ -2241,9 +2267,9 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // Q = A (tritri-330###).
         *icode = 1;
       }
-      return 1;
     }
 
+    return 1;
   } // if (z1 == 3)
 }
 
