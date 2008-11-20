@@ -558,7 +558,8 @@ enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 // Labels that signify the result of intersection tests.
 
 enum intersection {DISJOINT, INTERSECT, SHAREVERT, SHAREEDGE, SHAREFACE,
-  COLLINEAR, COPLANAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE, ACROSSTET};
+  COLLINEAR, COPLANAR, ACROSSVERT, ACROSSEDGE, ACROSSFACE, ACROSSTET,
+  TOUCHEDGE, TOUCHFACE};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1493,8 +1494,9 @@ enum intersection tri_vert_inter(point, point, point, point, point, int*);
 enum intersection tri_edge_inter_cop(point,point,point,point,point,point,int*);
 enum intersection tri_edge_inter_tail(point, point, point, point, point, int*);
 enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
-int tri_tri_test3d(point, point, point, point, point, point, point, int, int*,
-                   int*, int*);
+
+int tri_edge_test(point,point,point,point,point,point,int,int*,int*);
+int tri_tri_test(point,point,point,point,point,point,point,int,int*,int*,int*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

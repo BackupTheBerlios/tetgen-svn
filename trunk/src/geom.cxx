@@ -842,14 +842,257 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// tri_tri_test3d()    3D triangle-triangle intersection test.               //
+// tri_edge_test()    Triangle-edge intersection test.                       //
 //                                                                           //
-// This routine takes two triangles T1 (with vertices A, B, C) and T2 (with  //
-// vertices P, Q, R) in 3D, and test if they intersect each other.  Return 1 //
-// if they are intersected, otherwise, return 0.                             //
+// This routine takes a triangle T (with vertices A, B, C) and an edge E (P, //
+// Q) in 3D, and tests if they intersect each other.  Return 1 if they are   //
+// intersected, i.e., T \cap E is not empty, otherwise, return 0.            //
 //                                                                           //
-// We say that two triangles T1 and T2 intersect each other if T1 \cap T2 is //
-// not empty, otherwise, they are disjoint.                                  //
+// If the point 'R' is not NULL, it lies strictly above the plane defined by //
+// A, B, C. It is used in test when T and E are coplanar.                    //
+//                                                                           //
+// If T1 and T2 intersect each other (return 1), they may intersect in diff- //
+// erent ways. If 'level' > 0, their intersection type will be reported in   //
+// 'pu', 'pw', and 'icode'.  'perm' return the permutations of [A, B, C] and //
+// [P, Q], respectively; 'icode' encodes the intersection type.              //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q, 
+  point R, int level, int *types, int *pos)
+{
+  point U[3], V[3], Ptmp;
+  int pu[3], pv[3], itmp;
+  REAL sP, sQ, s1, s2, s3;
+  int z1;
+
+  // Test the locations of P and Q with respect to ABC.
+  sP = orient3d(A, B, C, P);
+  sQ = orient3d(A, B, C, Q);
+  orient3dcount+=2;
+
+  if (b->epsilon > 0) {
+    if ((sP != 0) && iscoplanar(A, B, C, P, sP)) sP = 0;
+    if ((sQ != 0) && iscoplanar(A, B, C, Q, sQ)) sQ = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-edge (%d %d %d)-(%d %d) (%c%c).\n", pointmark(A),
+      pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
+      sP>0 ? '+' : (sP<0 ? '-' : '0'), sQ>0 ? '+' : (sQ<0 ? '-' : '0'));
+  }
+  triedgcount++;
+
+  if (sP < 0) {
+    if (sQ < 0) { // (--) disjoint
+      return 0;
+    } else {
+      if (sQ > 0) { // (-+)
+        SETVECTOR3(U, A, B, C);
+        SETVECTOR3(V, P, Q, R);
+        SETVECTOR3(pu, 0, 1, 2);
+        SETVECTOR3(pv, 0, 1, 2);
+        z1 = 0;
+      } else { // (-0)
+        SETVECTOR3(U, A, B, C);
+        SETVECTOR3(V, P, Q, R);
+        SETVECTOR3(pu, 0, 1, 2);
+        SETVECTOR3(pv, 0, 1, 2);
+        z1 = 1;
+      }
+    }
+  } else {
+    if (sP > 0) { // (+-)
+      if (sQ < 0) {
+        SETVECTOR3(U, A, B, C);
+        SETVECTOR3(V, Q, P, R);  // P and Q are flipped.
+        SETVECTOR3(pu, 0, 1, 2);
+        SETVECTOR3(pv, 1, 0, 2);
+        z1 = 0;
+      } else {
+        if (sQ > 0) { // (++) disjoint
+          return 0;
+        } else { // (+0)
+          SETVECTOR3(U, B, A, C); // A and B are flipped.
+          SETVECTOR3(V, P, Q, R);
+          SETVECTOR3(pu, 1, 0, 2);
+          SETVECTOR3(pv, 0, 1, 2);
+          z1 = 1;
+        }
+      }
+    } else { // sP == 0
+      if (sQ < 0) { // (0-)
+        SETVECTOR3(U, A, B, C);
+        SETVECTOR3(V, Q, P, R);  // P and Q are flipped.
+        SETVECTOR3(pu, 0, 1, 2);
+        SETVECTOR3(pv, 1, 0, 2);
+        z1 = 1;
+      } else {
+        if (sQ > 0) { // (0+)
+          SETVECTOR3(U, B, A, C);  // A and B are flipped.
+          SETVECTOR3(V, Q, P, R);  // P and Q are flipped.
+          SETVECTOR3(pu, 1, 0, 2);
+          SETVECTOR3(pv, 1, 0, 2);
+          z1 = 1;
+        } else { // (00)
+          // A, B, C, P, and Q are coplanar.
+          z1 = 2;
+        }
+      }
+    }
+  }
+
+  if (z1 == 2) {
+    // return tri_edge_2d();
+  }
+
+  s1 = orient3d(U[0], U[1], V[0], V[1]); orient3dcount++;
+  if (b->epsilon) {
+    if ((s1 != 0) && iscoplanar(U[0], U[1], V[0], V[1], s1)) s1 = 0;
+  }
+  if (s1 < 0) {
+    return 0;
+  }
+
+  s2 = orient3d(U[1], U[2], V[0], V[1]); orient3dcount++;
+  if (b->epsilon) {
+    if ((s2 != 0) && iscoplanar(U[1], U[2], V[0], V[1], s2)) s2 = 0;
+  }
+  if (s2 < 0) {
+    return 0;
+  }
+
+  s3 = orient3d(U[2], U[0], V[0], V[1]); orient3dcount++;
+  if (b->epsilon) {
+    if ((s3 != 0) && iscoplanar(U[2], U[0], V[0], V[1], s3)) s3 = 0;
+  }
+  if (s3 < 0) {
+    return 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-edge (%d %d %d)-(%d %d) (%c%c%c).\n", pointmark(U[0]),
+      pointmark(U[1]), pointmark(U[2]), pointmark(V[0]), pointmark(V[1]),
+      s1>0 ? '+' : (s1<0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'),
+      s3>0 ? '+' : (s3<0 ? '-' : '0'));
+  }
+
+  if (z1 == 0) {
+    if (s1 > 0) {
+      if (s2 > 0) {
+        if (s3 > 0) { // (+++)
+          // [P, Q] passes interior of [A, B, C].
+          types[0] = (int) ACROSSFACE;
+          pos[0] = 3;  // interior of [A, B, C]
+          pos[1] = 0;  // [P, Q]
+        } else { // s3 == 0 (++0)
+          // [P, Q] intersects [C, A].
+          types[0] = (int) ACROSSEDGE;
+          pos[0] = pu[2];  // [C, A]
+          pos[1] = 0;  // [P, Q]
+        }
+      } else { // s2 == 0
+        if (s3 > 0) { // (+0+)
+          // [P, Q] intersects [B, C].
+          types[0] = (int) ACROSSEDGE;
+          pos[0] = pu[1];  // [B, C]
+          pos[1] = 0;  // [P, Q]
+        } else { // s3 == 0 (+00)
+          // [P, Q] passes C.
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[2];  // C
+          pos[1] = 0;  // [P, Q]
+        }
+      }
+    } else { // s1 == 0
+      if (s2 > 0) {
+        if (s3 > 0) { // (0++)
+          // [P, Q] intersects [A, B].
+          types[0] = (int) ACROSSEDGE;
+          pos[0] = pu[0];  // [A, B]
+          pos[1] = 0;  // [P, Q]
+        } else { // s3 == 0 (0+0)
+          // [P, Q] passes A.
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[0];  // A
+          pos[1] = 0;  // [P, Q]
+        }
+      } else { // s2 == 0
+        if (s3 > 0) { // (00+)
+          // [P, Q] passes B.
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[1];  // B
+          pos[1] = 0;  // [P, Q]
+        } else { // s3 == 0 (000)
+          // Impossible.
+          assert(0);
+        }
+      }
+    }
+  } else { // z1 == 1
+    if (s1 > 0) {
+      if (s2 > 0) {
+        if (s3 > 0) { // (+++)
+          // Q lies in [A, B, C].
+          types[0] = (int) TOUCHFACE;
+          pos[0] = 0; // [A, B, C]
+          pos[1] = pv[1]; // Q
+        } else { // s3 == 0 (++0)
+          // Q lies on [C, A].
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[2]; // [C, A]
+          pos[1] = pv[1]; // Q
+        }
+      } else { // s2 == 0
+        if (s3 > 0) { // (+0+)
+          // Q lies on [B, C].
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[1]; // [B, C]
+          pos[1] = pv[1]; // Q
+        } else { // s3 == 0 (+00)
+          // Q = C.
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[2]; // C
+          pos[1] = pv[1]; // Q
+        }
+      }
+    } else { // s1 == 0
+      if (s2 > 0) {
+        if (s3 > 0) { // (0++)
+          // Q lies on [A, B].
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[0]; // [A, B]
+          pos[1] = pv[1]; // Q
+        } else { // s3 == 0 (0+0)
+          // Q = A.
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[0]; // A
+          pos[1] = pv[1]; // Q
+        }
+      } else { // s2 == 0
+        if (s3 > 0) { // (00+)
+          // Q = B.
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[1]; // B
+          pos[1] = pv[1]; // Q
+        } else { // s3 == 0 (000)
+          // Impossible.
+          assert(0);
+        }
+      }
+    }
+  }
+
+  return 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tri_tri_test()    Triangle-triangle intersection test.                    //
+//                                                                           //
+// This routine takes two triangles T1 (with vertices A, B, C) and T2 (P, Q  //
+// R) in 3D, and tests if they intersect each other.  Return 1 if they are   //
+// intersected, i.e., T1 \cap T2 is not empty, otherwise, return 0.          //
 //                                                                           //
 // If the point 'O' is not NULL, it lies strictly above the plane defined by //
 // A, B, C. It is used in test when T1 and T2 are coplanar.                  //
@@ -861,7 +1104,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-int tetgenmesh::tri_tri_test3d(point A, point B, point C, point P, point Q, 
+int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q, 
   point R, point O, int level, int *pu, int *pw, int *icode)
 {
   point U[3], V[3], W[3], Ptmp;  // The permuted vectors of points.
@@ -1289,6 +1532,11 @@ int tetgenmesh::tri_tri_test3d(point A, point B, point C, point P, point Q,
         }
       }
     }
+  }
+
+  if (z1 == 4) {
+    assert(z2 == 4);  // SELF_CHECK
+    // return tri_tri_2d();
   }
 
   if (z2 == 1) {
@@ -1997,11 +2245,6 @@ int tetgenmesh::tri_tri_test3d(point A, point B, point C, point P, point Q,
     }
 
   } // if (z1 == 3)
-
-  assert(z1 == 4);  // SELF_CHECK
-  assert(z2 == 4);  // SELF_CHECK
-  // return tri_tri_inter_cop(A, B, C, P, Q, R, O, pos1, pos2);
-  return 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
