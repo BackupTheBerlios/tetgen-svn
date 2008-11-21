@@ -1490,13 +1490,9 @@ REAL insphere_sos(point pa, point pb, point pc, point pd, point pe);
 REAL incircle3d(point pa, point pb, point pc, point pd);
 bool iscoplanar(point k, point l, point m, point n, REAL ori);
 
-enum intersection tri_vert_inter(point, point, point, point, point, int*);
-enum intersection tri_edge_inter_cop(point,point,point,point,point,point,int*);
-enum intersection tri_edge_inter_tail(point, point, point, point, point, int*);
-enum intersection tri_edge_inter(point,point,point,point,point,point,int*);
-
+int tri_edge_2d(point,point,point,point,point,point,int,int*,int*);
 int tri_edge_test(point,point,point,point,point,point,int,int*,int*);
-int tri_tri_test(point,point,point,point,point,point,point,int,int*,int*,int*);
+int tri_tri_test(point,point,point,point,point,point,point,int,int*,int*);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

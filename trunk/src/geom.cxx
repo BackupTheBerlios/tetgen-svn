@@ -7,123 +7,22 @@ REAL tetgenmesh::PI = 3.14159265358979323846264338327950288419716939937510582;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// tri_vert_inter()    Test whether a triangle (ABC) and a coplanar vertex   //
-//                     (P) intersect or not.                                 //
+// tri_edge_2d()    Triangle-edge intersection test.                         //
 //                                                                           //
-// ABC is not degenerate.  We know that R lies above ABC, i.e., ABCR is a    //
-// valid tetrahedron.                                                        //
+// This routine takes a triangle T (with vertices A, B, C) and an edge E (P, //
+// Q) in a plane in 3D, and tests if they intersect each other.  Return 1 if //
+// they are intersected, i.e., T \cap E is not empty, otherwise, return 0.   //
 //                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-enum tetgenmesh::intersection tetgenmesh::tri_vert_inter(point A, point B,
-  point C, point P, point R, int* pos)
-{
-  REAL s3, s4, s5;
-
-  if (R == NULL) {
-    REAL n[3], len;
-    // Calculate a lift point, saved in dummypoint.
-    facenormal(A, B, C, n, 1);
-    len = sqrt(DOT(n, n));
-    n[0] /= len;
-    n[1] /= len;
-    n[2] /= len;
-    len = DIST(A, B);
-    len += DIST(B, C);
-    len += DIST(C, A);
-    len /= 3.0;
-    R = dummypoint;
-    R[0] = A[0] + len * n[0];
-    R[1] = A[1] + len * n[1];
-    R[2] = A[2] + len * n[2];
-  }
-
-  // Test P's orientations wrt edges AB, BC, CA. 
-  s3 = orient3d(A, B, R, P);
-  s4 = orient3d(B, C, R, P);
-  s5 = orient3d(C, A, R, P);
-  orient3dcount+=3;
-
-  if (b->epsilon) {
-    // Re-evaluate the sign with respect to the tolerance.
-    if ((s3 != 0) && iscoplanar(A, B, R, P, s3)) s3 = 0;
-    if ((s4 != 0) && iscoplanar(B, C, R, P, s4)) s4 = 0;
-    if ((s5 != 0) && iscoplanar(C, A, R, P, s5)) s5 = 0;
-  }
-
-  if (b->verbose > 2) {
-    printf("      Tri-vert (%d %d %d)-(%d)-(%d) (%c%c%c).\n", pointmark(A), 
-      pointmark(B), pointmark(C), pointmark(P), pointmark(R),
-      s3>0 ? '+' : (s3<0 ? '-' : '0'), s4>0 ? '+' : (s4<0 ? '-' : '0'),
-      s5>0 ? '+' : (s5<0 ? '-' : '0'));
-  }
-  trivercopcount++;
-
-  if (s3 < 0) {
-    return DISJOINT;
-  }
-  if (s4 < 0) {
-    return DISJOINT;
-  }
-  if (s5 < 0) {
-    return DISJOINT;
-  }
-
-  // P lies eother inside or on the boundary of ABC.
-  if (s3 == 0) {
-    if (s4 == 0) {
-      if (s5 == 0) {
-        assert(0); // Not possible.
-      }
-      // P = B.
-      *pos = 1;
-      return SHAREVERT;
-    }
-    if (s5 == 0) {
-      // P = A.
-      *pos = 0;
-      return SHAREVERT;
-    }
-    // P lies on AB.
-    *pos = 0;
-    return ACROSSEDGE;
-  }
-  if (s4 == 0) {
-    if (s5 == 0) {
-      // P = C.
-      *pos = 2;
-      return SHAREVERT;
-    }
-    // P lies on BC.
-    *pos = 1;
-    return ACROSSEDGE;
-  }
-  if (s5 == 0) {
-    // P lies on CA.
-    *pos = 1;
-    return ACROSSEDGE;
-  }
-
-  // P lies inside ABC.
-  return ACROSSFACE;
-}
-
-///////////////////////////////////////////////////////////////////////////////
+// If the point 'R' is not NULL, it lies strictly above T [A, B, C].         //
 //                                                                           //
-// tri_edge_inter_cop()    Test whether a triangle (ABC) and a coplanar edge //
-//                         (PQ) intersect or not.                            //
-//                                                                           //
-// ABC and PQ are not degenerate.  We know that R lies above ABC, i.e., ABCR //
-// is a valid tetrahedron.                                                   //
-//                                                                           //
-// If ABC and PQ intersect each other (the returned value is not DISJOINT),  //
-// 'pos' (ranges from 0 to 2) indicates the position of the first point or   //
-// edge of the triangle ABC which intersects PQ.                             //
+// If T1 and T2 intersect each other (return 1), they may intersect in diff- //
+// erent ways. If 'level' > 0, their intersection type will be reported in   //
+// combinations of 'types' and 'pos'.                                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
-  point C, point P, point Q, point R, int *pos)
+int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q, 
+  point R, int level, int *types, int *pos)
 {
   point U[3], V[3];  // The permuted vectors of points.
   int pu[3], pv[3];  // The original positions of points.
@@ -163,10 +62,10 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-edge-cop (%d %d %d)-(%d %d)-(%d)", pointmark(A),
-      pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R));
-    printf(" (%c%c%c)\n", sA > 0 ? '+' : (sA < 0 ? '-' : '0'),
-      sB>0 ? '+' : (sB<0 ? '-' : '0'), sC>0 ? '+' : (sC<0 ? '-' : '0'));
+    printf("      Tri-edge-2d (%d %d %d)-(%d %d)-(%d) (%c%c%c)", pointmark(A),
+      pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R),
+      sA > 0 ? '+' : (sA < 0 ? '-' : '0'), sB>0 ? '+' : (sB<0 ? '-' : '0'),
+      sC>0 ? '+' : (sC<0 ? '-' : '0'));
   }
   triedgcopcount++;
 
@@ -383,7 +282,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   }
 
   if (b->verbose > 2) {
-    printf("      Tri-tri (%d %d %d)-(%d %d %d) z1(%d) (%c%c)\n",
+    printf("      Tri-edge-2d (%d %d %d)-(%d %d %d) z1(%d) (%c%c)\n",
       pointmark(U[0]), pointmark(U[1]), pointmark(U[2]), pointmark(V[0]),
       pointmark(V[1]), pointmark(V[2]), z1, s1>0 ? '+' : (s1<0 ? '-' : '0'),
       s2>0 ? '+' : (s2<0 ? '-' : '0'));
@@ -391,24 +290,39 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
   assert(z1 != 4); // SELF_CHECK
 
   if (s1 > 0) {
-    return DISJOINT;
+    return 0;
   }
   if (s2 < 0) {
-    return DISJOINT;
+    return 0;
+  }
+
+  if (level == 0) {
+    return 1;  // They are intersected.
   }
 
   if (z1 == 1) {
-    *pos = pu[2];
-    if (s1 == 0) {
+    if (s1 == 0) {  // (0###)
       // C = Q.
-      return SHAREVERT;
+      types[0] = (int) SHAREVERT;
+      pos[0] = pu[2]; // C
+      pos[1] = pv[1]; // Q
+      types[1] = (int) DISJOINT; // No 2nd intersection
+    } else {
+      if (s2 == 0) { // (#0##)
+        // C = P.
+        types[0] = (int) SHAREVERT;
+        pos[0] = pu[2]; // C
+        pos[1] = pv[0]; // P
+        types[1] = (int) DISJOINT; // No 2nd intersection
+      } else { // (-+##)
+        // C in [P, Q].
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[2]; // C
+        pos[1] = pv[0]; // [P, Q]
+        types[1] = (int) DISJOINT; // No 2nd intersection
+      }
     }
-    if (s2 == 0) {
-      // C = P.
-      return SHAREVERT;
-    }
-    // C in [P, Q].
-    return ACROSSVERT;
+    return 1;
   }
 
   s3 = orient3d(U[0], U[2], R, V[0]);  // A, C, R, P
@@ -420,25 +334,35 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
     if ((s4 != 0) && iscoplanar(U[1], U[2], R, V[1], s4)) s4 = 0;
   }
 
-  if (z1 == 0) {
+  if (z1 == 0) {  // (tritri-03)
     if (s1 < 0) {
       if (s3 > 0) {
         assert(s2 > 0); // SELF_CHECK
         if (s4 > 0) {
           // [P, Q] overlaps [k, l] (-+++).
-          *pos = pu[2]; // C->A.
+          types[0] = (int) ACROSSEDGE;
+          pos[0] = pu[2]; // [C, A]
+          pos[1] = pv[0]; // [P, Q]
+          types[1] = (int) TOUCHFACE;
+          pos[2] = 3;     // [A, B, C]
+          pos[3] = pv[1]; // Q
         } else {
           if (s4 == 0) {
             // Q = l, [P, Q] contains [k, l] (-++0).
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = pu[2]; // [C, A]
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) TOUCHEDGE;
+            pos[2] = pu[1]; // [B, C]
+            pos[3] = pv[1]; // Q
           } else { // s4 < 0
             // [P, Q] contains [k, l] (-++-).
-          }
-          // Return the first edge that P->Q intersects.
-          if (pv[0] == 0) {
-            // P->Q does not reverse.
-            *pos = pu[1] < pu[2] ? pu[1] : pu[2];
-          } else {
-            *pos = pu[1] > pu[2] ? pu[1] : pu[2];
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = pu[2]; // [C, A]
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) ACROSSEDGE;
+            pos[2] = pu[1]; // [B, C]
+            pos[3] = pv[0]; // [P, Q]
           }
         }
       } else {
@@ -446,119 +370,211 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // P = k, [P, Q] in [k, l] (-+0+).
-            *pos = pu[2];
+            types[0] = (int) TOUCHEDGE;
+            pos[0] = pu[2]; // [C, A]
+            pos[1] = pv[0]; // P
+            types[1] = (int) TOUCHFACE;
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = pv[1]; // Q
           } else {
             if (s4 == 0) {
               // [P, Q] = [k, l] (-+00).
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[2]; // [C, A]
+              pos[1] = pv[0]; // P
+              types[1] = (int) TOUCHEDGE;
+              pos[2] = pu[1]; // [B, C]
+              pos[3] = pv[1]; // Q
             } else {
               // P = k, [P, Q] contains [k, l] (-+0-).
-            }
-            // Return the first edge that P->Q intersects.
-            if (pv[0] == 0) {
-              // P->Q does not reverse.
-              *pos = pu[1] < pu[2] ? pu[1] : pu[2];
-            } else {
-              *pos = pu[1] > pu[2] ? pu[1] : pu[2];
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[2]; // [C, A]
+              pos[1] = pv[0]; // P
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // [B, C]
+              pos[3] = pv[0]; // [P, Q]
             }
           }
         } else { // s3 < 0
           if (s2 > 0) {
             if (s4 > 0) {
               // [P, Q] in [k, l] (-+-+).
-              *pos = 3;
+              types[0] = (int) TOUCHFACE;
+              pos[0] = 3;     // [A, B, C]
+              pos[1] = pv[0]; // P
+              types[1] = (int) TOUCHFACE;
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = pv[1]; // Q
             } else {
               if (s4 == 0) {
                 // Q = l, [P, Q] in [k, l] (-+-0).
-                *pos = pu[1];
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = pv[0]; // P
+                types[1] = (int) TOUCHEDGE;
+                pos[2] = pu[1]; // [B, C]
+                pos[3] = pv[1]; // Q
               } else { // s4 < 0
                 // [P, Q] overlaps [k, l] (-+--).
-                *pos = pu[1];
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // [B, C]
+                pos[3] = pv[0]; // [P, Q]
               }
             }
           } else { // s2 == 0
             // P = l (#0##).
-            *pos = pu[1];
+            types[0] = (int) TOUCHEDGE;
+            pos[0] = pu[1]; // [B, C]
+            pos[1] = pv[0]; // P
+            types[1] = (int) DISJOINT; // No 2nd intersection
           }
         }
       }
     } else { // s1 == 0
       // Q = k (0####)
-      *pos = pu[2];
+      types[0] = (int) TOUCHEDGE;
+      pos[0] = pu[2]; // [C, A]
+      pos[1] = pv[1]; // Q
+      types[1] = (int) DISJOINT; // No 2nd intersection
     }
-    return ACROSSEDGE;
-  }
-
-  if (z1 == 2) {
+  } else if (z1 == 2) {  // (tritri-23)
     if (s1 < 0) {
       if (s3 > 0) {
         assert(s2 > 0); // SELF_CHECK
         if (s4 > 0) {
           // [P, Q] overlaps [A, l] (-+++).
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[0]; // A
+          pos[1] = pv[0]; // [P, Q]
+          types[1] = (int) TOUCHFACE;
+          pos[2] = 3;     // [A, B, C]
+          pos[3] = pv[1]; // Q
         } else {
           if (s4 == 0) {
             // Q = l, [P, Q] contains [A, l] (-++0).
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) TOUCHEDGE;
+            pos[2] = pu[1]; // [B, C]
+            pos[3] = pv[1]; // Q
           } else { // s4 < 0
             // [P, Q] contains [A, l] (-++-).
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) ACROSSEDGE;
+            pos[2] = pu[1]; // [B, C]
+            pos[3] = pv[0]; // [P, Q]
           }
         }
-        *pos = pu[0];  // P->Q pass A
-        return ACROSSVERT;
       } else {
         if (s3 == 0) {
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // P = A, [P, Q] in [A, l] (-+0+).
-            *pos = pu[0];
-            return SHAREVERT;
+            types[0] = (int) SHAREVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[0]; // P
+            types[1] = (int) TOUCHFACE;
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = pv[1]; // Q
           } else {
             if (s4 == 0) {
               // [P, Q] = [A, l] (-+00).
-              *pos = pu[0];
-              return SHAREVERT;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[0]; // P
+              types[1] = (int) TOUCHEDGE;
+              pos[2] = pu[1]; // [B, C]
+              pos[3] = pv[1]; // Q
             } else { // s4 < 0
               // Q = l, [P, Q] in [A, l] (-+0-).
-              *pos = pu[1]; // P->Q intersects B->C.
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[0]; // P
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // [B, C]
+              pos[3] = pv[0]; // [P, Q]
             }
           }
         } else { // s3 < 0
           if (s2 > 0) {
             if (s4 > 0) {
               // [P, Q] in [A, l] (-+-+).
-              *pos = 3;
+              types[0] = (int) TOUCHFACE;
+              pos[0] = 3;     // [A, B, C]
+              pos[1] = pv[0]; // P
+              types[0] = (int) TOUCHFACE;
+              pos[0] = 3;     // [A, B, C]
+              pos[1] = pv[1]; // Q
             } else {
               if (s4 == 0) {
                 // Q = l, [P, Q] in [A, l] (-+-0).
-                *pos = pu[1];
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = pv[0]; // P
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[1]; // [B, C]
+                pos[1] = pv[1]; // Q
               } else { // s4 < 0
                 // [P, Q] overlaps [A, l] (-+--).
-                *pos = pu[1];
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = pv[0]; // P
+                types[0] = (int) ACROSSEDGE;
+                pos[0] = pu[1]; // [B, C]
+                pos[1] = pv[0]; // [P, Q]
               }
             }
           } else { // s2 == 0
             // P = l (#0##).
-            *pos = pu[1];
+            types[0] = (int) TOUCHEDGE;
+            pos[0] = pu[1]; // [B, C]
+            pos[1] = pv[0]; // P
+            types[1] = (int) DISJOINT; // No 2nd intersection
           }
         }
       }
     } else { // s1 == 0
       // Q = A (0###).
-      *pos = pu[0];
-      return SHAREVERT;
+      types[0] = (int) SHAREVERT;
+      pos[0] = pu[0]; // A
+      pos[1] = pv[1]; // Q
+      types[1] = (int) DISJOINT; // No 2nd intersection
     }
-    return ACROSSEDGE;
-  }
-
-  if (z1 == 3) {
+  } else if (z1 == 3) {  // (tritri-33)
     if (s1 < 0) {
       if (s3 > 0) {
         assert(s2 > 0); // SELF_CHECK
         if (s4 > 0) {
           // [P, Q] overlaps [A, B] (-+++).
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[0]; // A
+          pos[1] = pv[0]; // [P, Q]
+          types[1] = (int) TOUCHEDGE;
+          pos[2] = pu[0]; // [A, B]
+          pos[3] = pv[1]; // Q
         } else {
           if (s4 == 0) {
             // Q = B, [P, Q] contains [A, B] (-++0).
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) SHAREVERT;
+            pos[2] = pu[1]; // B
+            pos[3] = pv[1]; // Q
           } else { // s4 < 0
             // [P, Q] contains [A, B] (-++-).
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) ACROSSVERT;
+            pos[2] = pu[1]; // B
+            pos[3] = pv[0]; // [P, Q]
           }
         }
       } else {
@@ -566,278 +582,79 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_cop(point A, point B,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // P = A, [P, Q] in [A, B] (-+0+).
+            types[0] = (int) SHAREVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[0]; // P
+            types[1] = (int) TOUCHEDGE;
+            pos[2] = pu[0]; // [A, B]
+            pos[3] = pv[1]; // Q
           } else {
             if (s4 == 0) {
               // [P, Q] = [A, B] (-+00).
+              types[0] = (int) SHAREEDGE;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = pv[0]; // [P, Q]
+              types[1] = (int) SHAREEDGE;
+              pos[2] = pu[0]; // [A, B]
+              pos[3] = pv[0]; // [P, Q]
             } else { // s4 < 0
               // P= A, [P, Q] in [A, B] (-+0-).
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[0]; // P
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = pv[0]; // [P, Q]
             }
           }
         } else { // s3 < 0
           if (s2 > 0) {
             if (s4 > 0) {
               // [P, Q] in [A, B] (-+-+).
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = pv[0]; // P
+              types[1] = (int) TOUCHEDGE;
+              pos[2] = pu[0]; // [A, B]
+              pos[3] = pv[1]; // Q
             } else {
               if (s4 == 0) {
                 // Q = B, [P, Q] in [A, B] (-+-0).
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[0]; // [A, B]
+                pos[1] = pv[0]; // P
+                types[1] = (int) SHAREVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = pv[1]; // Q
               } else { // s4 < 0
                 // [P, Q] overlaps [A, B] (-+--).
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[0]; // [A, B]
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = pv[0]; // [P, Q]
               }
             }
           } else { // s2 == 0
             // P = B (#0##).
-            *pos = pu[1];
-            return SHAREVERT;
+            types[0] = (int) SHAREVERT;
+            pos[0] = pu[1]; // B
+            pos[1] = pv[0]; // P
+            types[1] = (int) DISJOINT; // No 2nd intersection
           }
         }
       }
     } else { // s1 == 0
       // Q = A (0###).
-      *pos = pu[0];
-      return SHAREVERT; 
-    }
-    *pos = pu[0];
-    return COLLINEAR;
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// tri_edge_inter_tail()    Test whether a triangle (ABC) and a non-coplanar //
-//                          edge (PQ) intersect or not.                      //
-//                                                                           //
-// ABC and PQ are not degenerate.  We know that P lies above ABC, i.e., ABCP //
-// is a valid tetrahedron, and Q lies below ABC.                             //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-enum tetgenmesh::intersection tetgenmesh::tri_edge_inter_tail(point A, point B,
-  point C, point P, point Q, int *pos)
-{
-  REAL s3, s4, s5;
-
-  s3 = orient3d(A, B, P, Q);
-  s4 = orient3d(B, C, P, Q);
-  s5 = orient3d(C, A, P, Q);
-  orient3dcount+=3;
-
-  if (b->epsilon) {
-    // Re-evaluate the sign with respect to the tolerance.
-    if ((s3 != 0) && iscoplanar(A, B, P, Q, s3)) s3 = 0;
-    if ((s4 != 0) && iscoplanar(B, C, P, Q, s4)) s4 = 0;
-    if ((s5 != 0) && iscoplanar(C, A, P, Q, s5)) s5 = 0;
-  }
-
-  if (b->verbose > 2) {
-    printf("      Tri-edge-tail (%d %d %d)-(%d %d) (%c%c%c).\n",
-      pointmark(A), pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
-      s3>0 ? '+' : (s3<0 ? '-' : '0'), s4>0 ? '+' : (s4<0 ? '-' : '0'),
-      s5>0 ? '+' : (s5<0 ? '-' : '0'));
-  }
-
-  // Use the signs to decide whether PQ intersects ABC (see Fig. tri_edge).
-  //   There are total 3^3 = 27 cases, some are impossible (by assumptions).
-  if (s3 > 0) {
-    if (s4 > 0) {
-      if (s5 > 0) {
-        // (+++) PQ intersects ABC in its interior.
-        return ACROSSFACE;
-      } else {
-        if (s5 < 0) {
-          // (++-) PQ lies outside of CAP.
-          return DISJOINT;
-        } else {
-          // (++0) PQ intersects wih edge CA.
-          *pos = 2;
-          return ACROSSEDGE;
-        }
-      }
-    } else {
-      if (s4 < 0) {
-        if (s5 > 0) {
-          // (+-+) PQ lies outside of BCP.
-          return DISJOINT;
-        } else {
-          if (s5 < 0) {
-            // (+--) PQ lies both outsides of BCP and CAP.
-            return DISJOINT;
-          } else {
-            // (+-0) PQ lies both outsides of BCP, and coplanar with CAP.
-            return DISJOINT;
-          }
-        }
-      } else {
-        if (s5 > 0) {
-          // (+0+) PQ intersects edge BC.
-          *pos = 1;
-          return ACROSSEDGE;
-        } else {
-          if (s5 < 0) {
-            // (+0-) PQ lies both outsides of BCP and CAP.
-            return DISJOINT;
-          } else {
-            // (+00) PQ is collinear with PC.
-            *pos = 2;
-            return ACROSSVERT;
-          }
-        }
-      }
-    }
-  } else {
-    if (s3 < 0) {
-      if (s4 > 0) {
-        if (s5 > 0) {
-          // (-++) PQ lies outside ABP.
-          return DISJOINT;
-        } else {
-          if (s5 < 0) {
-            // (-+-) PQ lies both outsides of ABP and CAP.
-            return DISJOINT;
-          } else {
-            // (-+0) PQ lies outside of ABP, and coplanar with CAP.
-            return DISJOINT;
-          }
-        }
-      } else {
-        if (s4 < 0) {
-          if (s5 > 0) {
-            // (--+) PQ lies both outsides of ABP and BCP.
-            return DISJOINT;
-          } else {
-            if (s5 < 0) {
-              // (---) PQ lies both outsides of ABP, BCP, and CAP.
-              assert(0);  // Impossible by assumption.
-            } else {
-              // (--0) PQ lies both outsides of ABP, BCP, and cop. with CAP.
-              assert(0);  // Impossible by assumption.
-            }
-          }
-        } else {
-          if (s5 > 0) {
-            // (-0+) PQ lies outsides of ABP, and coplanar with BCP.
-            return DISJOINT;
-          } else {
-            if (s5 < 0) {
-              // (-0-) PQ lies both outsides of ABP, CAP, and cop with BCP.
-              assert(0);  // Impossible by assumption.
-            } else {
-              // (-00) PQ lies collinear with CP, and Q lies above ABC.
-              assert(0);  // Impossible by assumption.
-            }
-          }
-        }
-      }
-    } else {
-      if (s4 > 0) {
-        if (s5 > 0) {
-          // (0++) PQ intersects edge AB.
-          *pos = 0;
-          return ACROSSEDGE;
-        } else {
-          if (s5 < 0) {
-            // (0+-) PQ lies outside ACP.
-            return DISJOINT;
-          } else {
-            // (0+0) PQ is coincident with edge PA.
-            *pos = 0;
-            return ACROSSVERT;
-          }
-        }
-      } else {
-        if (s4 < 0) {
-          if (s5 > 0) {
-            // (0-+) PQ lies outside of BCP.
-            return DISJOINT;
-          } else {
-            if (s5 < 0) {
-              // (0--) Q must lie above ABC.
-              assert(0);  // Impossible by assumption.
-            } else {
-              // (0-0) Q must lie above ABC. Q is collinaer with AP.
-              assert(0);  // Impossible by assumption.
-            }
-          }
-        } else {
-          if (s5 > 0) {
-            // (00+) PQ is collinear with edge PB.
-            *pos = 1;
-            return ACROSSVERT;
-          } else {
-            if (s5 < 0) {
-              // (00-) Q must lies above ABC.
-              assert(0);  // Impossible by assumption.
-            } else {
-              // (000) Q = P.
-              assert(0);  // Impossible by assumption.
-            }
-          }
-        }
-      }
+      types[0] = (int) SHAREVERT;
+      pos[0] = pu[0]; // A
+      pos[1] = pv[1]; // Q
+      types[1] = (int) DISJOINT; // No 2nd intersection
     }
   }
-}
 
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// tri_edge_inter()    Test whether a triangle (ABC) and an edge (PQ)        //
-//                     intersect or not.                                     //
-//                                                                           //
-// R is a reference point which lies (strictly) above ABC.                   //
-//                                                                           //
-// If ABC and PQ intersect each other (the returned value is not DISJOINT),  //
-// 'pos' (ranges from 0 to 2) indicates the position of the first point or   //
-// edge of the triangle ABC which intersects PQ.                             //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
-  point C, point P, point Q, point R, int *pos)
-{
-  REAL s1, s2, s1s2;
-
-  // Test the locations of P and Q with respect to ABC.
-  s1 = orient3d(A, B, C, P);
-  s2 = orient3d(A, B, C, Q);
-  orient3dcount+=2;
-
-  if (b->epsilon > 0) {
-    if ((s1 != 0) && iscoplanar(A, B, C, P, s1)) s1 = 0;
-    if ((s2 != 0) && iscoplanar(A, B, C, Q, s2)) s2 = 0;
-  }
-
-  if (b->verbose > 2) {
-    printf("      Tri-edge (%d %d %d)-(%d %d) (%c%c).\n", pointmark(A),
-      pointmark(B), pointmark(C), pointmark(P), pointmark(Q),
-      s1>0 ? '+' : (s1<0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'));
-  }
-  triedgcount++;
-
-  s1s2 = s1 * s2;
-
-  // Classify the 3^2 = 9 cases.
-  if (s1s2 > 0) {
-    // Both P and Q lie at the same side of ABC.
-    return DISJOINT;  // (++) or (--)
-  } else {
-    if (s1s2 < 0) {
-      if (s1 < 0) {
-        return tri_edge_inter_tail(A, B, C, P, Q, pos);  // (-+)
-      } else {
-        return tri_edge_inter_tail(A, B, C, Q, P, pos);  // (+-)
-      }
-    } else {
-      if (s1 == 0) {
-        if (s2 == 0) {
-          return tri_edge_inter_cop(A, B, C, P, Q, R, pos); // (00)
-        } else {
-          return tri_vert_inter(A, B, C, P, R, pos); // (0+) or (0-) 
-        }
-      }
-      if (s2 == 0) {
-        return tri_vert_inter(A, B, C, Q, R, pos); // (+0) or (-0)
-      }
-    }
-  }
+  return 1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -942,7 +759,8 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
   }
 
   if (z1 == 2) {
-    // return tri_edge_2d();
+    // The triangle and the edge are coplanar.
+    return tri_edge_2d(A, B, C, P, Q, R, level, types, pos);
   }
 
   s1 = orient3d(U[0], U[1], V[0], V[1]); orient3dcount++;
@@ -975,6 +793,12 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
       s1>0 ? '+' : (s1<0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'),
       s3>0 ? '+' : (s3<0 ? '-' : '0'));
   }
+
+  if (level == 0) {
+    return 1;  // The are intersected.
+  }
+
+  types[1] = (int) DISJOINT; // No second intersection point.
 
   if (z1 == 0) {
     if (s1 > 0) {
@@ -1081,8 +905,6 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
       }
     }
   }
-
-  types[1] = (int) DISJOINT; // No second intersection point.
 
   return 1;
 }
@@ -2394,7 +2216,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         }
       } else {
         // Q = A (tritri-230###).
-        types[0] = (int) SHAREVERT
+        types[0] = (int) SHAREVERT;
         pos[0] = pu[0]; // A
         pos[1] = pw[1]; // Q
         types[1] = (int) DISJOINT; // No 2nd intersection
@@ -2483,7 +2305,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                   types[0] = (int) ACROSSEDGE;
                   pos[0] = pu[0]; // Int([A, B])
                   pos[1] = pw[2]; // Int([R, P])
-                  types[1] = (int) ACROSSVER;
+                  types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
                   pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
@@ -2491,7 +2313,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                   types[0] = (int) ACROSSEDGE;
                   pos[0] = pu[0]; // Int([A, B])
                   pos[1] = pw[2]; // Int([R, P])
-                  types[1] = (int) ACROSSVER;
+                  types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
                   pos[3] = 3;     // Int([P, Q, R])
                 }
