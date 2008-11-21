@@ -853,8 +853,7 @@ enum tetgenmesh::intersection tetgenmesh::tri_edge_inter(point A, point B,
 //                                                                           //
 // If T1 and T2 intersect each other (return 1), they may intersect in diff- //
 // erent ways. If 'level' > 0, their intersection type will be reported in   //
-// 'pu', 'pw', and 'icode'.  'perm' return the permutations of [A, B, C] and //
-// [P, Q], respectively; 'icode' encodes the intersection type.              //
+// combinations of 'types' and 'pos'.                                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1101,8 +1100,7 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
 //                                                                           //
 // If T1 and T2 intersect each other (return 1), they may intersect in diff- //
 // erent ways. If 'level' > 0, their intersection type will be reported in   //
-// 'pu', 'pw', and 'icode'.  'pu' and 'pw' return the permutations of [A, B, //
-// C] and [P, Q, R], respectively; 'icode' encodes the intersection type.    //
+// combinations of 'types' and 'pos'.                                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1762,14 +1760,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK.
           if (s4 > 0) {
             // [i, j] overlaps [k, l] (tritri-00-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = pu[2]; // Int([C, A])
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Int([Q, R])
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [k, l] (tritri-00-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               // [i, j] contains [k, l] (tritri-00-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
@@ -1777,40 +1790,76 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK.
             if (s4 > 0) {
               // i = k, [i, j] overlaps [k, l] (tritri-00-+0+).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = pw[2]; // Int([R, P])
+              types[1] = (int) ACROSSFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               if (s4 == 0) {
                 // [i, j] = [k, l] (tritri-00-+00).
-                *icode = 0;
+                types[0] = (int) ACROSSEDGE;
+                pos[0] = pu[2]; // Int([C, A])
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 // i = k, [i, j] contains [k, l] (tritri-00-+0-).
-                *icode = 0; 
+                types[0] = (int) ACROSSEDGE;
+                pos[0] = pu[2]; // Int([C, A])
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = 3;     // Int([P, Q, R]) 
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [i, j] in [k, l] in [A, B, C] (tritri-00-+-+).
-                *icode = 0;
+                types[0] = (int) ACROSSFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 if (s4 == 0) {
                   // j = l, [i, j] in [k, l] (tritri-00-+-0)
-                  *icode = 0;
+                  types[0] = (int) ACROSSFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[2]; // Int([R, P])
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
                   // [i, j] overlaps [k, l] (tritri-00-+--)
-                  *icode = 0;
+                  types[0] = (int) ACROSSFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[2]; // Int([R, P])
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               assert(s4 < 0); // SELF_CHECK
               // i = l, [P, R] intersects [B, C] (tritri-00#0##).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[1]; // Int([B, C])
+              pos[1] = pw[2]; // Int([R, P])
+              types[1] = (int) DISJOINT; // No 2nd intersection.
             }
           }
         }
       } else { // s1 == 0
         // j = k, [Q, R] intersects [A, B] (tritri-000###).
-        *icode = 0;
+        types[0] = (int) ACROSSEDGE;
+        pos[0] = pu[2]; // Int([C, A])
+        pos[1] = pw[1]; // Int([Q, R])
+        types[1] = (int) DISJOINT; // No 2nd intersection.
       }
     } else if (z2 == 2) {  // (02)
       if (s1 < 0) {
@@ -1818,14 +1867,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK;
           if (s4 > 0) {
             // [P, j] overlaps [k, l] (tritri-02-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = pu[2]; // Int([C, A])
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Int([Q, R])
           } else {
             if (s4 == 0) {
               // j = k, [i, j] contains [k, l] (tritri-02-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else { // s4 < 0
               // [i, j] contains [k, l] (tritri-02-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
@@ -1833,40 +1897,76 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = k, [P, j] in [k, l] (tritri-02-+0+).
-              *icode = 0;
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = pv[0]; // P
+              types[1] = (int) ACROSSFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               if (s4 == 0) {
                 // [P, j] = [k, l] (tritri-02-+00).
-                *icode = 0;
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[2]; // Int([C, A])
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {  // s4 < 0
                 // P = k, [P, j] contains [k, l] (tritri-02-+0-).
-                *icode = 0;
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[2]; // Int([C, A])
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = 3;     // Int([P, Q, R])
               }
             }
           } else { // s3 < 0.
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, j] in [k, l] in [A, B, C] (tritri-02-+-+).
-                *icode = 0;
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 if (s4 == 0) {
                   // j = l, [P, j] overlaps [k, l] (tritri-02-+-0).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pv[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
                   // [P, j] overlaps [k, l] (tritri-02-+--).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pv[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else {  // s2 == 0
               assert(s4 < 0); // SELF_CHECK
               // P = k, P in [B, C] (tritri-02#0##).
-              *icode = 0;
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[1]; // Int([B, C])
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT;  // No 2nd intersection
             }
           }
         }
       } else { // s1 == 0
         // j = k, [Q, R] intersects [A, C] (tritri-020###).
-        *icode = 0;
+        types[0] = (int) ACROSSEDGE;
+        pos[0] = pu[2]; // Int([C, A])
+        pos[1] = pw[1]; // Int([Q, R])
+        types[1] = (int) DISJOINT;  // No 2nd intersection
       }
     } else if (z2 == 3) {  // (03)
       if (s1 < 0) {
@@ -1874,14 +1974,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, Q] overlaps [k, l] (tritri-03-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = pu[2]; // Int([C, A])
+            pos[1] = pw[0]; // Int([P, Q])
+            types[1] = (int) TOUCHFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
               // Q = l, [P, Q] contains [k, l] (tritri-03-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = pw[0]; // Int([P, Q])
+              types[1] = (int) TOUCHEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[1]; // Q
             } else { // s4 < 0
               // [P, Q] contains [k, l] (tritri-03-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = pw[0]; // Int([P, Q])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[0]; // Int([P, Q])
             }
           }
         } else {
@@ -1889,39 +2004,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0);  // SELF_CHECK
             if (s4 > 0) {
               // P = k, [P, Q] in [k, l] (tritri-03-+0+).
-              *icode = 0;
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[2]; // Int([C, A])
+              pos[1] = pw[0]; // P
+              types[1] = (int) TOUCHFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
                 // [P, Q] = [k, l] (tritri-03-+00).
-                *icode = 0;
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[2]; // Int([C, A])
+                pos[1] = pw[0]; // P
+                types[1] = (int) TOUCHEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[1]; // Q
               } else {  // s4 < 0
                 // P = k, [P, Q] contains [k, l] (tritri-03-+0-).
-                *icode = 0;
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[2]; // Int([C, A])
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[0]; // Int([P, Q])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, Q] in [k, l] (tritri-03-+-+).
-                *icode = 0;
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pw[0]; // P
+                types[1] = (int) TOUCHFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
                   // Q = l, [P, Q] in [k, l] (tritri-03-+-0).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) TOUCHEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[1]; // Q
                 } else { // s4 < 0
                   // [P, Q] overlaps [k, l] (tritri-03-+--).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[0]; // Int([P, Q])
                 }
               }
             } else {  // s2 == 0
               // P = l in [B, C] (tritri-03#0##).
-              *icode = 0;
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[1]; // Int([B, C])
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT; // No 2nd intersection
             }
           }
         }
       } else {
         // Q = k in [A, C] (tritri-030###).
-        *icode = 0;
+        types[0] = (int) TOUCHEDGE;
+        pos[0] = pu[2]; // Int([C, A])
+        pos[1] = pw[1]; // Q
+        types[1] = (int) DISJOINT; // No 2nd intersection
       }
     }
 
@@ -1936,14 +2087,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0);  // SELF_CHECK
           if (s4 > 0) {
             // [i, j] overlaps [A, l] (tritri-20-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Int([Q, R])
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [A, l] (tritri-20-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {  // s4 < 0
               // [i, j] contains [A, l] (tritri-20-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
@@ -1951,39 +2117,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // i = A, [i, j] overlaps [A, l] (tritri-20-+0+).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[2]; // Int([R, P])
+              types[1] = (int) ACROSSFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               if (s4 == 0) {
                 // [i, j] = [A, l] (tritri-20-+00).
-                *icode = 0;
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else { // s4 < 0
                 // i = A, [i, j] contains [A, l] (tritri-20-+0-).
-                *icode = 0;
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = 3;     // Int([P, Q, R])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [i, j] in [A, l] in [A, B, C] (tritri-20-+-+).
-                *icode = 0;
+                types[0] = (int) ACROSSFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 if (s4 == 0) {
                   // j = l, [i, j] in [A, l] (tritri-20-+-0).
-                  *icode = 0;
+                  types[0] = (int) ACROSSFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[2]; // Int([R, P])
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
                   // [i, j] overlaps [A, l] (tritri-20-+--).
-                  *icode = 0;
+                  types[0] = (int) ACROSSFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[2]; // Int([R, P])
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               // i = l, [P, R] intersects [B, C] (tritri-20#0##).
-              *icode = 0;
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = pu[1]; // Int([B, C])
+              pos[1] = pw[2]; // Int([R, P])
+              types[1] = (int) DISJOINT; // No 2nd intersection
             }
           }
         }
       } else { // s1 == 0
         // j = A in [Q, R] (tritri-200###).
-        *icode = 0;
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[0]; // Int([B, C])
+        pos[1] = pw[1]; // Int([Q, R])
+        types[1] = (int) DISJOINT; // No 2nd intersection
       }
     } else if (z2 == 2) {  // (22)
       if (s1 < 0) {
@@ -1991,14 +2193,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, j] overlaps [A, l] (tritri-22-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Int([Q, R])
           } else {
             if (s4 == 0) {
               // j = l, [P, j] contains [A, l] (tritri-22-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else { // s4 < 0
               // [P, j] contains [A, l] (tritri-22-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
@@ -2006,39 +2223,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, j] in [A, l] (tritri-22-+0+).
-              *icode = 0;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // Q
+              types[1] = (int) ACROSSFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               if (s4 == 0) {
                 // [P, j] = [A, l] (tritri-22-+00).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // Q
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else { // s4 < 0
                 // P = A, [P, j] contains [A, l] (tritri-22-+0-).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // Q
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = 3;     // Int([P, Q, R])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, j] in [A, l] in [A, B, C] (tritri-22-+-+).
-                *icode = 0;
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 if (s4 == 0) {
                   // j = l, [P, j] in [A, l] (tritri-22-+-0).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
                   // P, j] overlaps [A, l] (tritri-22-+--).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               // P = l, P in [B, C] (tritri-22#0##).
-              *icode = 0;
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[1]; // Int({[B, C])
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT; // No 2nd intersection
             }
           }
         }
       } else {
         // j = A in [Q, R] (tritri-220###).
-        *icode = 0;
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[0]; // A
+        pos[1] = pw[1]; // Int([Q, R])
+        types[1] = (int) DISJOINT; // No 2nd intersection
       }
     } else if (z2 == 3) {  // (23)
       if (s1 < 0) {
@@ -2046,14 +2299,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, Q] overlaps [A, l] (tritri-23-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pw[0]; // Int([P, Q])
+            types[1] = (int) TOUCHFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
               // Q = l, [P, Q] contains [A, l] (tritri-23-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // Int([P, Q])
+              types[1] = (int) TOUCHEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[1]; // Q
             } else { // s4 < 0
               // [P, Q] contains [A, l] (tritri-23-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // Int([P, Q])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[1]; // Int([B, C])
+              pos[3] = pw[0]; // Int([P, Q])
             }
           }
         } else {
@@ -2061,39 +2329,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, Q] in [A, l] (tritri-23-+0+).
-              *icode = 0;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // P
+              types[1] = (int) TOUCHFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
                 // [P, Q] = [A, l] (tritri-23-+00).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // P
+                types[1] = (int) TOUCHEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[1]; // Q
               } else {  // s4 < 0
                 // [P, Q] contains [A, l] (tritri-23-+0-).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[1]; // Int([B, C])
+                pos[3] = pw[0]; // Int([P, Q])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, Q] in [A, l] (tritri-23-+-+).
-                *icode = 0;
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pw[0]; // P
+                types[1] = (int) TOUCHFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
                   // Q = l, [P, Q] in [A, l] (tritri-23-+-0).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) TOUCHEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[1]; // Q
                 } else { // s4 < 0
                   // [P, Q] overlaps [A, l] (tritri-23-+--).
-                  *icode = 0;
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = pu[1]; // Int([B, C])
+                  pos[3] = pw[0]; // Int([P, Q])
                 }
               }
             } else { // s2 == 0
               // P = l in [B, C] (tritri-23#0##).
-              *icode = 0;
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[1]; // Int([B, C])
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT; // No 2nd intersection
             }
           }
         }
       } else {
         // Q = A (tritri-230###).
-        *icode = 2;
+        types[0] = (int) SHAREVERT
+        pos[0] = pu[0]; // A
+        pos[1] = pw[1]; // Q
+        types[1] = (int) DISJOINT; // No 2nd intersection
       }
     }
 
@@ -2108,14 +2412,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [i, j] overlaps [A, B] (tritri-30-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSEDGE;
+            pos[2] = pu[0]; // Int([A, B])
+            pos[3] = pu[1]; // Int([Q, R])
           } else {
             if (s4 == 0) {
               // j = B, [i, j] contains [A, B] (tritri-30-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = pu[1]; // Int([Q, R])
             } else { // s4 < 0
               // [i, j] contains [A, B] (tritri-30-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
@@ -2123,39 +2442,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // i = A, [i, j] in [A, B] (tritri-30-+0+).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[2]; // Int([R, P])
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[0]; // Int([A, B])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               if (s4 == 0) {
                 // [i, j] = [A, B] (tritri-30-+00).
-                *icode = 0;
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = pw[1]; // Int([Q, R])
               } else { // s4 < 0
                 // i = A, [i, j] contains [A, B] (tritri-30-+0-).
-                *icode = 0;
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = 3;     // Int([P, Q, R])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [i, j] in [A, B] (tritri-30-+-+).
-                *icode = 0;
+                types[0] = (int) ACROSSEDGE;
+                pos[0] = pu[0]; // Int([A, B])
+                pos[1] = pw[2]; // Int([R, P])
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[0]; // Int([A, B])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 if (s4 == 0) {
                   // j = B, [i, j] in [A, B] (tritri-30-+-0).
-                  *icode = 0;
+                  types[0] = (int) ACROSSEDGE;
+                  pos[0] = pu[0]; // Int([A, B])
+                  pos[1] = pw[2]; // Int([R, P])
+                  types[1] = (int) ACROSSVER;
+                  pos[2] = pu[1]; // B
+                  pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
                   // [i, j] overlaps [A, B] (tritri-30-+--).
-                  *icode = 0;
+                  types[0] = (int) ACROSSEDGE;
+                  pos[0] = pu[0]; // Int([A, B])
+                  pos[1] = pw[2]; // Int([R, P])
+                  types[1] = (int) ACROSSVER;
+                  pos[2] = pu[1]; // B
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               // i = B in [P, R] (tritri-30#0##).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pw[2]; // Int([R, P])
+              types[1] = (int) DISJOINT; // No 2nd intersection
             }
           }
         }
       } else {
         // j = A in [Q, R] (tritri-300###).
-        *icode = 0;
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[0]; // A
+        pos[1] = pw[1]; // Int([Q, R])
+        types[1] = (int) DISJOINT; // No 2nd intersection
       }
     } else if (z2 == 2) {  // (32)
       if (s1 < 0) {
@@ -2163,14 +2518,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, j] overlaps [A, B] (tritri-32-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSEDGE;
+            pos[2] = pu[0]; // Int([A, B])
+            pos[3] = pw[1]; // Int([Q, R])
           } else {
             if (s4 == 0) {
               // j = B, [P, j] contains [A, B] (tritri-32-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = pw[1]; // Int([Q, R])
             } else { // s4 < 0
               // [P, j] contains [A, B] (tritri-32-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
@@ -2178,39 +2548,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, j] in [A, B] (tritri-32-+0+).
-              *icode = 0;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // P
+              types[1] = (int) ACROSSEDGE;
+              pos[2] = pu[0]; // Int([A, B])
+              pos[3] = pw[1]; // Int([Q, R])
             } else {
               if (s4 == 0) {
                 // [P, j] = [A, B] (tritri-32-+00).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = pw[1]; // Int([Q, R])
               } else { // s4 < 0
                 // P = A, [P, j] contains [A, B] (tritri-32-+0-).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = 3;     // Int([P, Q, R])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, j] in [A, B] (tritri-32-+-+).
-                *icode = 0;
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[0]; // Int([A, B])
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSEDGE;
+                pos[2] = pu[0]; // Int([A, B])
+                pos[3] = pw[1]; // Int([Q, R])
               } else {
                 if (s4 == 0) {
                   // j = B, [P, j] in [A, B] (tritri-32-+-0).
-                  *icode = 0;
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[0]; // Int([A, B])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = pw[1]; // Int([Q, R])
                 } else { // s4 < 0
                   // [P, j] overlaps [A, B] (tritri-32-+--).
-                  *icode = 0;
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[0]; // Int([A, B])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               // P = B (tritri-32#0##).
-              *icode = 2;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT; // No 2nd intersection
             }
           }
         }
       } else {
         // j = A in [Q, R] (tritri-320###).
-        *icode = 0;
+        types[0] = (int) ACROSSVERT;
+        pos[0] = pu[0]; // A
+        pos[1] = pw[1]; // Int([Q, R])
+        types[1] = (int) DISJOINT; // No 2nd intersection
       }
     } else if (z2 == 3) {  // (33)
       if (s1 < 0) {
@@ -2218,14 +2624,29 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [P, Q] overlaps [A, B] (tritri-33-+++).
-            *icode = 0;
+            types[0] = (int) ACROSSVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pw[0]; // Int([P, Q])
+            types[1] = (int) TOUCHEDGE;
+            pos[2] = pu[0]; // Int([A, B])
+            pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
               // Q = B, [P, Q] contains [A, B] (tritri-33-++0).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // Int([P, Q])
+              types[1] = (int) SHAREVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = pw[1]; // Q
             } else { // s4 < 0
               // [P, Q] contains [A, B] (tritri-33-++-).
-              *icode = 0;
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // Int([P, Q])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = pw[0]; // Int([P, Q])
             }
           }
         } else {
@@ -2233,39 +2654,75 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
               // P = A, [P, Q] in [A, B] (tritri-33-+0+).
-              *icode = 0;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pw[0]; // P
+              types[1] = (int) TOUCHEDGE;
+              pos[2] = pu[0]; // Int([A, B])
+              pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
                 // [P, Q] = [A, B] (tritri-33-+00).
-                *icode = 5;
+                types[0] = (int) SHAREEDGE;
+                pos[0] = pu[0]; // Int([A, B])
+                pos[1] = pw[0]; // Int([P, Q])
+                types[1] = (int) SHAREEDGE;
+                pos[0] = pu[0]; // Int([A, B])
+                pos[1] = pw[0]; // Int([P, Q])
               } else { // s4 < 0
                 // P = A, [P, Q] contains [A, B] (tritri-33-+0-).
-                *icode = 0;
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[0]; // A
+                pos[3] = pw[0]; // Int([P, Q])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
                 // [P, Q] in [A, B] (tritri-33-+-+).
-                *icode = 0;
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[0]; // Int([A, B])
+                pos[1] = pw[0]; // P
+                types[1] = (int) TOUCHEDGE;
+                pos[2] = pu[0]; // Int([A, B])
+                pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
                   // Q = B, [P, Q] overlaps [A, B] (tritri-33-+-0).
-                  *icode = 0;
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[0]; // Int([A, B])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) SHAREVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = pw[1]; // Q
                 } else { // s4 < 0
                   // [P, Q] overlaps [A, B] (tritri-33-+--).
-                  *icode = 0;
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[0]; // Int([A, B])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = pw[0]; // Int([P, Q])
                 }
               }
             } else { // s2 == 0
               // P = B (tritri-33#0##).
-              *icode = 2;
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT;  // No 2nd intersection
             }
           }
         }
       } else {
         // Q = A (tritri-330###).
-        *icode = 1;
+        types[0] = (int) SHAREVERT;
+        pos[0] = pu[0]; // A
+        pos[1] = pw[1]; // Q
+        types[1] = (int) DISJOINT;  // No 2nd intersection
       }
     }
 
