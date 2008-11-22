@@ -1358,6 +1358,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
 
   if (z1 == 4) {
     assert(z2 == 4);  // SELF_CHECK
+    assert(0); // Not implement yet.
     // return tri_tri_2d();
   }
 

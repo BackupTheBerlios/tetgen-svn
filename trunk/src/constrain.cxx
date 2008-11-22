@@ -12,7 +12,7 @@
 //                                                                           //
 // The return value indicates one of the following cases (let 'searchtet' be //
 // abcd, a is the origin of the path):                                       //
-//   - COLLINEAR, edge ab is collinear with the path;                        //
+//   - ACROSSVERT, edge ab is collinear with the path;                       //
 //   - ACROSSEDGE, edge bc intersects with the path;                         //
 //   - ACROSSFACE, face bcd intersects with the path.                        //
 //                                                                           //
@@ -63,13 +63,13 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   // Check whether the destination or apex is 'endpt'.
   if (pb == endpt) {
     // pa->pb is the search edge.
-    return COLLINEAR;
+    return ACROSSVERT;
   }
   if (pc == endpt) {
     // pa->pc is the search edge.
     enext2self(*searchtet);
     esymself(*searchtet);
-    return COLLINEAR;
+    return ACROSSVERT;
   }
 
   // Walk through tets at pa until the right one is found.
@@ -88,7 +88,7 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
       enext0fnextself(*searchtet);
       enext2self(*searchtet);
       esymself(*searchtet);
-      return COLLINEAR;
+      return ACROSSVERT;
     }
     // Check if we have entered outside of the domain.
     if (pd == dummypoint) {
@@ -233,13 +233,13 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
           if (hori == 0) {
             if (rori == 0) {
               // pa->'endpt' is COLLINEAR with pa->pb.
-              return COLLINEAR;
+              return ACROSSVERT;
             }
             if (lori == 0) {
               // pa->'endpt' is COLLINEAR with pa->pc.
               enext2self(*searchtet);
               esymself(*searchtet);
-              return COLLINEAR;
+              return ACROSSVERT;
             }
             // pa->'endpt' crosses the edge pb->pc.
             // enextself(*searchtet);
@@ -253,7 +253,7 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
               enext0fnextself(*searchtet); // face abd.
               enext2self(*searchtet);
               esymself(*searchtet);
-              return COLLINEAR;
+              return ACROSSVERT;
             }
             // pa->'endpt' crosses the edge pb->pd.
             // enext0fnextself(*searchtet); // face abd.
@@ -316,13 +316,13 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
   if (hori == 0) {
     if (rori == 0) {
       // pa->'endpt' is COLLINEAR with pa->pb.
-      return COLLINEAR;
+      return ACROSSVERT;
     }
     if (lori == 0) {
       // pa->'endpt' is COLLINEAR with pa->pc.
       enext2self(*searchtet);
       esymself(*searchtet);
-      return COLLINEAR;
+      return ACROSSVERT;
     }
     // pa->'endpt' crosses the edge pb->pc.
     return ACROSSEDGE;
@@ -333,7 +333,7 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
       enext0fnextself(*searchtet); // face abd.
       enext2self(*searchtet);
       esymself(*searchtet);
-      return COLLINEAR;
+      return ACROSSVERT;
     }
     // pa->'endpt' crosses the edge pb->pd.
     enext0fnextself(*searchtet); // face abd.
@@ -362,7 +362,7 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
 // used as the starting tet for searching the edge.                          //
 //                                                                           //
 // The returned value indicates one of the following cases:                  //
-//   - COLLINEAR, the segment exists and is inserted in T;                   //
+//   - SHAREVERT, the segment exists and is inserted in T;                   //
 //   - ACROSSVERT, a vertex ('refpt') lies on the segment;                   //
 //   - ACROSSEDGE, the segment is missing;                                   //
 //   - ACROSSFACE, the segment is missing;                                   //
@@ -435,7 +435,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
 
   dir = finddirection(searchtet, endpt);
 
-  if (dir == COLLINEAR) {
+  if (dir == ACROSSVERT) {
     pd = dest(*searchtet);
     if (pd == endpt) {
       // Found! Insert the segment.
@@ -447,7 +447,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         fnextself(neightet);
       } while (neightet.tet != searchtet->tet);
       // The job is done. 
-      return dir;
+      return SHAREVERT;
     } else {
       // A point is on the path.
       *refpt = pd;
@@ -531,7 +531,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         pb = dest(neightet);
         pc = apex(neightet);
         pd = oppo(neightet);
-        dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
+        // dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
         if (dir != DISJOINT) break;
       }
       assert(dir != DISJOINT);  // SELF_CHECK
@@ -545,7 +545,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         pb = dest(neightet);
         pc = apex(neightet);
         pd = oppo(neightet);
-        dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
+        // dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
         if (dir != DISJOINT) break;
       }
       if (dir == DISJOINT) {
@@ -899,7 +899,7 @@ void tetgenmesh::delaunizesegments()
     searchtet.tet = NULL;
     dir = scoutsegment(&sseg, &searchtet, &refpt);
 
-    if (dir != COLLINEAR) {
+    if (dir != SHAREVERT) {
       // The segment is missing, split it.
       spivot(sseg, splitshs[0]);
       if (dir != ACROSSVERT) {
@@ -1016,7 +1016,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
 
     // Search the edge from pa->pb.
     dir = finddirection(searchtet, pb);
-    if (dir == COLLINEAR) {
+    if (dir == ACROSSVERT) {
       pd = dest(*searchtet); 
       if (pd == pb) {
         // Found the edge. Break the loop.
@@ -1056,7 +1056,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
       tspivot(spintet, checksh);
       assert(checksh.sh == NULL); // SELF_CHECK
       tsbond(spintet, *ssub);
-      return COPLANAR;
+      return SHAREFACE;
     }
     if (pd == apex(*searchtet)) break;
   }
