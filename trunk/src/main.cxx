@@ -1095,11 +1095,12 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
   b->epsilon = 0;
   b->verbose = 3;
 
-  for (j = 0; j < 12; j++) {
+  for (j = 0; j < 36; j++) {
 
     // Permut the vertices.
     switch (j) {
     case 0:
+      printf("\n");
       i = m.tri_tri_test(A, B, C, P, Q, R, NULL, 1, types, pos); break;
     case 1:
       i = m.tri_tri_test(C, A, B, P, Q, R, NULL, 1, types, pos); break;
@@ -1111,22 +1112,80 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
       i = m.tri_tri_test(C, B, A, P, Q, R, NULL, 1, types, pos); break;
     case 5:
       i = m.tri_tri_test(A, C, B, P, Q, R, NULL, 1, types, pos); break;
+
     case 6:
-      i = m.tri_tri_test(A, B, C, Q, P, R, NULL, 1, types, pos); break;
+      printf("\n");
+      i = m.tri_tri_test(A, B, C, R, P, Q, NULL, 1, types, pos); break;
     case 7:
-      i = m.tri_tri_test(C, A, B, Q, P, R, NULL, 1, types, pos); break;
+      i = m.tri_tri_test(C, A, B, R, P, Q, NULL, 1, types, pos); break;
     case 8:
-      i = m.tri_tri_test(B, C, A, Q, P, R, NULL, 1, types, pos); break;
+      i = m.tri_tri_test(B, C, A, R, P, Q, NULL, 1, types, pos); break;
     case 9:
-      i = m.tri_tri_test(B, A, C, R, Q, P, NULL, 1, types, pos); break;
+      i = m.tri_tri_test(B, A, C, R, P, Q, NULL, 1, types, pos); break;
     case 10:
-      i = m.tri_tri_test(C, B, A, R, Q, P, NULL, 1, types, pos); break;
+      i = m.tri_tri_test(C, B, A, R, P, Q, NULL, 1, types, pos); break;
     case 11:
+      i = m.tri_tri_test(A, C, B, R, P, Q, NULL, 1, types, pos); break;
+
+    case 12:
+      printf("\n");
+      i = m.tri_tri_test(A, B, C, Q, R, P, NULL, 1, types, pos); break;
+    case 13:
+      i = m.tri_tri_test(C, A, B, Q, R, P, NULL, 1, types, pos); break;
+    case 14:
+      i = m.tri_tri_test(B, C, A, Q, R, P, NULL, 1, types, pos); break;
+    case 15:
+      i = m.tri_tri_test(B, A, C, Q, R, P, NULL, 1, types, pos); break;
+    case 16:
+      i = m.tri_tri_test(C, B, A, Q, R, P, NULL, 1, types, pos); break;
+    case 17:
+      i = m.tri_tri_test(A, C, B, Q, R, P, NULL, 1, types, pos); break;
+
+    case 18:
+      printf("\n");
+      i = m.tri_tri_test(A, B, C, Q, P, R, NULL, 1, types, pos); break;
+    case 19:
+      i = m.tri_tri_test(C, A, B, Q, P, R, NULL, 1, types, pos); break;
+    case 20:
+      i = m.tri_tri_test(B, C, A, Q, P, R, NULL, 1, types, pos); break;
+    case 21:
+      i = m.tri_tri_test(B, A, C, Q, P, R, NULL, 1, types, pos); break;
+    case 22:
+      i = m.tri_tri_test(C, B, A, Q, P, R, NULL, 1, types, pos); break;
+    case 23:
+      i = m.tri_tri_test(A, C, B, Q, P, R, NULL, 1, types, pos); break;
+
+    case 24:
+      printf("\n");
+      i = m.tri_tri_test(A, B, C, R, Q, P, NULL, 1, types, pos); break;
+    case 25:
+      i = m.tri_tri_test(C, A, B, R, Q, P, NULL, 1, types, pos); break;
+    case 26:
+      i = m.tri_tri_test(B, C, A, R, Q, P, NULL, 1, types, pos); break;
+    case 27:
+      i = m.tri_tri_test(B, A, C, R, Q, P, NULL, 1, types, pos); break;
+    case 28:
+      i = m.tri_tri_test(C, B, A, R, Q, P, NULL, 1, types, pos); break;
+    case 29:
       i = m.tri_tri_test(A, C, B, R, Q, P, NULL, 1, types, pos); break;
-    }
+
+    case 30:
+      printf("\n");
+      i = m.tri_tri_test(A, B, C, P, R, Q, NULL, 1, types, pos); break;
+    case 31:
+      i = m.tri_tri_test(C, A, B, P, R, Q, NULL, 1, types, pos); break;
+    case 32:
+      i = m.tri_tri_test(B, C, A, P, R, Q, NULL, 1, types, pos); break;
+    case 33:
+      i = m.tri_tri_test(B, A, C, P, R, Q, NULL, 1, types, pos); break;
+    case 34:
+      i = m.tri_tri_test(C, B, A, P, R, Q, NULL, 1, types, pos); break;
+    case 35:
+      i = m.tri_tri_test(A, C, B, P, R, Q, NULL, 1, types, pos); break;
+    } // switch (j)
 
     if (i == 0) {
-      printf("  DISJOINT.\n");
+      printf("  [%d] DISJOINT.\n", j);
       continue;
     }
 
@@ -1135,25 +1194,25 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
       dir = (enum tetgenmesh::intersection) types[i];
       switch (dir) {
       case tetgenmesh::DISJOINT: 
-        printf("  [%d] DISJOINT\n", i+1); break;
+        printf("  [%d] DISJOINT\n", j); break;
       case tetgenmesh::SHAREVERT: 
-        printf("  [%d] SHAREVERT %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] SHAREVERT %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::SHAREEDGE: 
-        printf("  [%d] SHAREEDGE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] SHAREEDGE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::SHAREFACE: 
         printf("  [%d] SHAREFACE\n", i); break;
       case tetgenmesh::TOUCHEDGE: 
-        printf("  [%d] TOUCHEDGE %d (%d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] TOUCHEDGE %d (%d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::TOUCHFACE: 
-        printf("  [%d] TOUCHFACE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] TOUCHFACE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::ACROSSVERT: 
-        printf("  [%d] ACROSSVERT %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] ACROSSVERT %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::ACROSSEDGE: 
-        printf("  [%d] ACROSSEDGE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] ACROSSEDGE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::ACROSSFACE: 
-        printf("  [%d] ACROSSFACE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] ACROSSFACE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::ACROSSTET: 
-        printf("  [%d] ACROSSTET\n", i+1); break;
+        printf("  [%d] ACROSSTET\n", j); break;
       }
     }
   }
