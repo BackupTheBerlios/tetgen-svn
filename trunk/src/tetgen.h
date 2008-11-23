@@ -832,6 +832,8 @@ static int edge2locver[6][2];
 static int locpivot[4][3];
 static int locverpivot[4][6][2];
 
+static int mi1mo3[3];
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Mesh manipulation primitives                                              //

@@ -41,7 +41,7 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
     }
   } else {
     printf("  This code does not do surface mesh yet.\n");
-    terminatetetgen(1);
+    // terminatetetgen(1);
   }
 }
 

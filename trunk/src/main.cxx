@@ -1069,9 +1069,9 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
   tetgenmesh m;
   tetgenmesh::face s1, s2;
   tetgenmesh::point A, B, C, P, Q, R;
-  // tetgenmesh::intersection dir;
-  int pu[3], pv[3], icode;
-  int pos;
+  tetgenmesh::intersection dir;
+  int types[2], pos[4];
+  int i, j;
 
   m.b = b;
   m.in = in;
@@ -1095,21 +1095,68 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
   b->epsilon = 0;
   b->verbose = 3;
 
-  // dir = m.tri_edge_inter(A, B, C, P, Q, NULL, &pos);
-  pos = m.tri_tri_test(A, B, C, P, Q, R, NULL, 1, pu, pv, &icode);
+  for (j = 0; j < 12; j++) {
 
-  /*switch (dir) {
-    case tetgenmesh::DISJOINT: printf("  DISJOINT\n"); break;
-    case tetgenmesh::SHAREVERT: printf("  SHAREVERT pos(%d)\n", pos); break;
-    case tetgenmesh::SHAREEDGE: printf("  SHAREEDGE pos(%d)\n", pos); break;
-    case tetgenmesh::SHAREFACE: printf("  SHAREFACE\n"); break;
-    case tetgenmesh::COLLINEAR: printf("  COLLINEAR pos(%d)\n", pos); break;
-    case tetgenmesh::COPLANAR: printf("  COPLANAR\n"); break;
-    case tetgenmesh::ACROSSVERT: printf("  ACROSSVERT pos(%d)\n", pos); break;
-    case tetgenmesh::ACROSSEDGE: printf("  ACROSSEDGE pos(%d)\n", pos); break;
-    case tetgenmesh::ACROSSFACE: printf("  ACROSSFACE\n"); break;
-    case tetgenmesh::ACROSSTET: printf("  ACROSSTET\n"); break;
-  }*/
+    // Permut the vertices.
+    switch (j) {
+    case 0:
+      i = m.tri_tri_test(A, B, C, P, Q, R, NULL, 1, types, pos); break;
+    case 1:
+      i = m.tri_tri_test(C, A, B, P, Q, R, NULL, 1, types, pos); break;
+    case 2:
+      i = m.tri_tri_test(B, C, A, P, Q, R, NULL, 1, types, pos); break;
+    case 3:
+      i = m.tri_tri_test(B, A, C, P, Q, R, NULL, 1, types, pos); break;
+    case 4:
+      i = m.tri_tri_test(C, B, A, P, Q, R, NULL, 1, types, pos); break;
+    case 5:
+      i = m.tri_tri_test(A, C, B, P, Q, R, NULL, 1, types, pos); break;
+    case 6:
+      i = m.tri_tri_test(A, B, C, Q, P, R, NULL, 1, types, pos); break;
+    case 7:
+      i = m.tri_tri_test(C, A, B, Q, P, R, NULL, 1, types, pos); break;
+    case 8:
+      i = m.tri_tri_test(B, C, A, Q, P, R, NULL, 1, types, pos); break;
+    case 9:
+      i = m.tri_tri_test(B, A, C, R, Q, P, NULL, 1, types, pos); break;
+    case 10:
+      i = m.tri_tri_test(C, B, A, R, Q, P, NULL, 1, types, pos); break;
+    case 11:
+      i = m.tri_tri_test(A, C, B, R, Q, P, NULL, 1, types, pos); break;
+    }
+
+    if (i == 0) {
+      printf("  DISJOINT.\n");
+      continue;
+    }
+
+    // Report the intersection types and positions.
+    for (i = 0; i < 2; i++) {
+      dir = (enum tetgenmesh::intersection) types[i];
+      switch (dir) {
+      case tetgenmesh::DISJOINT: 
+        printf("  [%d] DISJOINT\n", i+1); break;
+      case tetgenmesh::SHAREVERT: 
+        printf("  [%d] SHAREVERT %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::SHAREEDGE: 
+        printf("  [%d] SHAREEDGE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::SHAREFACE: 
+        printf("  [%d] SHAREFACE\n", i); break;
+      case tetgenmesh::TOUCHEDGE: 
+        printf("  [%d] TOUCHEDGE %d (%d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::TOUCHFACE: 
+        printf("  [%d] TOUCHFACE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::ACROSSVERT: 
+        printf("  [%d] ACROSSVERT %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::ACROSSEDGE: 
+        printf("  [%d] ACROSSEDGE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::ACROSSFACE: 
+        printf("  [%d] ACROSSFACE %d %d\n", i+1, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::ACROSSTET: 
+        printf("  [%d] ACROSSTET\n", i+1); break;
+      }
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
