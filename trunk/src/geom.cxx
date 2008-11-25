@@ -7,7 +7,7 @@ REAL tetgenmesh::PI = 3.14159265358979323846264338327950288419716939937510582;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// tri_edge_2d()    Triangle-edge intersection test.                         //
+// tri_edge_2d()    Triangle-edge coplanar intersection test.                //
 //                                                                           //
 // This routine takes a triangle T (with vertices A, B, C) and an edge E (P, //
 // Q) in a plane in 3D, and tests if they intersect each other.  Return 1 if //
@@ -908,6 +908,223 @@ int tetgenmesh::tri_edge_test(point A, point B, point C, point P, point Q,
   }
 
   return 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// tri_tri_2d()    Triangle-triangle coplanar intersection test.             //
+//                                                                           //
+// This routine takes two triangles T1 (with vertices A, B, C) and T2 (with  //
+// vertices P, Q, R) in 3D, and T1 and T2 are coplanar, and tests if they    //
+// intersect each other.  Return 1 if they intersect, ie., T1 \cap T2 is not //
+// empty, otherwise, return 0.                                               //
+//                                                                           //
+// If 'O' is not NULL, it lies strictly above A, B, C.                       //
+//                                                                           //
+// If T1 and T2 intersect (return 1) and if 'level' > 0,                     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q, 
+  point R, point O, int level, int *types, int *pos)
+{
+  point U[3], V[3];
+  int pu[3], pv[3], iv;
+  REAL s1, s2, s3;
+  int z1;
+
+  if (O == NULL) {
+    REAL n[3], len;
+    // Calculate a lift point, saved in dummypoint.
+    facenormal(A, B, C, n, 1);
+    len = sqrt(DOT(n, n));
+    n[0] /= len;
+    n[1] /= len;
+    n[2] /= len;
+    len = DIST(A, B);
+    len += DIST(B, C);
+    len += DIST(C, A);
+    len /= 3.0;
+    O = dummypoint;
+    O[0] = A[0] + len * n[0];
+    O[1] = A[1] + len * n[1];
+    O[2] = A[2] + len * n[2];
+  }
+
+  s1 = orient3d(A, B, O, P);
+  s2 = orient3d(B, C, O, P);
+  s3 = orient3d(C, A, O, P);
+  orient3dcount+=3;
+
+  if (b->epsilon) {
+    if ((s1 != 0) && iscoplanar(A, B, O, P, s1)) s1 = 0;
+    if ((s2 != 0) && iscoplanar(B, C, O, P, s2)) s2 = 0;
+    if ((s3 != 0) && iscoplanar(C, A, O, P, s3)) s3 = 0;
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-tri-2d (%d %d %d)-(%d %d %d) (%c%c%c)\n", pointmark(A),
+      pointmark(B), pointmark(C), pointmark(P), pointmark(Q), pointmark(R),
+      s1>0 ? '+' : (s1 < 0 ? '-' : '0'), s2>0 ? '+' : (s2<0 ? '-' : '0'),
+      s3>0 ? '+' : (s3<0 ? '-' : '0'));
+  }
+
+  if (s1 < 0) {
+    if (s2 < 0) {
+      if (s3 < 0) { // (---)
+        assert(0); // Not possible.
+      } else {
+        if (s3 > 0) { // (--+)
+          SETVECTOR3(U, B, C, A);  // PT = ST x ST
+          SETVECTOR3(pu, 1, 2, 0);
+          z1 = 2;
+        } else { // (--0)
+          assert(0); // Not possible.
+        }
+      }
+    } else {
+      if (s2 > 0) {
+        if (s3 < 0) { // (-+-)
+          SETVECTOR3(U, A, B, C);  // I3
+          SETVECTOR3(pu, 0, 1, 2);
+          z1 = 2;
+        } else {
+          if (s3 > 0) { // (-++)
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(pu, 0, 1, 2);
+            z1 = 1;
+          } else { // (-+0)
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(pu, 0, 1, 2);
+            z1 = 4;
+          }
+        }
+      } else { // s2 == 0
+        if (s3 < 0) { //(-0-)
+          assert(0); // Not possible
+        } else {
+          if (s3 > 0) { // (-0+)
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(pu, 1, 2, 0);
+            z1 = 3;
+          } else { // (-00)
+            assert(0); // Not possible
+          }
+        }
+      }
+    }
+  } else {
+    if (s1 > 0) {
+      if (s2 < 0) {
+        if (s3 < 0) { // (+--)
+          SETVECTOR3(U, C, A, B);  // PT = ST
+          SETVECTOR3(pu, 2, 0, 1);
+          z1 = 2;
+        } else {
+          if (s3 > 0) { (+-+)
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(pu, 1, 2, 0);
+            z1 = 1;
+          } else { // (+-0)
+            SETVECTOR3(U, C, A, B);  // PT = ST
+            SETVECTOR3(pu, 2, 0, 1);
+            z1 = 3;
+          }
+        }
+      } else { 
+        if (s2 > 0) {
+          if (s3 < 0) { // (++-)
+            SETVECTOR3(U, C, A, B);  // PT = ST
+            SETVECTOR3(pu, 2, 0, 1);
+            z1 = 1;
+          } else {
+            if (s3 > 0) { // (+++)
+              SETVECTOR3(U, A, B, C);  // I3
+              SETVECTOR3(pu, 0, 1, 2);
+              z1 = 7;
+            } else { // (++0)
+              SETVECTOR3(U, C, A, B);  // PT = ST
+              SETVECTOR3(pu, 2, 0, 1);
+              z1 = 5;
+            }
+          }
+        } else { // s2 == 0
+          if (s3 < 0) { // (+0-)
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(pu, 1, 2, 0);
+            z1 = 4;
+          } else {
+            if (s3 > 0) { // (+0+)
+              SETVECTOR3(U, B, C, A);  // PT = ST x ST
+              SETVECTOR3(pu, 1, 2, 0);
+              z1 = 5;
+            } else { // (+00)
+              SETVECTOR3(U, C, A, B);  // PT = ST
+              SETVECTOR3(pu, 2, 0, 1);
+              z1 = 6;
+            }
+          }
+        }
+      }
+    } else { // s1 == 0
+      if (s2 < 0) {
+        if (s3 < 0) { // (0--)
+          assert(0); // Not possible
+        } else {
+          if (s3 > 0) { // (0-+)
+            SETVECTOR3(U, B, C, A);  // PT = ST x ST
+            SETVECTOR3(pu, 1, 2, 0);
+            z1 = 4;
+          } else { // (0-0)
+            assert(0); // Not possible
+          }
+        }
+      } else {
+        if (s2 > 0) {
+          if (s3 < 0) { // (0+-)
+            SETVECTOR3(U, A, B, C);  // I3
+            SETVECTOR3(pu, 0, 1, 2);
+            z1 = 3;
+          } else {
+            if (s3 > 0) { // (0++)
+              SETVECTOR3(U, A, B, C);  // I3
+              SETVECTOR3(pu, 0, 1, 2);
+              z1 = 5;
+            } else { // (0+0)
+              SETVECTOR3(U, A, B, C);  // I3
+              SETVECTOR3(pu, 0, 1, 2);
+              z1 = 6;
+            }
+          }
+        } else { // s2 == 0
+          if (s3 < 0) { // (00-)
+            assert(0); // Not possible
+          } else {
+            if (s3 > 0) { // (00+)
+              SETVECTOR3(U, B, C, A);  // PT = ST x ST
+              SETVECTOR3(pu, 1, 2, 0);
+              z1 = 6;
+            } else { // (000)
+              assert(0); // Not possible
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (b->verbose > 2) {
+    printf("      Tri-tri-2d (%d %d %d)-(%d) z1(%d)\n", pointmark(U[0]), 
+      pointmark(U[1]), pointmark(U[2]), pointmark(P), z1);
+  }
+
+  if (level == 0) {
+    if (z1 > 4) {
+      return 1;  // Intersect.
+    }
+  }
+
+  return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

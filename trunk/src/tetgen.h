@@ -1493,6 +1493,7 @@ bool iscoplanar(point k, point l, point m, point n, REAL ori);
 
 int tri_edge_2d(point,point,point,point,point,point,int,int*,int*);
 int tri_edge_test(point,point,point,point,point,point,int,int*,int*);
+int tri_tri_2d(point,point,point,point,point,point,point,int,int*,int*);
 int tri_tri_test(point,point,point,point,point,point,point,int,int*,int*);
 
 ///////////////////////////////////////////////////////////////////////////////
