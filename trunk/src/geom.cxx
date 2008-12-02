@@ -930,7 +930,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
 {
   point U[3], V[3];
   int pu[3], pv[3], iv;
-  REAL s1, s2, s3;
+  REAL s1, s2, s3, s4;
   int z1;
 
   if (O == NULL) {
@@ -1123,6 +1123,67 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       return 1;  // Intersect.
     }
   }
+
+  // Orient P, Q, R to be CCW wrt O, keep P as origin
+  s4 = orient3d(P, Q, R, O);
+  orient3dcount++;
+  if (b->epsilon) {
+    if ((s4 != 0) && iscoplanar(P, Q, R, O, s4)) s4 = 0;
+  }
+
+  aseert(s4 != 0);
+  if (s4 < 0) {
+    SETVECTOR3(V, P, Q, R);
+    SETVECTOR3(pv, 0, 1, 2);
+    iv = 0;
+  } else {
+    SETVECTOR3(V, P, R, Q);
+    SETVECTOR3(pv, 0, 2, 1);
+    iv = 1;
+  }
+
+  // Decide whether they intersect of not.
+
+  if (z1 == 1) {
+
+    s5 = orient3d(V[0], U[0], O, V[1]); // P, A, O, Q
+    s6 = orient3d(V[0], U[1], O, V[2]); // P, B, O, R
+    orient3dcount+=2;
+    if (b->epsilon) {
+      if ((s5 != 0) && iscoplanar(V[0], U[0], O, V[1], s5)) s5 = 0;
+      if ((s6 != 0) && iscoplanar(V[0], U[1], O, V[2], s6)) s6 = 0;
+    }
+
+    if (s5 > 0) {
+      if (s6 < 0) { // (+-)
+        return 0;
+      }
+    }
+
+    s7 = orient3d(U[0], U[1], O, V[1]); // A, B, O, Q
+    s8 = orient3d(U[0], U[1], O, V[2]); // A, B, O, R
+    orient3dcount+=2;
+    if (b->epsilon) {
+      if ((s7 != 0) && iscoplanar(U[0], U[1], O, V[1], s7)) s7 = 0;
+      if ((s8 != 0) && iscoplanar(U[0], U[1], O, V[2], s8)) s8 = 0;
+    }
+
+    if (s7 < 0) {
+      if (s8 < 0) { // (##--)
+        return 0;
+      }
+    }
+
+    s9  = orient3d(V[0], U[0], O, V[2]); // P, A, O, R
+    s10 = orient3d(V[0], U[1], O, V[1]); // P, B, O, Q
+    orient3dcount+=2;
+    if (b->epsilon) {
+      if ((s9  != 0) && iscoplanar(U[0], U[1], O, V[2], s9)) s9 = 0;
+      if ((s10 != 0) && iscoplanar(U[0], U[1], O, V[1], s10)) s10 = 0;
+    }
+
+
+  } // z1 == 1
 
   return 0;
 }
