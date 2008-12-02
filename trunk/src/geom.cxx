@@ -931,7 +931,8 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   point U[3], V[3];
   int pu[3], pv[3], iv;
   REAL s1, s2, s3, s4;
-  int z1;
+  REAL s5, s6 ,s7, s8, s9, s10;
+  int z1, z2, z3;
 
   if (O == NULL) {
     REAL n[3], len;
@@ -1021,7 +1022,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
           SETVECTOR3(pu, 2, 0, 1);
           z1 = 2;
         } else {
-          if (s3 > 0) { (+-+)
+          if (s3 > 0) { // (+-+)
             SETVECTOR3(U, B, C, A);  // PT = ST x ST
             SETVECTOR3(pu, 1, 2, 0);
             z1 = 1;
@@ -1131,7 +1132,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     if ((s4 != 0) && iscoplanar(P, Q, R, O, s4)) s4 = 0;
   }
 
-  aseert(s4 != 0);
+  assert(s4 != 0);
   if (s4 < 0) {
     SETVECTOR3(V, P, Q, R);
     SETVECTOR3(pv, 0, 1, 2);
@@ -1147,41 +1148,252 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   if (z1 == 1) {
 
     s5 = orient3d(V[0], U[0], O, V[1]); // P, A, O, Q
-    s6 = orient3d(V[0], U[1], O, V[2]); // P, B, O, R
-    orient3dcount+=2;
+    s6 = orient3d(V[0], U[1], O, V[1]); // P, B, O, Q
+    s7 = orient3d(U[0], U[1], O, V[1]); // A, B, O, Q
     if (b->epsilon) {
       if ((s5 != 0) && iscoplanar(V[0], U[0], O, V[1], s5)) s5 = 0;
-      if ((s6 != 0) && iscoplanar(V[0], U[1], O, V[2], s6)) s6 = 0;
-    }
-
-    if (s5 > 0) {
-      if (s6 < 0) { // (+-)
-        return 0;
-      }
-    }
-
-    s7 = orient3d(U[0], U[1], O, V[1]); // A, B, O, Q
-    s8 = orient3d(U[0], U[1], O, V[2]); // A, B, O, R
-    orient3dcount+=2;
-    if (b->epsilon) {
+      if ((s6 != 0) && iscoplanar(V[0], U[1], O, V[1], s6)) s6 = 0;
       if ((s7 != 0) && iscoplanar(U[0], U[1], O, V[1], s7)) s7 = 0;
-      if ((s8 != 0) && iscoplanar(U[0], U[1], O, V[2], s8)) s8 = 0;
     }
 
-    if (s7 < 0) {
-      if (s8 < 0) { // (##--)
-        return 0;
+    if (s5 < 0) {
+      if (s6 < 0) {
+        if (s7 < 0) { // (---)
+          z2 = 6;
+        } else {
+          if (s7 > 0) { // (--+)
+            z2 = 5;
+          } else { // (--0)
+            z2 = 12;
+          }
+        }
+      } else {
+        if (s6 > 0) {
+          if (s7 < 0) { // (-+-)
+            z2 = 1;
+          } else {
+            if (s7 > 0) { // (-++)
+              z2 = 7;
+            } else { // (-+0)
+              z2 = 16; assert(0);
+            }
+          }
+        } else { // s6 == 0
+          if (s7 < 0) { //(-0-)
+            z2 = 13;
+          } else {
+            if (s7 > 0) { // (-0+)
+              z2 = 15;
+            } else { // (-00)
+              if (level == 0) {
+                return 1;
+              }
+              z2 = 18; // Q = B.
+            }
+          }
+        }
+      }
+    } else {
+      if (s5 > 0) {
+        if (s6 < 0) {
+          if (s7 < 0) { // (+--)
+            assert(0); // Not possible.
+          } else {
+            if (s7 > 0) { // (+-+)
+              z2 = 4;
+            } else { // (+-0)
+              assert(0); // Not possible.
+            }
+          }
+        } else { 
+          if (s6 > 0) {
+            if (s7 < 0) { // (++-)
+              return 0; // z2 = 2
+            } else {
+              if (s7 > 0) { // (+++)
+                return 0; // z2 = 3
+              } else { // (++0)
+                return 0; // z2 = 9
+              }
+            }
+          } else { // s6 == 0
+            if (s7 < 0) { // (+0-)
+              assert(0); // Not possible.
+            } else {
+              if (s7 > 0) { // (+0+)
+                return 0; // z2 = 10
+              } else { // (+00)
+                assert(0); // Not possible.
+              }
+            }
+          }
+        }
+      } else { // s5 == 0
+        if (s6 < 0) {
+          if (s7 < 0) { // (0--)
+            assert(0); // Not possible.
+          } else {
+            if (s7 > 0) { // (0-+)
+              z2 = 11;
+            } else { // (0-0)
+              assert(0); // Not possible.
+            }
+          }
+        } else {
+          if (s6 > 0) {
+            if (s7 < 0) { // (0+-)
+              z2 = 8;
+            } else {
+              if (s7 > 0) { // (0++)
+                return 0; // z2 = 14
+              } else { // (0+0)
+                // Q = A; // z2 = 17;
+                if (level > 0) {
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[0]; // A
+                  pos[1] = pv[1]; // Q
+                }
+                return 1;
+              }
+            }
+          } else { // s6 == 0
+            if (s7 < 0) { // (00-)
+              assert(0); // Not possible.
+            } else {
+              if (s7 > 0) { // (00+)
+                z2 = 19; assert(0); // Q = P.
+              } else { // (000)
+                assert(0); // Not possible.
+              }
+            }
+          }
+        }
       }
     }
 
-    s9  = orient3d(V[0], U[0], O, V[2]); // P, A, O, R
-    s10 = orient3d(V[0], U[1], O, V[1]); // P, B, O, Q
-    orient3dcount+=2;
+    s8 = orient3d(V[0], U[0], O, V[2]); // P, A, O, R
+    s9 = orient3d(V[0], U[1], O, V[2]); // P, B, O, R
+    s10 = orient3d(U[0], U[1], O, V[2]); // A, B, O, R
     if (b->epsilon) {
-      if ((s9  != 0) && iscoplanar(U[0], U[1], O, V[2], s9)) s9 = 0;
-      if ((s10 != 0) && iscoplanar(U[0], U[1], O, V[1], s10)) s10 = 0;
+      if ((s8 != 0) && iscoplanar(V[0], U[0], O, V[2], s8)) s8 = 0;
+      if ((s9 != 0) && iscoplanar(V[0], U[1], O, V[2], s9)) s9 = 0;
+      if ((s10 != 0) && iscoplanar(U[0], U[1], O, V[2], s10)) s10 = 0;
     }
 
+    if (s8 < 0) {
+      if (s9 < 0) {
+        if (s10 < 0) { // (---)
+          return 0; // z3 = 6;
+        } else {
+          if (s10 > 0) { // (--+)
+            return 0; // z3 = 5;
+          } else { // (--0)
+            return 0; // z3 = 12;
+          }
+        }
+      } else {
+        if (s9 > 0) {
+          if (s10 < 0) { // (-+-)
+            z3 = 1;
+          } else {
+            if (s10 > 0) { // (-++)
+              z3 = 7;
+            } else { // (-+0)
+              z3 = 16; assert(0);
+            }
+          }
+        } else { // s9 == 0
+          if (s10 < 0) { //(-0-)
+            z3 = 13;
+          } else {
+            if (s10 > 0) { // (-0+)
+              return 0; // z3 = 15;
+            } else { // (-00)
+              // z3 = 18; // R = B.
+              if (level > 1) {
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[1]; // B
+                pos[1] = pv[2]; // R
+              }
+              return 1;
+            }
+          }
+        }
+      }
+    } else {
+      if (s8 > 0) {
+        if (s9 < 0) {
+          if (s10 < 0) { // (+--)
+            assert(0); // Not possible.
+          } else {
+            if (s10 > 0) { // (+-+)
+              z3 = 4;
+            } else { // (+-0)
+              assert(0); // Not possible.
+            }
+          }
+        } else { 
+          if (s9 > 0) {
+            if (s10 < 0) { // (++-)
+              z3 = 2;
+            } else {
+              if (s10 > 0) { // (+++)
+                z3 = 3;
+              } else { // (++0)
+                z3 = 9;
+              }
+            }
+          } else { // s9 == 0
+            if (s10 < 0) { // (+0-)
+              assert(0); // Not possible.
+            } else {
+              if (s10 > 0) { // (+0+)
+                z3 = 10;
+              } else { // (+00)
+                assert(0); // Not possible.
+              }
+            }
+          }
+        }
+      } else { // s8 == 0
+        if (s9 < 0) {
+          if (s10 < 0) { // (0--)
+            assert(0); // Not possible.
+          } else {
+            if (s10 > 0) { // (0-+)
+              return 0; // z3 = 11;
+            } else { // (0-0)
+              assert(0); // Not possible.
+            }
+          }
+        } else {
+          if (s9 > 0) {
+            if (s10 < 0) { // (0+-)
+              z3 = 8;
+            } else {
+              if (s10 > 0) { // (0++)
+                z3 = 14;
+              } else { // (0+0)
+                if (level == 0) {
+                  return 1;
+                }
+                z3 = 17; // R = A;
+              }
+            }
+          } else { // s9 == 0
+            if (s10 < 0) { // (00-)
+              assert(0); // Not possible.
+            } else {
+              if (s10 > 0) { // (00+)
+                z3 = 19; assert(0); // R = P.
+              } else { // (000)
+                assert(0); // Not possible.
+              }
+            }
+          }
+        }
+      }
+    }
 
   } // z1 == 1
 
