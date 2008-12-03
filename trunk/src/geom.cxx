@@ -931,7 +931,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   point U[3], V[3];
   int pu[3], pv[3], iv;
   REAL s1, s2, s3, s4;
-  REAL s5, s6 ,s7, s8, s9, s10;
+  REAL s5, s6 ,s7, s8, s9, s10, s11;
   int z1, z2, z3;
 
   if (O == NULL) {
@@ -1160,18 +1160,18 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     if (s5 < 0) {
       if (s6 < 0) {
         if (s7 < 0) { // (---)
-          z2 = 6;
+          z2 = 111;
         } else {
           if (s7 > 0) { // (--+)
-            z2 = 5;
+            z2 = 112;
           } else { // (--0)
-            z2 = 12;
+            z2 = 110;
           }
         }
       } else {
         if (s6 > 0) {
           if (s7 < 0) { // (-+-)
-            // z2 = 1; [P, Q] intersects [A, B, C].
+            // z2 = 121; [P, Q] intersects [A, B, C].
             if (level > 0) {
               types[0] = (int) TRIEDGEINT;
               pos[0] = 3; // [A, B, C]
@@ -1181,22 +1181,29 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             return 1;
           } else {
             if (s7 > 0) { // (-++)
-              z2 = 7;
+              z2 = 222;
             } else { // (-+0)
-              z2 = 16; assert(0);
+              z2 = 120; assert(0); // Case z1 == 5
             }
           }
         } else { // s6 == 0
-          if (s7 < 0) { //(-0-)
-            z2 = 13;
+          if (s7 < 0) { // (-0-)
+            // z2 = 101; [A, B] intersects [P, Q, R]
+            if (level > 1) {
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT; // Test skipped.
+            }
+            return 1;
           } else {
             if (s7 > 0) { // (-0+)
-              z2 = 15;
+              z2 = 102;
             } else { // (-00)
               if (level == 0) {
                 return 1;
               }
-              z2 = 18; // Q = B.
+              z2 = 100; // Q = B.
             }
           }
         }
@@ -1208,7 +1215,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             assert(0); // Not possible.
           } else {
             if (s7 > 0) { // (+-+)
-              z2 = 4;
+              z2 = 212;
             } else { // (+-0)
               assert(0); // Not possible.
             }
@@ -1216,12 +1223,12 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
         } else { 
           if (s6 > 0) {
             if (s7 < 0) { // (++-)
-              return 0; // z2 = 2
+              return 0; // z2 = 221
             } else {
               if (s7 > 0) { // (+++)
-                return 0; // z2 = 3
+                return 0; // z2 = 222
               } else { // (++0)
-                return 0; // z2 = 9
+                return 0; // z2 = 220
               }
             }
           } else { // s6 == 0
@@ -1229,7 +1236,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               assert(0); // Not possible.
             } else {
               if (s7 > 0) { // (+0+)
-                return 0; // z2 = 10
+                return 0; // z2 = 202
               } else { // (+00)
                 assert(0); // Not possible.
               }
@@ -1250,12 +1257,12 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
         } else {
           if (s6 > 0) {
             if (s7 < 0) { // (0+-)
-              z2 = 8;
+              z2 = 021;
             } else {
               if (s7 > 0) { // (0++)
-                return 0; // z2 = 14
+                return 0; // z2 = 022
               } else { // (0+0)
-                // Q = A; // z2 = 17;
+                // Q = A; // z2 = 020;
                 if (level > 0) {
                   types[0] = (int) SHAREVERT;
                   pos[0] = pu[0]; // A
@@ -1270,7 +1277,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               assert(0); // Not possible.
             } else {
               if (s7 > 0) { // (00+)
-                z2 = 19; assert(0); // Q = P.
+                z2 = 002; assert(0); // Q = P.
               } else { // (000)
                 assert(0); // Not possible.
               }
@@ -1293,12 +1300,12 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     if (s8 < 0) {
       if (s9 < 0) {
         if (s10 < 0) { // (---)
-          return 0; // z3 = 6;
+          return 0; // z3 = 111;
         } else {
           if (s10 > 0) { // (--+)
-            return 0; // z3 = 5;
+            return 0; // z3 = 112;
           } else { // (--0)
-            return 0; // z3 = 12;
+            return 0; // z3 = 110;
           }
         }
       } else {
@@ -1314,19 +1321,19 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             return 1;
           } else {
             if (s10 > 0) { // (-++)
-              z3 = 7;
+              z3 = 122;
             } else { // (-+0)
-              z3 = 16; assert(0);
+              z3 = 120; assert(0);
             }
           }
         } else { // s9 == 0
           if (s10 < 0) { //(-0-)
-            z3 = 13;
+            z3 = 101;
           } else {
             if (s10 > 0) { // (-0+)
               return 0; // z3 = 15;
             } else { // (-00)
-              // z3 = 18; // R = B.
+              // z3 = 100; // R = B.
               if (level > 0) {
                 types[0] = (int) SHAREVERT;
                 pos[0] = pu[1]; // B
@@ -1353,12 +1360,12 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
         } else { 
           if (s9 > 0) {
             if (s10 < 0) { // (++-)
-              z3 = 2;
+              z3 = 221;
             } else {
               if (s10 > 0) { // (+++)
-                z3 = 3;
+                z3 = 222;
               } else { // (++0)
-                z3 = 9;
+                z3 = 220;
               }
             }
           } else { // s9 == 0
@@ -1366,7 +1373,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               assert(0); // Not possible.
             } else {
               if (s10 > 0) { // (+0+)
-                z3 = 10;
+                z3 = 202;
               } else { // (+00)
                 assert(0); // Not possible.
               }
@@ -1379,7 +1386,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             assert(0); // Not possible.
           } else {
             if (s10 > 0) { // (0-+)
-              return 0; // z3 = 11;
+              return 0; // z3 = 012;
             } else { // (0-0)
               assert(0); // Not possible.
             }
@@ -1387,15 +1394,15 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
         } else {
           if (s9 > 0) {
             if (s10 < 0) { // (0+-)
-              z3 = 8;
+              z3 = 021;
             } else {
               if (s10 > 0) { // (0++)
-                z3 = 14;
+                z3 = 022;
               } else { // (0+0)
                 if (level == 0) {
                   return 1;
                 }
-                z3 = 17; // R = A;
+                z3 = 020; // R = A;
               }
             }
           } else { // s9 == 0
@@ -1403,7 +1410,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               assert(0); // Not possible.
             } else {
               if (s10 > 0) { // (00+)
-                z3 = 19; assert(0); // R = P.
+                z3 = 002; assert(0); // R = P.
               } else { // (000)
                 assert(0); // Not possible.
               }
@@ -1413,12 +1420,16 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       }
     }
 
-    if (z2 == 4) {
+    if (z2 == 212) {
       return 0;
     }
 
-    if (z2 == 5) {
-      if (z3 == 2) {
+    if (z2 == 012) {
+      return 0;
+    }
+
+    if (z2 == 112) {
+      if (z3 == 221) { // (tritri2d-z1-Q--+)
         s11 = orient3d(V[1], V[2], O, U[0]); // Q, R, O, A
         orient3dcount++;
         if (b->epsilon) {
@@ -1445,7 +1456,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
           return 1;
         }
       }
-      if (z3 == 8) {
+      if (z3 == 021) {
         if (level > 0) {
           // [A, B] intersects [P, Q, R]
           types[0] = (int) EDGETRIINT;
@@ -1459,7 +1470,90 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       return 0;
     }
 
-    if (z2 == 6) {
+    if (z2 == 110) {
+      if (z3 == 020) {
+        // R = A, [Q, R] contains [A, B],
+        if (level > 0) {
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[1]; // B
+          pos[1] = pv[1]; // [Q, R]
+          types[1] = (int) SHAREVERT;
+          pos[2] = pu[0]; // A
+          pos[3] = pv[2]; // R
+        }
+        return 1;
+      }
+      if (z3 == 220) {
+        // [Q, R] contains [A, B].
+        if (level > 0) {
+          types[0] = (int) ACROSSVERT;
+          pos[0] = pu[1]; // B
+          pos[1] = pv[1]; // [Q, R]
+          types[1] = (int) ACROSSVERT;
+          pos[2] = pu[0]; // A
+          pos[3] = pv[1]; // [Q, R]
+        }
+        return 1;
+      }
+      // Other cases of z3 are all DISJOINT.
+      return 0; 
+    }
+
+    if (z2 == 111) { // (tritri2d-z1-Q---)
+      if ((z3 == 021) || (z3 == 221) || (z3 == 220)) {
+        // [A, B] intersects [P, Q, R]
+        if (level > 1) {
+          types[0] = (int) EDGETRIINT;
+          pos[0] = pu[0]; // [A, B]
+          pos[1] = 3; // [P, Q, R]
+          types[1] = (int) DISJOINT; // Test skipped.
+        }
+        return 1;
+      }
+      if (z3 == 222) {
+        s11 = orient3d(V[1], V[2], O, U[1]); // Q, R, O, B
+        orient3dcount++;
+        if (b->epsilon) {
+          if ((s11 != 0) && iscoplanar(V[1], V[2], O, U[1], s11)) s11 = 0;
+        }
+        if (s11 < 0) {
+          return 0;
+        } else {
+          if (level > 0) {
+            if (s11 > 0) {
+              // [A, B] intersects [P, Q, R]
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT;
+            } else {
+              // [Q, R] passes B
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT;
+            }
+          }
+          return 1;
+        }
+      }
+      // Other cases of z3 are all DISJOINT.
+      return 0;
+    }
+
+    if (z2 == 122) {
+    
+    }
+
+    if (z2 == 022) {
+    
+    }
+
+    if (z2 == 102) {
+    
+    }
+
+    if (z2 == 100) {
     
     }
 
