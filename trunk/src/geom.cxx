@@ -931,7 +931,8 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   point U[3], V[3];
   int pu[3], pv[3], iv;
   REAL s1, s2, s3, s4;
-  REAL s5, s6 ,s7, s8, s9, s10, s11;
+  REAL s5, s6 ,s7, s8, s9, s10;
+  REAL s11, s12;
   int z1, z2, z3;
 
   if (O == NULL) {
@@ -1617,6 +1618,436 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     }
 
   } // z1 == 1
+
+  if (z1 == 2) {
+
+    s5 = orient3d(V[0], U[1], O, V[1]); // P, B, O, Q
+    s6 = orient3d(V[0], U[2], O, V[1]); // P, C, O, Q
+    s7 = orient3d(U[1], U[2], O, V[1]); // B, C, O, Q
+    orient3dcount+=3;
+    if (b->epsilon) {
+      if ((s5 != 0) && iscoplanar(V[0], U[1], O, V[1], s5)) s5 = 0;
+      if ((s6 != 0) && iscoplanar(V[0], U[2], O, V[1], s6)) s6 = 0;
+      if ((s7 != 0) && iscoplanar(U[1], U[2], O, V[1], s7)) s7 = 0;
+    }
+
+    if (s5 < 0) {
+      if (s6 < 0) {
+        if (s7 < 0) { // (---)
+          z2 = 1;
+        } else {
+          if (s7 > 0) { // (--+)
+            z2 = 2;
+          } else { // (--0)
+            z2 = 3;
+          }
+        }
+      } else {
+        if (s6 > 0) {
+          if (s7 < 0) { // (-+-)
+            assert(0); // z2 = 4; Not possible.
+          } else {
+            if (s7 > 0) { // (-++)
+              z2 = 5;
+            } else { // (-+0)
+              assert(0); // z2 = 6; Not possible.
+            }
+          }
+        } else { // s6 == 0
+          if (s7 < 0) { // (-0-)
+            assert(0); // z2 = 7; Not possible.
+          } else {
+            if (s7 > 0) { // (-0+)
+              z2 = 8;
+            } else { // (-00)
+              assert(0); // z2 = 9; Not possible.
+            }
+          }
+        }
+      }
+    } else {
+      if (s5 > 0) {
+        if (s6 < 0) {
+          if (s7 < 0) { // (+--)
+            // z2 = 10; [P, Q] intersects [A, B, C]
+            if (level > 0) {
+              types[0] = (int) TRIEDGEINT;
+              pos[0] = 3; // [A, B, C]
+              pos[1] = pv[0]; // [P, Q]
+              types[1] = (int) DISJOINT; // test skipped.
+            }
+            return 1;
+          } else {
+            if (s7 > 0) { // (+-+)
+              z2 = 11;
+            } else { // (+-0)
+              assert(0); // z2 = 12; Case z1 = 5
+            }
+          }
+        } else { 
+          if (s6 > 0) {
+            if (s7 < 0) { // (++-)
+              return 0; // z2 = 13;
+            } else {
+              if (s7 > 0) { // (+++)
+                return 0; // z2 = 14;
+              } else { // (++0)
+                return 0; // z2 = 15;
+              }
+            }
+          } else { // s6 == 0
+            if (s7 < 0) { // (+0-)
+              // z2 = 16; [P, Q] passes C
+              if (level > 0) {
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[2]; // C
+                pos[1] = pv[0]; // [P, Q]
+                types[1] = (int) DISJOINT;
+              }
+              return 1;
+            } else {
+              if (s7 > 0) { // (+0+)
+                return 0; // z2 = 17;
+              } else { // (+00)
+                // z2 = 18; Q = C
+                if (level > 0) {
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[1]; // Q
+                  types[1] = (int) DISJOINT;
+                }
+                return 1;
+              }
+            }
+          }
+        }
+      } else { // s5 == 0
+        if (s6 < 0) {
+          if (s7 < 0) { // (0--)
+            // z2 = 19; [A, B] intersects [P, Q, R]
+            if (level > 0) {
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT;
+            }
+            return 1;
+          } else {
+            if (s7 > 0) { // (0-+)
+              z2 = 20;
+            } else { // (0-0)
+              z2 = 21;
+            }
+          }
+        } else {
+          if (s6 > 0) {
+            if (s7 < 0) { // (0+-)
+              assert(0); // z2 = 22; Not possible.
+            } else {
+              if (s7 > 0) { // (0++)
+                return 0; // z2 = 23;
+              } else { // (0+0)
+                assert(0); // z2 = 24; Not possible.
+              }
+            }
+          } else { // s6 == 0
+            if (s7 < 0) { // (00-)
+              assert(0); // z2 = 25; Not possible.
+            } else {
+              if (s7 > 0) { // (00+)
+                // z2 = 26; Q = P.
+                assert(0);
+              } else { // (000)
+                assert(0); // z2 = 27; Not possible
+              }
+            }
+          }
+        }
+      }
+    }
+
+    s8 = orient3d(V[0], U[1], O, V[2]); // P, B, O, R
+    s9 = orient3d(V[0], U[2], O, V[2]); // P, C, O, R
+    s10 = orient3d(U[1], U[2], O, V[2]); // B, C, O, R
+    orient3dcount+=3;
+    if (b->epsilon) {
+      if ((s8 != 0) && iscoplanar(V[0], U[1], O, V[2], s8)) s8 = 0;
+      if ((s9 != 0) && iscoplanar(V[0], U[2], O, V[2], s9)) s9 = 0;
+      if ((s10 != 0) && iscoplanar(U[1], U[2], O, V[2], s10)) s10 = 0;
+    }
+
+    if (s8 < 0) {
+      if (s9 < 0) {
+        if (s10 < 0) { // (---)
+          return 0; // z3 = 1;
+        } else {
+          if (s10 > 0) { // (--+)
+            return 0; // z3 = 2;
+          } else { // (--0)
+            return 0; // z3 = 3;
+          }
+        }
+      } else {
+        if (s9 > 0) {
+          if (s10 < 0) { // (-+-)
+            assert(0); // z3 = 4; Not possible.
+          } else {
+            if (s10 > 0) { // (-++)
+              z3 = 5;
+            } else { // (-+0)
+              assert(0); // z3 = 6; Not possible.
+            }
+          }
+        } else { // s9 == 0
+          if (s10 < 0) { // (-0-)
+            assert(0); // z3 = 7; Not possible.
+          } else {
+            if (s10 > 0) { // (-0+)
+              return 0; // z3 = 8;
+            } else { // (-00)
+              assert(0); // z3 = 9; // Not possible
+            }
+          }
+        }
+      }
+    } else {
+      if (s8 > 0) {
+        if (s9 < 0) {
+          if (s10 < 0) { // (+--)
+            // z3 = 10; [P, R] intersects [A, B, C]
+            if (level > 0) {
+              types[0] = (int) EDGETRIINT;
+              pos[0] = 3; // [A, B, C]
+              pos[1] = pv[2]; // [R, P]
+              types[1] = (int) DISJOINT; // Test skipped.
+            }
+            return 1;
+          } else {
+            if (s10 > 0) { // (+-+)
+              z3 = 11;
+            } else { // (+-0)
+              assert(0); // z3 = 12; Case z1 = 5
+            }
+          }
+        } else { 
+          if (s9 > 0) {
+            if (s10 < 0) { // (++-)
+              z3 = 13;
+            } else {
+              if (s10 > 0) { // (+++)
+                z3 = 14;
+              } else { // (++0)
+                z3 = 15;
+              }
+            }
+          } else { // s9 == 0
+            if (s10 < 0) { // (+0-)
+              // z3 = 16; [B, C] intersects [P, Q, R]
+              if (level > 0) {
+                types[0] = (int) EDGETRIINT;
+                pos[0] = pu[1]; // [B, C]
+                pos[1] = 3; // [P, Q, R]
+                types[1] = (int) DISJOINT; // Test skipped.
+              }
+              return 1;
+            } else {
+              if (s10 > 0) { // (+0+)
+                z3 = 17;
+              } else { // (+00)
+                z3 = 18;
+              }
+            }
+          }
+        }
+      } else { // s8 == 0
+        if (s9 < 0) {
+          if (s10 < 0) { // (0--)
+            // z3 = 19; [P, R] passes B
+            if (level > 0) {
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pv[2]; // [R, P]
+              types[1] = (int) DISJOINT;
+            }
+            return 1;
+          } else {
+            if (s10 > 0) { // (0-+)
+              return 0; // z3 = 20;
+            } else { // (0-0)
+              // z3 = 21; R = B
+              if (level > 0) {
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[1]; // B
+                pos[1] = pv[2]; // R
+                types[1] = (int) DISJOINT;
+              }
+              return 1;
+            }
+          }
+        } else {
+          if (s9 > 0) {
+            if (s10 < 0) { // (0+-)
+              assert(0); // z3 = 22; Not possible.
+            } else {
+              if (s10 > 0) { // (0++)
+                z3 = 23;
+              } else { // (0+0)
+                assert(0); // z3 = 24; Not possible.
+              }
+            }
+          } else { // s9 == 0
+            if (s10 < 0) { // (00-)
+              assert(0); // z3 = 25; Not possible.
+            } else {
+              if (s10 > 0) { // (00+)
+                assert(0); // z3 = 26; P = R
+              } else { // (000)
+                assert(0); // z3 = 27; Not possible.
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (z2 == 1) {
+      if ((z3 == 5) || (z3 == 23)) {
+        return 0;
+      }
+      if (z3 == 11) { // (tritri2d-z2-z2=1a)
+        s11 = orient3d(V[1], V[2], O, U[0]); // Q, R, O, A
+        orient3dcount++;
+        if (b->epsilon) {
+          if ((s11 != 0) && iscoplanar(V[1], V[2], O, U[0], s11)) s11 = 0;
+        }
+        if (s11 > 0) { // (+#)
+          return 0;
+        }
+        s12 = orient3d(U[0], U[1], O, V[2]); // A, B, O, R
+        orient3dcount++;
+        if (b->epsilon) {
+          if ((s12 != 0) && iscoplanar(U[0], U[1], O, V[2], s12)) s12 = 0;
+        }
+        if (s11 < 0) {
+          if (s12 < 0) { // (--)
+            // [Q, R] intersects [A, B, C]
+            if (level > 0) {
+              types[0] = (int) TRIEDGEINT;
+              pos[0] = 3; // [A, B, C]
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT; // Test skipped.
+            }
+            return 1;
+          } else {
+            if (s12 > 0) { // (-+)
+              return 0;
+            } else { // (-0) 
+              // R in [A, B]
+              assert(0); // Case z1 == 5
+            }
+          }
+        } else { // s11 == 0
+          if (s12 < 0) { // (0-)
+            // [Q, R] pass A.
+            if (level > 0) {
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT;
+            }
+            return 1;
+          } else {
+            if (s12 > 0) { // (0+)
+              return 0;
+            } else { // (00)
+              // R = A.
+              if (level > 0) {
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pv[2]; // R
+                types[1] = (int) DISJOINT;
+              }
+              return 1;
+            }
+          }
+        }
+        assert(0); // Not possible.
+      }
+      if ((z3 == 14) || (z3 == 17)) { // (tritri2d-z2-z2=1b)
+        s11 = orient3d(V[1], V[2], O, U[0]); // Q, R, O, A
+        orient3dcount++;
+        if (b->epsilon) {
+          if ((s11 != 0) && iscoplanar(V[1], V[2], O, U[0], s11)) s11 = 0;
+        }
+        if (s11 > 0) {
+          return 0;
+        } else {
+          if (s11 == 0) {
+            // [Q, R] pass A.
+            if (level > 0) {
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT;
+            }
+            return 1;
+          }
+        }
+        // The remianing case: s11 < 0
+        if (z3 == 17) {
+          // [Q, R] intersects [A, B, C]
+          if (level > 0) {
+            types[0] = (int) EDGETRIINT;
+            pos[0] = 3; // [A, B, C]
+            pos[1] = pv[1]; // [Q, R]
+            types[1] = (int) DISJOINT; // Test skipped.
+          }
+          return 1;
+        }
+        s12 = orient3d(V[1], V[2], O, U[2]); // Q, R, O, C
+        orient3dcount++;
+        if (b->epsilon) {
+          if ((s12 != 0) && iscoplanar(V[1], V[2], O, U[2], s12)) s12 = 0;
+        }
+        if (s12 < 0) {
+          return 0;
+        } else {
+          if (s12 > 0) {
+            // [Q, R] intersects [A, B, C]
+            if (level > 0) {
+              types[0] = (int) TRIEDGEINT;
+              pos[0] = 3; // [A, B, C]
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT; // Test skipped.
+            }
+            return 1;
+          } else { // s12 == 0
+            // [Q, R] passes C, [A, C] intersects [P, Q, R]
+            if (level > 0) {
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[2]; // [C, A]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT; // Test skipped.
+            }
+            return 1;
+          }
+        }
+        assert(0); // Not possible.
+      }
+      if ((z3 == 13) || (z3 == 15) || (z3 == 18)) {
+        // [A, C] intersects [P, Q, R]
+        if (level > 0) {
+          types[0] = (int) EDGETRIINT;
+          pos[0] = pu[2]; // [C, A]
+          pos[1] = 3; // [P, Q, R]
+          types[1] = (int) DISJOINT; // Test skipped.
+        }
+        return 1;
+      }
+      assert(0); // Not possible.
+    }
+
+  } // z1 == 2
 
   return 0;
 }
