@@ -932,7 +932,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   int pu[3], pv[3], iv;
   REAL s1, s2, s3, s4;
   REAL s5, s6 ,s7, s8, s9, s10;
-  REAL s11, s12;
+  REAL s11, s12, s13;
   int z1, z2, z3;
 
   if (O == NULL) {
@@ -1621,8 +1621,162 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   } // z1 == 1
 
   //////////////////////////// z1 == 2 ///////////////////////////////////////
-  
-  
+
+  if (z1 == 2) {
+
+    s5 = orient3d(U[0], U[1], O, V[1]); // A, B, Q
+    if (s5 < 0) {
+      s6 = orient3d(U[0], U[1], O, V[2]); // A, B, R
+      if (s6 < 0) {
+        return 0;
+      } else { // s6 >= 0
+        s7 = orient3d(V[1], V[2], O, U[0]); // Q, R, A
+        if (s7 < 0) {
+          s8 = orient3d(V[1], V[2], O, U[2]); // Q, R, C
+          if (s8 < 0) {
+            return 0;
+          } else {
+            s9 = orient3d(U[2], U[0], O, V[2]); // C, A, R
+            if (s9 < 0) {
+              return 0;
+            } else {
+              z2 = 1;
+            }
+          }
+        } else { // s7 >= 0
+          s8 = orient3d(V[2], V[0], O, U[1]); // R, P, B
+          if (s8 < 0) {
+            return 0;
+          } else {
+            z2 = 2;
+          }
+        }
+      }
+    } else { // s5 >= 0
+      s6 = orient3d(U[2], U[0], O, V[1]); // C, A, Q
+      if (s6 < 0) {
+        s7 = orient3d(V[0], U[2], O, V[1]); // P, C, Q
+        if (s7 > 0) {
+          return 0;
+        } else { // s7 <= 0
+          s8 = orient3d(U[2], U[0], O, V[2]); // C, A, R
+          if (s8 < 0) {
+            return 0;
+          } else { // s8 >= 0
+            s9 = orient3d(V[1], V[2], O, U[2]); // Q, R, C
+            if (s9 < 0) {
+              return 0;
+            } else {
+              z2 = 3;
+            }
+          }
+        }
+      } else { // s6 >= 0
+        s7 = orient3d(V[0], U[1], O, V[1]); // P, B, Q
+        if (s7 < 0) {
+          s8 = orient3d(V[0], U[1], O, V[2]); // P, B, R
+          if (s8 < 0) {
+            return 0;
+          } else { // s8 >= 0
+            s9 = orient3d(U[0], U[1], O, V[2]); // A, B, R
+            if (s9 < 0) {
+              return 0;
+            } else {
+              z2 = 4;
+            }
+          }
+        } else { // s7 >= 0
+          s8 = orient3d(V[0], U[2], O, V[1]); // P, C, Q
+          if (s8 > 0) {
+            return 0;
+          } else { // s8 <= 0
+            z2 = 5;
+          }
+        }
+      }
+    }
+
+    if (level == 0) {
+      return 1;
+    }
+
+    // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
+
+    if (s5 < 0) { 
+      if (s6 > 0) {
+        if (s7 < 0) { // (tritri2d-R2-1)
+          if (s8 > 0) {
+            if (s9 > 0) { // top-left
+              // [Q, R] intersects [A, B, C]
+              types[0] = (int) TRIEDGEINT;
+              pos[0] = 3; // [A, B, C]
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT;
+            } else { // s9 == 0 top-right
+              // R touches [C, A]
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[2]; // [C, A]
+              pos[1] = pv[2]; // R
+              types[1] = (int) DISJOINT;
+            }
+          } else { // s8 == 0 
+            if (s9 > 0) { // bot-left
+              // [Q, R] passes C.
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[2]; // C
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT;
+            } else { // s9 == 0 bot-right
+              // R = C
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[2]; // C
+              pos[1] = pv[2]; // R
+              types[1] = (int) DISJOINT;
+            }
+          }
+        } else { // s7 >= 0 (tritri2d-R2-2)
+          if (s7 > 0) {
+            if (s8 > 0) { 
+              // [A, B] intersects [P, Q, R]
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT;
+            } else { // s8 == 0 (s6 > 0) R != B (top-right)
+              // [R, B] passes B
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pv[2]; // [R, P]
+              types[1] = (int) DISJOINT;
+            }
+          } else { // s7 == 0 (s6 > 0) R != A (bottom)
+            s9 = orient3d(V[1], V[2], O, U[2]); // Q, R, C
+            if (s9 > 0) {
+              // [Q, R] passes A
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[1]; // [Q, R]
+              types[1] = (int) DISJOINT;
+            } else { // s9 <= 0
+              // [A, C] intersects [P, Q, R]
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[2]; // [C, A]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT;
+            }
+          }
+        }
+      } else { // s6 == 0
+      
+      }
+    } else { // s5 >= 0
+    
+    }
+
+    // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
+
+  } // z1 == 2
+
   // Old scheme.
   //////////////////////////// z1 == 2 ///////////////////////////////////////
 
