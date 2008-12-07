@@ -1620,9 +1620,9 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     assert(0); // Not possible.
   } // z1 == 1
 
-  //////////////////////////// z1 == 2 ///////////////////////////////////////
+  //////////////////////////// z1 == 2, 3, 4 /////////////////////////////////
 
-  if (z1 == 2) {
+  if ((z1 == 2) || (z1 == 3) || (z1 == 4)) {
 
     s5 = orient3d(U[0], U[1], O, V[1]); // A, B, Q
     if (s5 < 0) {
@@ -1656,7 +1656,9 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       s6 = orient3d(U[2], U[0], O, V[1]); // C, A, Q
       if (s6 < 0) {
         s7 = orient3d(V[0], U[2], O, V[1]); // P, C, Q
-        if (s7 > 0) {
+        if (s7 > 0) { 
+          // Comments! To my analysis, it should be s7 >= 0.
+          // See fig. tritri2d-R2-3a
           return 0;
         } else { // s7 <= 0
           s8 = orient3d(U[2], U[0], O, V[2]); // C, A, R
@@ -1702,80 +1704,144 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
 
     // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
 
-    if (s5 < 0) { 
-      if (s6 > 0) {
-        if (s7 < 0) { // (tritri2d-R2-1)
-          if (s8 > 0) {
-            if (s9 > 0) { // top-left
-              // [Q, R] intersects [A, B, C]
-              types[0] = (int) TRIEDGEINT;
-              pos[0] = 3; // [A, B, C]
-              pos[1] = pv[1]; // [Q, R]
-              types[1] = (int) DISJOINT;
-            } else { // s9 == 0 top-right
-              // R touches [C, A]
-              types[0] = (int) TOUCHEDGE;
-              pos[0] = pu[2]; // [C, A]
-              pos[1] = pv[2]; // R
-              types[1] = (int) DISJOINT;
+    if (z1 == 2) {
+      if (s5 < 0) { 
+        if (s6 > 0) {
+          if (s7 < 0) { // (tritri2d-R2-1)
+            if (s8 > 0) {
+              if (s9 > 0) { // top-left
+                // [Q, R] intersects [A, B, C]
+                types[0] = (int) TRIEDGEINT;
+                pos[0] = 3; // [A, B, C]
+                pos[1] = pv[1]; // [Q, R]
+                types[1] = (int) DISJOINT;
+              } else { // s9 == 0 top-right
+                // R touches [C, A]
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = pu[2]; // [C, A]
+                pos[1] = pv[2]; // R
+                types[1] = (int) DISJOINT;
+              }
+            } else { // s8 == 0 
+              if (s9 > 0) { // bot-left
+                // [Q, R] passes C.
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[2]; // C
+                pos[1] = pv[1]; // [Q, R]
+                types[1] = (int) DISJOINT;
+              } else { // s9 == 0 bot-right
+                // R = C
+                types[0] = (int) SHAREVERT;
+                pos[0] = pu[2]; // C
+                pos[1] = pv[2]; // R
+                types[1] = (int) DISJOINT;
+              }
             }
-          } else { // s8 == 0 
-            if (s9 > 0) { // bot-left
-              // [Q, R] passes C.
-              types[0] = (int) ACROSSVERT;
-              pos[0] = pu[2]; // C
-              pos[1] = pv[1]; // [Q, R]
-              types[1] = (int) DISJOINT;
-            } else { // s9 == 0 bot-right
-              // R = C
-              types[0] = (int) SHAREVERT;
-              pos[0] = pu[2]; // C
-              pos[1] = pv[2]; // R
-              types[1] = (int) DISJOINT;
+          } else { // s7 >= 0 (tritri2d-R2-2)
+            if (s7 > 0) {
+              if (s8 > 0) { 
+                // [A, B] intersects [P, Q, R]
+                types[0] = (int) EDGETRIINT;
+                pos[0] = pu[0]; // [A, B]
+                pos[1] = 3; // [P, Q, R]
+                types[1] = (int) DISJOINT;
+              } else { // s8 == 0 (s6 > 0) R != B (top-right)
+                // [R, P] passes B
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[1]; // B
+                pos[1] = pv[2]; // [R, P]
+                types[1] = (int) DISJOINT;
+              }
+            } else { // s7 == 0 (s6 > 0) R != A (bottom)
+              s9 = orient3d(V[1], V[2], O, U[2]); // Q, R, C
+              if (s9 > 0) {
+                // [Q, R] passes A
+                types[0] = (int) ACROSSVERT;
+                pos[0] = pu[0]; // A
+                pos[1] = pv[1]; // [Q, R]
+                types[1] = (int) DISJOINT;
+              } else { // s9 <= 0
+                // [A, C] intersects [P, Q, R]
+                types[0] = (int) EDGETRIINT;
+                pos[0] = pu[2]; // [C, A]
+                pos[1] = 3; // [P, Q, R]
+                types[1] = (int) DISJOINT;
+              }
             }
           }
-        } else { // s7 >= 0 (tritri2d-R2-2)
+        } else { // s6 == 0 (tritri2d-R2-2a)
+          assert(s7 >= 0); // s7 < 0 is not possible
           if (s7 > 0) {
-            if (s8 > 0) { 
-              // [A, B] intersects [P, Q, R]
-              types[0] = (int) EDGETRIINT;
+            if (s8 > 0) {
+              // R touches [A, B]
+              types[0] = (int) TOUCHEDGE;
               pos[0] = pu[0]; // [A, B]
-              pos[1] = 3; // [P, Q, R]
+              pos[1] = pv[2]; // R
               types[1] = (int) DISJOINT;
-            } else { // s8 == 0 (s6 > 0) R != B (top-right)
-              // [R, B] passes B
-              types[0] = (int) ACROSSVERT;
+            } else { // s8 == 0
+              // R = B
+              types[0] = (int) SHAREVERT;
               pos[0] = pu[1]; // B
-              pos[1] = pv[2]; // [R, P]
+              pos[1] = pv[2]; // R
               types[1] = (int) DISJOINT;
             }
-          } else { // s7 == 0 (s6 > 0) R != A (bottom)
-            s9 = orient3d(V[1], V[2], O, U[2]); // Q, R, C
-            if (s9 > 0) {
-              // [Q, R] passes A
-              types[0] = (int) ACROSSVERT;
-              pos[0] = pu[0]; // A
-              pos[1] = pv[1]; // [Q, R]
-              types[1] = (int) DISJOINT;
-            } else { // s9 <= 0
-              // [A, C] intersects [P, Q, R]
-              types[0] = (int) EDGETRIINT;
-              pos[0] = pu[2]; // [C, A]
-              pos[1] = 3; // [P, Q, R]
-              types[1] = (int) DISJOINT;
-            }
+          } else { // s7 == 0
+            // R = A
+            types[0] = (int) SHAREVERT;
+            pos[0] = pu[0]; // A
+            pos[1] = pv[2]; // R
+            types[1] = (int) DISJOINT;
           }
         }
-      } else { // s6 == 0
-      
+      } else { // s5 >= 0
+        if (s5 > 0) {
+          if (s6 < 0) {
+            if (s7 < 0) { // (tritri2d-R2-3)
+              if (s8 > 0) {
+                if (s9 > 0) { 
+                  // [C, A] intersects [P, Q, R]
+                  types[0] = (int) EDGETRIINT;
+                  pos[0] = pu[2]; // [C, A]
+                  pos[1] = 3; // [P, Q, R]
+                  types[1] = (int) DISJOINT;
+                } else { // s9 == 0
+                  // [Q, R] passes C
+                  types[0] = (int) ACROSSVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[1]; // [Q, R]
+                  types[1] = (int) DISJOINT;
+                }
+              } else { // s8 == 0
+                if (s9 > 0) {
+                  // R touches [C, A]
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[2]; // [C, A]
+                  pos[1] = pv[2]; // R
+                  types[1] = (int) DISJOINT;
+                } else { // s9 == 0
+                  // R = C
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[2]; // R
+                  types[1] = (int) DISJOINT;
+                }
+              }
+            } else { // s7 == 0 (see tritri2d-R2-3a)
+              // Not possible be intersecting!
+              assert(0);
+            }
+          } else { // s6 >= 0
+          
+          }
+        } else { // s5 == 0
+        
+        }
       }
-    } else { // s5 >= 0
-    
-    }
+    } // z1 == 2
 
     // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
 
-  } // z1 == 2
+  } // z1 == 2 || z1 == 3 || z1 == 4
 
   // Old scheme.
   //////////////////////////// z1 == 2 ///////////////////////////////////////
