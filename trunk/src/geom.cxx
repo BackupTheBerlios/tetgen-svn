@@ -1965,8 +1965,39 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                   }
                 }
               }
-            } else { // s6 == 0
-              // New tests are required (see tritri2d-R2-6)
+            } else { // s6 == 0 (tritri2d-R2-6)
+              // Q = A. Note that R must above P, Q.
+              s7 = orient3d(V[1], V[2], O, U[2]); // Q, R, C
+              if (s7 < 0) {
+                // [Q, R] intersects [A, B, C]
+                types[0] = (int) EDGETRIINT;
+                pos[0] = 3; // [A, B, C]
+                pos[1] = pv[1]; // [Q, R]
+                types[1] = (int) DISJOINT;
+              } else {
+                if (s7 > 0) {
+                  // Q = A
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[0]; // A
+                  pos[1] = pv[1]; // Q
+                  types[1] = (int) DISJOINT;
+                } else { // s7 == 0
+                  s8 = orient3d(V[0], V[2], O, U[2]); // P, R, C
+                  if (s8 == 0) {
+                    // [Q, R] = [A, C]
+                    types[0] = (int) SHAREEDGE;
+                    pos[0] = pu[2]; // [C, A]
+                    pos[1] = pv[1]; // [Q, R]
+                    types[1] = (int) DISJOINT;
+                  } else { // s8 > 0 || s8 < 0
+                    // [A, C] intersects [P, Q, R]
+                    types[0] = (int) EDGETRIINT;
+                    pos[0] = pu[2]; // [C, A]
+                    pos[1] = 3; // [P, Q, R]
+                    types[1] = (int) DISJOINT;
+                  }
+                }
+              }
             }
           }
         }
