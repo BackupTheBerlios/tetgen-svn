@@ -1898,7 +1898,47 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             }
           }
         } else { // s5 == 0
-        
+          if (s6 < 0) { // (tritri2d-R2-3b)
+            if (s7 < 0) {
+              if (s8 > 0) {
+                if (s9 > 0) {
+                  // [C, A] intersects [P, Q, R]
+                  types[0] = (int) EDGETRIINT;
+                  pos[0] = pu[2]; // [C, A]
+                  pos[1] = 3; // [P, Q, R]
+                  types[1] = (int) DISJOINT;
+                } else { // s9 == 0
+                  // [Q, R] passes C
+                  types[0] = (int) ACROSSVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[1]; // [Q, R]
+                  types[1] = (int) DISJOINT;
+                }
+              } else { // s8 == 0
+                if (s9 > 0) {
+                  // R touches [C, A]
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[2]; // [C, A]
+                  pos[1] = pv[2]; // R
+                  types[1] = (int) DISJOINT;
+                } else { // s9 == 0
+                  // R = C
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[2]; // R
+                  types[1] = (int) DISJOINT;
+                }
+              }
+            } else { // s7 == 0 (see tritri2d-R2-3c)
+              assert(0); // To my analysis should be disjoint. 
+            }
+          } else {
+            if (s6 > 0) {
+          
+            } else { // s6 == 0
+            
+            }
+          }
         }
       }
     } // z1 == 2
