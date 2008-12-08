@@ -1831,7 +1831,71 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               assert(0);
             }
           } else { // s6 >= 0
-          
+            if (s6 > 0) {
+              if (s7 < 0) { // (tritri2d-R2-4)
+                if (s8 > 0) { // (top-left)
+                  // [A, B] intersects [P, Q, R]
+                  types[0] = (int) EDGETRIINT;
+                  pos[0] = pu[0]; // [A, B]
+                  pos[1] = 3; // [P, Q, R]
+                  types[1] = (int) DISJOINT;
+                } else { // s8 == 0
+                  if (s9 > 0) { // (top-right)
+                    // [R, P] passes B
+                    types[0] = (int) ACROSSVERT;
+                    pos[0] = pu[1]; // B
+                    pos[1] = pv[2]; // [R, P]
+                    types[1] = (int) DISJOINT;
+                  } else { // s9 == 0 (bot-left)
+                    // R = B
+                    types[0] = (int) SHAREVERT;
+                    pos[0] = pu[1]; // B
+                    pos[1] = pv[2]; // R
+                    types[1] = (int) DISJOINT;
+                  }
+                }
+              } else { // s7 >= 0
+                if (s7 > 0) { // (tritri2d-R2-5)
+                  if (s8 < 0) { // (top-left)
+                    // [P, Q] intersects [A, B, C]
+                    types[0] = (int) TRIEDGEINT;
+                    pos[0] = 3; // [A, B, C]
+                    pos[1] = pv[0]; // [P, Q]
+                    types[1] = (int) DISJOINT;
+                  } else { // s8 == 0 (top-right)
+                    // [P, Q] passes C
+                    types[0] = (int) ACROSSVERT;
+                    pos[0] = pu[2]; // C
+                    pos[1] = pv[0]; // [P, Q]
+                    types[1] = (int) DISJOINT;
+                  }
+                } else { // s7 == 0 (bot-left)
+                  // [A, B] intersects [P, Q, R]
+                  types[0] = (int) EDGETRIINT;
+                  pos[0] = pu[0]; // [A, B]
+                  pos[1] = 3; // [P, Q, R]
+                  types[1] = (int) DISJOINT;
+                }
+              }
+            } else { // s6 == 0 (tritri2d-R2-5a)
+              if (s7 > 0) {
+                if (s8 < 0) {
+                  // Q touches [C, A]
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[2]; // [C, A]
+                  pos[1] = pv[1]; // Q
+                  types[1] = (int) DISJOINT;
+                } else { // s8 == 0
+                  // Q = C
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[1]; // Q
+                  types[1] = (int) DISJOINT;
+                }
+              } else { // s7 == 0
+                assert(0); // Not possible
+              }
+            }
           }
         } else { // s5 == 0
         
