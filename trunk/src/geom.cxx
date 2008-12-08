@@ -1934,9 +1934,39 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             }
           } else {
             if (s6 > 0) {
-          
+              if (s7 < 0) { // (tritri2d-R2-4a)
+                if (s8 > 0) {
+                  if (s9 > 0) {
+                    // [A, B] intersects [P, Q, R]
+                    types[0] = (int) EDGETRIINT;
+                    pos[0] = pu[0]; // [A, B]
+                    pos[1] = 3; // [P, Q, R]
+                    types[1] = (int) DISJOINT;
+                  } else { // s9 == 0
+                    // [A, B] intersects [P, Q, R]
+                    types[0] = (int) EDGETRIINT;
+                    pos[0] = pu[0]; // [A, B]
+                    pos[1] = 3; // [P, Q, R]
+                    types[1] = (int) DISJOINT;
+                  }
+                } else { // s8 == 0
+                  if (s9 > 0) {
+                    // [R, P] passes B
+                    types[0] = (int) ACROSSVERT;
+                    pos[0] = pu[1]; // B
+                    pos[1] = pv[2]; // [R, P]
+                    types[1] = (int) DISJOINT;
+                  } else { // s9 == 0
+                    // R = B
+                    types[0] = (int) SHAREVERT;
+                    pos[0] = pu[1]; // B
+                    pos[1] = pv[2]; // R
+                    types[1] = (int) DISJOINT;
+                  }
+                }
+              }
             } else { // s6 == 0
-            
+              // New tests are required (see tritri2d-R2-6)
             }
           }
         }
