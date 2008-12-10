@@ -1547,17 +1547,26 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       } else { // s6 == 0 (tritri2d-R2-2a)
         assert(s7 >= 0); // s7 < 0 is not possible
         if (s7 > 0) {
-          if (s8 > 0) {
-            // R touches [A, B]
-            types[0] = (int) TOUCHEDGE;
+          if ((z1 == 2) || (z1 == 4)) {
+            if (s8 > 0) {
+              // R touches [A, B]
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = pv[2]; // R
+              types[1] = (int) DISJOINT;
+            } else { // s8 == 0
+              // R = B
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pv[2]; // R
+              types[1] = (int) DISJOINT;
+            }
+          } else { // z1 == 3 (tritri2d-R3-2a)
+            // [R, P] intersects [A, B, C]
+            // [A, B] intersects [P, Q, R]
+            types[0] = (int) EDGETRIINT;
             pos[0] = pu[0]; // [A, B]
-            pos[1] = pv[2]; // R
-            types[1] = (int) DISJOINT;
-          } else { // s8 == 0
-            // R = B
-            types[0] = (int) SHAREVERT;
-            pos[0] = pu[1]; // B
-            pos[1] = pv[2]; // R
+            pos[1] = 3; // [P, Q, R]
             types[1] = (int) DISJOINT;
           }
         } else { // s7 == 0
@@ -1638,11 +1647,20 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                   pos[1] = pv[0]; // [P, Q]
                   types[1] = (int) DISJOINT;
                 } else { // s8 == 0 (top-right)
-                  // [P, Q] passes C
-                  types[0] = (int) ACROSSVERT;
-                  pos[0] = pu[2]; // C
-                  pos[1] = pv[0]; // [P, Q]
-                  types[1] = (int) DISJOINT;
+                  if ((z1 == 2) || (z1 == 3)) {
+                    // [P, Q] passes C
+                    types[0] = (int) ACROSSVERT;
+                    pos[0] = pu[2]; // C
+                    pos[1] = pv[0]; // [P, Q]
+                    types[1] = (int) DISJOINT;
+                  } else { // z1 == 4 (tritri2d-R4-5)
+                    // [P, Q] intersects [A, B, C]
+                    // [C, A] intersects [P, Q, R]
+                    types[0] = (int) EDGETRIINT;
+                    pos[0] = pu[2]; // [C, A]
+                    pos[1] = 3; // [P, Q, R]
+                    types[1] = (int) DISJOINT;
+                  }
                 }
               } else { // s7 == 0 (bot-left)
                 // [A, B] intersects [P, Q, R]
@@ -1653,22 +1671,31 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               }
             }
           } else { // s6 == 0 (tritri2d-R2-5a)
-            if (s7 > 0) {
-              if (s8 < 0) {
-                // Q touches [C, A]
-                types[0] = (int) TOUCHEDGE;
-                pos[0] = pu[2]; // [C, A]
-                pos[1] = pv[1]; // Q
-                types[1] = (int) DISJOINT;
-              } else { // s8 == 0
-                // Q = C
-                types[0] = (int) SHAREVERT;
-                pos[0] = pu[2]; // C
-                pos[1] = pv[1]; // Q
-                types[1] = (int) DISJOINT;
+            if ((z1 == 2) || (z1 == 3)) {
+              if (s7 > 0) {
+                if (s8 < 0) {
+                  // Q touches [C, A]
+                  types[0] = (int) TOUCHEDGE;
+                  pos[0] = pu[2]; // [C, A]
+                  pos[1] = pv[1]; // Q
+                  types[1] = (int) DISJOINT;
+                } else { // s8 == 0
+                  // Q = C
+                  types[0] = (int) SHAREVERT;
+                  pos[0] = pu[2]; // C
+                  pos[1] = pv[1]; // Q
+                  types[1] = (int) DISJOINT;
+                }
+              } else { // s7 == 0
+                assert(0); // Not possible
               }
-            } else { // s7 == 0
-              assert(0); // Not possible
+            } else { // z1 == 4 (tritri2d-R4-5a)
+              // [P, Q] intersects [A, B, C]
+              // [C, A] intersects [P, Q, R]
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[2]; // [C, A]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT;
             }
           }
         }
