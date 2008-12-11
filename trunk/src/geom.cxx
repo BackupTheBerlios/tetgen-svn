@@ -1119,18 +1119,43 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       pointmark(U[1]), pointmark(U[2]), pointmark(P), z1);
   }
 
-  if (z1 > 4) {
-    if (level == 0) {
-      return 1;  // Intersect.
+  if (z1 == 5) { // P in [A, B]
+    if (level > 0) {
+      s4 = orient3d(U[0], U[1], O, V[1]); // A, B, Q
+      if (s4 < 0) {
+        s5 = orient3d(U[0], U[1], O, V[2]); // A, B, R
+        if (s5 < 0) {
+          // P touches [A, B]
+          types[0] = (int) TOUCHEDGE;
+          pos[0] = pu[0]; // [A, B]
+          pos[1] = pv[0]; // P
+          types[1] = (int) DISJOINT;
+        } else { // s5 >= 0
+          // [R, P] intersects [A, B, C]
+          types[0] = (int) EDGETRIINT;
+          pos[0] = 3; // [A, B, C]
+          pos[1] = pv[2]; // [R, P]
+          types[1] = (int) DISJOINT;
+        }
+      } else { // s4 >= 0
+        // [P, Q] intersects [A, B, C]
+        types[0] = (int) EDGETRIINT;
+        pos[0] = 3; // [A, B, C]
+        pos[1] = pv[0]; // [P, Q]
+        types[1] = (int) DISJOINT;
+      }
     }
+    return 1;
   }
 
-  if (z1 == 7) {
-    // [P, Q] intersects [A, B, C]
-    types[0] = (int) EDGETRIINT;
-    pos[0] = 3; // [A, B, C]
-    pos[1] = pv[0]; // [P, Q]
-    types[1] = (int) DISJOINT;
+  if (z1 == 7) { // P in [A, B, C]
+    if (level > 0) {
+      // [P, Q] intersects [A, B, C]
+      types[0] = (int) EDGETRIINT;
+      pos[0] = 3; // [A, B, C]
+      pos[1] = pv[0]; // [P, Q]
+      types[1] = (int) DISJOINT;
+    }
     return 1;
   }
 
@@ -1203,8 +1228,6 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     if (level == 0) {
       return 1;
     }
-
-    // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
 
     if (s5 < 0) {
       if (s6 > 0) { // (tritri2d-R1-1)
@@ -1381,8 +1404,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       }
     }
 
-    // >>>>>>>>>>>>>>>>>> z1 == 1
-
+    return 1;
   } // z1 == 1
 
   //////////////////////////// z1 == 2, 3, 4 /////////////////////////////////
@@ -1466,8 +1488,6 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
     if (level == 0) {
       return 1;
     }
-
-    // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
 
     if (s5 < 0) { 
       if (s6 > 0) {
@@ -1818,11 +1838,58 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       }
     }
 
-    // <<<<<<<<<<<<<<<<<< Classify intersection cases >>>>>>>>>>>>>>>>>>
-
+    return 1;
   } // z1 == 2 || z1 == 3 || z1 == 4
 
-  return 1;
+  if (z1 == 6) { // P = A
+
+    if (level > 0) {
+      s5 = orient3d(U[0], U[1], O, V[1]); // A, B, Q
+      if (s5 < 0) {
+        s6 = orient3d(U[0], U[1], O, V[2]); // A, B, R
+        if (s6 < 0) {
+          // P = A
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[0]; // A
+          pos[1] = pv[0]; // P
+          types[1] = (int) DISJOINT;
+        } else {
+          if (s6 > 0) {
+            // [P, Q] intersects [A, B, C]
+            types[0] = (int) TRIEDGEINT;
+            pos[0] = 3; // [A, B, C]
+            pos[1] = pv[0]; // [P, Q]
+            types[1] = (int) DISJOINT;
+          } else { // s6 == 0
+            // [R, P] intersects [A, B, C]
+            // [A, B] intersects [P, Q, R]
+            types[0] = (int) EDGETRIINT;
+            pos[0] = pu[0]; // [A, B]
+            pos[1] = 3; // [P, Q, R]
+            types[1] = (int) DISJOINT;
+          }
+        }
+      } else { // s5 >= 0
+        s6 = orient3d(U[0], U[2], O, V[1]); // A, C, Q
+        if (s6 < 0) {
+          // P = A
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[0]; // A
+          pos[1] = pv[0]; // P
+          types[1] = (int) DISJOINT;
+        } else { // s6 >= 0
+          // [P, Q] intersects [A, B, C]
+          // [A, B] intersects [P, Q, R] if s6 == 0
+          types[0] = (int) TRIEDGEINT;
+          pos[0] = 3; // [A, B, C]
+          pos[1] = pv[0]; // [P, Q]
+          types[1] = (int) DISJOINT;
+        }
+      }
+    } // if (level > 0)
+
+    return 1;
+  } // z1 == 6
 }
 
 ///////////////////////////////////////////////////////////////////////////////
