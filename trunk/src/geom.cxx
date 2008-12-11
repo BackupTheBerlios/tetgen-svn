@@ -929,7 +929,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   point R, point O, int level, int *types, int *pos)
 {
   point U[3], V[3];
-  int pu[3], pv[3], iv;
+  int pu[3], pv[3], pe[3];
   REAL s1, s2, s3, s4;
   REAL s5, s6 ,s7, s8, s9;
   int z1;
@@ -1128,20 +1128,20 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
           // P touches [A, B]
           types[0] = (int) TOUCHEDGE;
           pos[0] = pu[0]; // [A, B]
-          pos[1] = pv[0]; // P
+          pos[1] = 0; // P
           types[1] = (int) DISJOINT;
         } else { // s5 >= 0
           // [R, P] intersects [A, B, C]
           types[0] = (int) EDGETRIINT;
           pos[0] = 3; // [A, B, C]
-          pos[1] = pv[2]; // [R, P]
+          pos[1] = 2; // [R, P]
           types[1] = (int) DISJOINT;
         }
       } else { // s4 >= 0
         // [P, Q] intersects [A, B, C]
         types[0] = (int) EDGETRIINT;
         pos[0] = 3; // [A, B, C]
-        pos[1] = pv[0]; // [P, Q]
+        pos[1] = 0; // [P, Q]
         types[1] = (int) DISJOINT;
       }
     }
@@ -1153,7 +1153,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       // [P, Q] intersects [A, B, C]
       types[0] = (int) EDGETRIINT;
       pos[0] = 3; // [A, B, C]
-      pos[1] = pv[0]; // [P, Q]
+      pos[1] = 0; // [P, Q]
       types[1] = (int) DISJOINT;
     }
     return 1;
@@ -1170,11 +1170,11 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
   if (s4 < 0) {
     SETVECTOR3(V, P, Q, R);
     SETVECTOR3(pv, 0, 1, 2);
-    iv = 0;
+    SETVECTOR3(pe, 0, 1, 2);
   } else {
     SETVECTOR3(V, P, R, Q);
     SETVECTOR3(pv, 0, 2, 1);
-    iv = 1;
+    SETVECTOR3(pe, 2, 1, 0);
   }
 
   //////////////////////////// z1 == 1 ///////////////////////////////////////
@@ -1242,7 +1242,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             // [R, P] passes B
             types[0] = (int) ACROSSVERT;
             pos[0] = pu[1]; // B
-            pos[1] = pv[2]; // [R, P]
+            pos[1] = pe[2]; // [R, P]
             types[1] = (int) DISJOINT;
           }
         } else { // s7 == 0
@@ -1250,7 +1250,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
           // [Q, R] passes A.
           types[0] = (int) ACROSSVERT;
           pos[0] = pu[0]; // A
-          pos[1] = pv[1]; // [Q, R]
+          pos[1] = pe[1]; // [Q, R]
           types[1] = (int) DISJOINT;
         }
       } else { // s6 == 0 // (tritri2d-R1-1a)
@@ -1292,7 +1292,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                 // [Q, R] passes B
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[1]; // B
-                pos[1] = pv[1]; // [Q, R]
+                pos[1] = pe[1]; // [Q, R]
                 types[1] = (int) DISJOINT;
               }
             } else { // s8 == 0
@@ -1300,7 +1300,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                 // [R, P] passes B
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[1]; // B
-                pos[1] = pv[2]; // [R, P]
+                pos[1] = pe[2]; // [R, P]
                 types[1] = (int) DISJOINT;
               } else { // s9 == 0
                 // R = B
@@ -1331,7 +1331,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
           // [P, Q] passes A
           types[0] = (int) ACROSSVERT;
           pos[0] = pu[0]; // A
-          pos[1] = pv[0]; // [P, Q]
+          pos[1] = pe[0]; // [P, Q]
           types[1] = (int) DISJOINT;
         }
       } else { // s5 == 0
@@ -1349,7 +1349,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               // [R, P] passes B
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[1]; // B
-              pos[1] = pv[2]; // [R, P]
+              pos[1] = pe[2]; // [R, P]
               types[1] = (int) DISJOINT;
             }
           } else { // s7 >= 0 (tritri2d-R1-3a)
@@ -1387,7 +1387,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                     // [Q, R] = [A, B]
                     types[0] = (int) SHAREEDGE;
                     pos[0] = pu[0]; // [A, B]
-                    pos[1] = pv[1]; // [Q, R]
+                    pos[1] = pe[1]; // [Q, R]
                     types[1] = (int) DISJOINT;
                   }
                 }
@@ -1497,7 +1497,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               // [Q, R] intersects [A, B, C]
               types[0] = (int) TRIEDGEINT;
               pos[0] = 3; // [A, B, C]
-              pos[1] = pv[1]; // [Q, R]
+              pos[1] = pe[1]; // [Q, R]
               types[1] = (int) DISJOINT;
             } else { // s9 == 0 top-right
               // R touches [C, A]
@@ -1511,7 +1511,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               // [Q, R] passes C.
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[2]; // C
-              pos[1] = pv[1]; // [Q, R]
+              pos[1] = pe[1]; // [Q, R]
               types[1] = (int) DISJOINT;
             } else { // s9 == 0 bot-right
               // R = C
@@ -1534,7 +1534,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                 // [R, P] passes B
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[1]; // B
-                pos[1] = pv[2]; // [R, P]
+                pos[1] = pe[2]; // [R, P]
                 types[1] = (int) DISJOINT;
               } else { // z1 == 3 (tritri2d-R3-2)
                 // [R, P] intersects [A, B, C]
@@ -1553,7 +1553,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               // [Q, R] passes A
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = pv[1]; // [Q, R]
+              pos[1] = pe[1]; // [Q, R]
               types[1] = (int) DISJOINT;
             } else { // s9 >= 0
               // [A, C] intersects [P, Q, R]
@@ -1612,7 +1612,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                 // [Q, R] passes C
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[2]; // C
-                pos[1] = pv[1]; // [Q, R]
+                pos[1] = pe[1]; // [Q, R]
                 types[1] = (int) DISJOINT;
               }
             } else { // s8 == 0
@@ -1648,7 +1648,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                   // [R, P] passes B
                   types[0] = (int) ACROSSVERT;
                   pos[0] = pu[1]; // B
-                  pos[1] = pv[2]; // [R, P]
+                  pos[1] = pe[2]; // [R, P]
                   types[1] = (int) DISJOINT;
                 } else { // s9 == 0 (bot-left)
                   // R = B
@@ -1664,14 +1664,14 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                   // [P, Q] intersects [A, B, C]
                   types[0] = (int) TRIEDGEINT;
                   pos[0] = 3; // [A, B, C]
-                  pos[1] = pv[0]; // [P, Q]
+                  pos[1] = pe[0]; // [P, Q]
                   types[1] = (int) DISJOINT;
                 } else { // s8 == 0 (top-right)
                   if ((z1 == 2) || (z1 == 3)) {
                     // [P, Q] passes C
                     types[0] = (int) ACROSSVERT;
                     pos[0] = pu[2]; // C
-                    pos[1] = pv[0]; // [P, Q]
+                    pos[1] = pe[0]; // [P, Q]
                     types[1] = (int) DISJOINT;
                   } else { // z1 == 4 (tritri2d-R4-5)
                     // [P, Q] intersects [A, B, C]
@@ -1733,7 +1733,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                 // [Q, R] passes C
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[2]; // C
-                pos[1] = pv[1]; // [Q, R]
+                pos[1] = pe[1]; // [Q, R]
                 types[1] = (int) DISJOINT;
               }
             } else { // s8 == 0
@@ -1776,7 +1776,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                   // [R, P] passes B
                   types[0] = (int) ACROSSVERT;
                   pos[0] = pu[1]; // B
-                  pos[1] = pv[2]; // [R, P]
+                  pos[1] = pe[2]; // [R, P]
                   types[1] = (int) DISJOINT;
                 } else { // s9 == 0
                   // R = B
@@ -1807,7 +1807,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               // [Q, R] intersects [A, B, C]
               types[0] = (int) EDGETRIINT;
               pos[0] = 3; // [A, B, C]
-              pos[1] = pv[1]; // [Q, R]
+              pos[1] = pe[1]; // [Q, R]
               types[1] = (int) DISJOINT;
             } else {
               if (s7 > 0) {
@@ -1822,7 +1822,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
                   // [Q, R] = [A, C]
                   types[0] = (int) SHAREEDGE;
                   pos[0] = pu[2]; // [C, A]
-                  pos[1] = pv[1]; // [Q, R]
+                  pos[1] = pe[1]; // [Q, R]
                   types[1] = (int) DISJOINT;
                 } else { // s8 > 0 || s8 < 0
                   // [A, C] intersects [P, Q, R]
@@ -1858,7 +1858,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
             // [P, Q] intersects [A, B, C]
             types[0] = (int) TRIEDGEINT;
             pos[0] = 3; // [A, B, C]
-            pos[1] = pv[0]; // [P, Q]
+            pos[1] = pe[0]; // [P, Q]
             types[1] = (int) DISJOINT;
           } else { // s6 == 0
             // [R, P] intersects [A, B, C]
@@ -1882,7 +1882,7 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
           // [A, B] intersects [P, Q, R] if s6 == 0
           types[0] = (int) TRIEDGEINT;
           pos[0] = 3; // [A, B, C]
-          pos[1] = pv[0]; // [P, Q]
+          pos[1] = pe[0]; // [P, Q]
           types[1] = (int) DISJOINT;
         }
       }
@@ -2342,8 +2342,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
 
   if (z1 == 4) {
     assert(z2 == 4);  // SELF_CHECK
-    assert(0); // Not implement yet.
-    // return tri_tri_2d();
+    return tri_tri_2d(A, B, C, P, Q, R, O, level, types, pos);
   }
 
   if (z2 == 1) {
