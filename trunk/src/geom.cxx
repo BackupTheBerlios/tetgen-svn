@@ -2135,7 +2135,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               z1 = 3; 
             } else { // (000)
               // (A, B, C) is coplanar with (P, Q, R).
-              z1 = 4;
+              z1 = -1;
             }
           }
         }
@@ -2332,7 +2332,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               SWAP2(pu[0], pu[1], itmp); iu = 1;
               z2 = 3;
             } else {  // (000)
-              z2 = 4;
+              z2 = -1;
             }
           }
         }
@@ -2340,8 +2340,12 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
     }
   }
 
-  if (z1 == 4) {
-    assert(z2 == 4);  // SELF_CHECK
+  if ((iu == 1) && (z1 == 2)) {
+    z1 = 4; // A and B are inverted.
+  }
+
+  if (z1 == -1) {
+    assert(z2 == -1);  // SELF_CHECK
     return tri_tri_2d(A, B, C, P, Q, R, O, level, types, pos);
   }
 
@@ -2386,7 +2390,6 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
     }
   }
 
-  // Do we need to classify the intersection type of T1 and T2?
   if (level == 0) {
     return 1;
   }
@@ -2410,7 +2413,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         } else {
           // R in [k, l] in [A, B, C] (tritri-01+-##).
           types[0] = (int) TOUCHFACE;
-          pos[0] = 3; // Interior of [A, B, C]
+          pos[0] = 3; // [A, B, C]
           pos[1] = pw[2]; // R
           types[1] = (int) DISJOINT; // No 2nd inter-point.
         }
@@ -2464,6 +2467,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // [A, B]
           pos[1] = pw[2]; // R
           types[1] = (int) DISJOINT; // No 2nd inter-point.
+        }
+      }
+    } else if (z1 == 4) { // (41)
+      if (s1 == 0) { // (tritri-410###).
+        // R touches [C, A]
+        types[0] = (int) TOUCHEDGE;
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+        pos[1] = pw[2]; // R
+        types[1] = (int) DISJOINT;
+      } else {
+        if (s2 == 0) { // (tritri-41#0##).
+          // R = B
+          types[0] = (int) SHAREVERT;
+          pos[0] = pu[1]; // B
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT;
+        } else { // (tritri-41+-##)
+          // R in [k, l]
+          types[0] = (int) TOUCHFACE;
+          pos[0] = 3; // [A, B, C]
+          pos[1] = pw[2]; // R
+          types[1] = (int) DISJOINT;
         }
       }
     }
@@ -3535,6 +3560,148 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
 
     return 1;
   } // if (z1 == 3)
+
+  if (z1 == 4) {
+
+    if (z2 == 0) { // (40)
+      if (s1 < 0) {
+        if (s3 > 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // [i, j] overlaps [k, B] (tritri-40-+++)
+          } else {
+            if (s4 == 0) {
+              // j = B, [i, j] overlaps [k, B] (tritri-40-++0)
+            } else { // s4 < 0
+              // [i, j] contains [k, B] (tritri-40-++-)
+            }
+          }
+        } else {
+          if (s3 == 0) {
+            assert(s2 > 0); // SELF_CHECK
+            if (s4 > 0) {
+              // (tritri-40-+0+)
+            } else {
+              if (s4 == 0) {
+                // (tritri-40-+00)
+              } else { // s4 < 0
+                // (tritri-40-+0-)
+              }
+            }
+          } else { // s3 < 0
+            if (s2 > 0) {
+              if (s4 > 0) {
+                // (tritri-40-+-+)
+              } else {
+                if (s4 == 0) {
+                  // (tritri-40-+-0)
+                } else { // s4 < 0
+                  // (tritri-40-+--)
+                }
+              }
+            } else { // s2 == 0
+              // assert(s4 < 0); // SELF_CHECK
+              // (tritri-40#0##)
+            }
+          }
+        }
+      } else { // s1 == 0
+        // (tritri-400###)
+      }
+    } else if (z2 == 2) { // (42)
+      if (s1 < 0) {
+        if (s3 > 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // (tritri-42-+++)
+          } else {
+            if (s4 == 0) {
+              // (tritri-42-++0)
+            } else { // s4 < 0
+              // (tritri-42-++-)
+            }
+          }
+        } else {
+          if (s3 == 0) {
+            assert(s2 > 0); // SELF_CHECK
+            if (s4 > 0) {
+              // (tritri-42-+0+)
+            } else {
+              if (s4 == 0) {
+                // (tritri-42-+00)
+              } else { // s4 < 0
+                // (tritri-42-+0-)
+              }
+            }
+          } else { // s3 < 0
+            if (s2 > 0) {
+              if (s4 > 0) {
+                // (tritri-42-+-+)
+              } else {
+                if (s4 == 0) {
+                  // (tritri-42-+-0)
+                } else { // s4 < 0
+                  // (tritri-42-+--)
+                }
+              }
+            } else { // s2 == 0
+              // assert(s4 < 0); // SELF_CHECK
+              // (tritri-42#0##)
+            }
+          }
+        }
+      } else { // s1 == 0
+        // (tritri-420###)
+      }
+    } else if (z2 == 3) { // (43)
+      if (s1 < 0) {
+        if (s3 > 0) {
+          assert(s2 > 0); // SELF_CHECK
+          if (s4 > 0) {
+            // (tritri-43-+++)
+          } else {
+            if (s4 == 0) {
+              // (tritri-43-++0)
+            } else { // s4 < 0
+              // (tritri-43-++-)
+            }
+          }
+        } else {
+          if (s3 == 0) {
+            assert(s2 > 0); // SELF_CHECK
+            if (s4 > 0) {
+              // (tritri-43-+0+)
+            } else {
+              if (s4 == 0) {
+                // (tritri-43-+00)
+              } else { // s4 < 0
+                // (tritri-43-+0-)
+              }
+            }
+          } else { // s3 < 0
+            if (s2 > 0) {
+              if (s4 > 0) {
+                // (tritri-43-+-+)
+              } else {
+                if (s4 == 0) {
+                  // (tritri-43-+-0)
+                } else { // s4 < 0
+                  // (tritri-43-+--)
+                }
+              }
+            } else { // s2 == 0
+              // assert(s4 < 0); // SELF_CHECK
+              // (tritri-43#0##)
+            }
+          }
+        }
+      } else { // s1 == 0
+        // (tritri-430###)
+      }
+    }
+
+    return 1;
+  } // if (z1 == 4)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
