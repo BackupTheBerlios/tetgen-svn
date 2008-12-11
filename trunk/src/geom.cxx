@@ -2340,13 +2340,13 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
     }
   }
 
-  if ((iu == 1) && (z1 == 2)) {
-    z1 = 4; // A and B are inverted.
-  }
-
   if (z1 == -1) {
     assert(z2 == -1);  // SELF_CHECK
     return tri_tri_2d(A, B, C, P, Q, R, O, level, types, pos);
+  }
+
+  if ((iu == 1) && (z1 == 2)) {
+    z1 = 4; // A and B are inverted.
   }
 
   if (z2 == 1) {
@@ -3569,134 +3569,320 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
             // [i, j] overlaps [k, B] (tritri-40-+++)
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+            pos[1] = 3;     // [P, Q, R]
+            types[1] = (int) ACROSSFACE;
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = B, [i, j] overlaps [k, B] (tritri-40-++0)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
             } else { // s4 < 0
               // [i, j] contains [k, B] (tritri-40-++-)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = 3; // [P, Q, R]
             }
           }
         } else {
           if (s3 == 0) {
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
-              // (tritri-40-+0+)
+              // i = k, [i, j] in [k, B] (tritri-40-+0+)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              types[1] = (int) ACROSSFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
             } else {
               if (s4 == 0) {
-                // (tritri-40-+00)
+                // [i, j] = [k, B] (tritri-40-+00)
+                types[0] = (int) ACROSSEDGE;
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
               } else { // s4 < 0
-                // (tritri-40-+0-)
+                // i = k, [i, j] contains [k, B] (tritri-40-+0-)
+                types[0] = (int) ACROSSEDGE;
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = 3; // [P, Q, R]
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
-                // (tritri-40-+-+)
+                // [i, j] in [k, B] (tritri-40-+-+)
+                types[0] = (int) ACROSSFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                types[1] = (int) ACROSSFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
               } else {
                 if (s4 == 0) {
-                  // (tritri-40-+-0)
+                  // j = B, [i, j] in [k, B] (tritri-40-+-0)
+                  types[0] = (int) ACROSSFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
                 } else { // s4 < 0
-                  // (tritri-40-+--)
+                  // [i, j] overlaps [k, B] (tritri-40-+--)
+                  types[0] = (int) ACROSSFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               // assert(s4 < 0); // SELF_CHECK
-              // (tritri-40#0##)
+              // i = B (tritri-40#0##)
+              types[0] = (int) ACROSSVERT;
+              pos[0] = pu[0]; // B
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              types[1] = (int) DISJOINT;
             }
           }
         }
       } else { // s1 == 0
-        // (tritri-400###)
+        // j = k (tritri-400###)
+        types[0] = (int) ACROSSEDGE;
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 2) { // (42)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
-            // (tritri-42-+++)
+            // [P, j] overlaps [k, B] (tritri-42-+++)
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+            pos[1] = 3;     // Int([P, Q, R])
+            types[1] = (int) ACROSSFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
           } else {
             if (s4 == 0) {
-              // (tritri-42-++0)
+              // j = B, [P, j] contains [k, B] (tritri-42-++0)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
             } else { // s4 < 0
-              // (tritri-42-++-)
+              // [P, j] contains [k, B] (tritri-42-++-)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = 3;     // Int([P, Q, R])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = 3;     // Int([P, Q, R])
             }
           }
         } else {
           if (s3 == 0) {
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
-              // (tritri-42-+0+)
+              // P = k, [P, j] in [k, B] (tritri-42-+0+)
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = pv[0]; // P
+              types[1] = (int) ACROSSFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
             } else {
               if (s4 == 0) {
-                // (tritri-42-+00)
+                // [P, j] = [k, B] (tritri-42-+00)
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
               } else { // s4 < 0
-                // (tritri-42-+0-)
+                // P = k, [P, j] in [k, B] (tritri-42-+0-)
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = 3;     // Int([P, Q, R])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
-                // (tritri-42-+-+)
+                // [P, j] in [k, B] (tritri-42-+-+)
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pv[0]; // P
+                types[1] = (int) ACROSSFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
               } else {
                 if (s4 == 0) {
-                  // (tritri-42-+-0)
+                  // j = B, [P, j] in [k, B] (tritri-42-+-0)
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pv[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
                 } else { // s4 < 0
-                  // (tritri-42-+--)
+                  // [P, j] overlaps [k, B] (tritri-42-+--)
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pv[0]; // P
+                  types[1] = (int) ACROSSEDGE;
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                  pos[3] = 3;     // Int([P, Q, R])
                 }
               }
             } else { // s2 == 0
               // assert(s4 < 0); // SELF_CHECK
-              // (tritri-42#0##)
+              // P = B (tritri-42#0##)
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT;
             }
           }
         }
       } else { // s1 == 0
-        // (tritri-420###)
+        // j = k (tritri-420###)
+        types[0] = (int) ACROSSEDGE;
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 3) { // (43)
       if (s1 < 0) {
         if (s3 > 0) {
           assert(s2 > 0); // SELF_CHECK
           if (s4 > 0) {
-            // (tritri-43-+++)
+            // [P, Q] overlaps [k, B] (tritri-43-+++)
+            types[0] = (int) ACROSSEDGE;
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+            pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
+            types[1] = (int) TOUCHFACE;
+            pos[2] = 3;     // Int([A, B, C])
+            pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
-              // (tritri-43-++0)
+              // Q = B, [P, Q] contains [k, B] (tritri-43-++0)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
+              types[1] = (int) SHAREVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = pw[1]; // Q
             } else { // s4 < 0
-              // (tritri-43-++-)
+              // [P, Q] contains [k, B] (tritri-43-++-)
+              types[0] = (int) ACROSSEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
+              types[1] = (int) ACROSSVERT;
+              pos[2] = pu[1]; // B
+              pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
             }
           }
         } else {
           if (s3 == 0) {
             assert(s2 > 0); // SELF_CHECK
             if (s4 > 0) {
-              // (tritri-43-+0+)
+              // P = k, [P, Q] in [k, B] (tritri-43-+0+)
+              types[0] = (int) TOUCHEDGE;
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[1] = pw[0]; // P
+              types[1] = (int) TOUCHFACE;
+              pos[2] = 3;     // Int([A, B, C])
+              pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
-                // (tritri-43-+00)
+                // [P, Q] = [k, B] (tritri-43-+00)
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[1] = pw[0]; // P
+                types[1] = (int) SHAREVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = pw[1]; // Q
               } else { // s4 < 0
-                // (tritri-43-+0-)
+                // P = k, [P, Q] contains [k, B] (tritri-43-+0-)
+                types[0] = (int) TOUCHEDGE;
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[1] = pw[0]; // P
+                types[1] = (int) ACROSSVERT;
+                pos[2] = pu[1]; // B
+                pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               }
             }
           } else { // s3 < 0
             if (s2 > 0) {
               if (s4 > 0) {
-                // (tritri-43-+-+)
+                // [P, Q] in [k, B] (tritri-43-+-+)
+                types[0] = (int) TOUCHFACE;
+                pos[0] = 3;     // Int([A, B, C])
+                pos[1] = pw[0]; // P
+                types[1] = (int) TOUCHFACE;
+                pos[2] = 3;     // Int([A, B, C])
+                pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
-                  // (tritri-43-+-0)
+                  // Q = B, [P, Q] in [k, B] (tritri-43-+-0)
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) SHAREVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = pw[1]; // Q
                 } else { // s4 < 0
-                  // (tritri-43-+--)
+                  // [P, Q] overlaps [k, B] (tritri-43-+--)
+                  types[0] = (int) TOUCHFACE;
+                  pos[0] = 3;     // Int([A, B, C])
+                  pos[1] = pw[0]; // P
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
+                  pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
                 }
               }
             } else { // s2 == 0
               // assert(s4 < 0); // SELF_CHECK
-              // (tritri-43#0##)
+              // P = B (tritri-43#0##)
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[1]; // B
+              pos[1] = pw[0]; // P
+              types[1] = (int) DISJOINT;
             }
           }
         }
       } else { // s1 == 0
-        // (tritri-430###)
+        // Q = k (tritri-430###)
+        types[0] = (int) TOUCHEDGE;
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+        pos[1] = pw[1]; // Q
+        types[1] = (int) DISJOINT;
       }
     }
 
