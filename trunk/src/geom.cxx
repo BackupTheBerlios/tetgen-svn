@@ -307,20 +307,20 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
       types[0] = (int) SHAREVERT;
       pos[0] = pu[2]; // C
       pos[1] = pv[1]; // Q
-      types[1] = (int) DISJOINT; // No 2nd intersection
+      types[1] = (int) DISJOINT;
     } else {
       if (s2 == 0) { // (#0##)
         // C = P.
         types[0] = (int) SHAREVERT;
         pos[0] = pu[2]; // C
         pos[1] = pv[0]; // P
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        types[1] = (int) DISJOINT;
       } else { // (-+##)
         // C in [P, Q].
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[2]; // C
         pos[1] = pv[0]; // [P, Q]
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        types[1] = (int) DISJOINT;
       }
     }
     return 1;
@@ -430,7 +430,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
             types[0] = (int) TOUCHEDGE;
             pos[0] = pu[1]; // [B, C]
             pos[1] = pv[0]; // P
-            types[1] = (int) DISJOINT; // No 2nd intersection
+            types[1] = (int) DISJOINT;
           }
         }
       }
@@ -439,7 +439,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
       types[0] = (int) TOUCHEDGE;
       pos[0] = pu[2]; // [C, A]
       pos[1] = pv[1]; // Q
-      types[1] = (int) DISJOINT; // No 2nd intersection
+      types[1] = (int) DISJOINT;
     }
   } else if (z1 == 2) {  // (tritri-23)
     if (s1 < 0) {
@@ -536,7 +536,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
             types[0] = (int) TOUCHEDGE;
             pos[0] = pu[1]; // [B, C]
             pos[1] = pv[0]; // P
-            types[1] = (int) DISJOINT; // No 2nd intersection
+            types[1] = (int) DISJOINT;
           }
         }
       }
@@ -545,7 +545,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
       types[0] = (int) SHAREVERT;
       pos[0] = pu[0]; // A
       pos[1] = pv[1]; // Q
-      types[1] = (int) DISJOINT; // No 2nd intersection
+      types[1] = (int) DISJOINT;
     }
   } else if (z1 == 3) {  // (tritri-33)
     if (s1 < 0) {
@@ -642,7 +642,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
             types[0] = (int) SHAREVERT;
             pos[0] = pu[1]; // B
             pos[1] = pv[0]; // P
-            types[1] = (int) DISJOINT; // No 2nd intersection
+            types[1] = (int) DISJOINT;
           }
         }
       }
@@ -651,7 +651,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
       types[0] = (int) SHAREVERT;
       pos[0] = pu[0]; // A
       pos[1] = pv[1]; // Q
-      types[1] = (int) DISJOINT; // No 2nd intersection
+      types[1] = (int) DISJOINT;
     }
   }
 
@@ -2402,20 +2402,20 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) TOUCHEDGE;
         pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
         pos[1] = pw[2]; // R
-        types[1] = (int) DISJOINT; // No 2nd inter-point.
+        types[1] = (int) DISJOINT;
       } else {
         if (s2 == 0) {
           // R = l in [B, C] (tritri-01#0##).
           types[0] = (int) TOUCHEDGE;
           pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
           pos[1] = pw[2]; // R
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         } else {
           // R in [k, l] in [A, B, C] (tritri-01+-##).
           types[0] = (int) TOUCHFACE;
           pos[0] = 3; // [A, B, C]
           pos[1] = pw[2]; // R
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         }
       }
     } else if (z1 == 1) {  // (11)
@@ -2424,27 +2424,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
       types[0] = (int) SHAREVERT;
       pos[0] = pu[2]; // C
       pos[1] = pw[2]; // R
-      types[1] = (int) DISJOINT; // No 2nd inter-point.
+      types[1] = (int) DISJOINT;  
     } else if (z1 == 2) {  // (21)
       if (s1 == 0) {
         // R = A (tritri-210###).
         types[0] = (int) SHAREVERT;
         pos[0] = pu[0]; // A
         pos[1] = pw[2]; // R
-        types[1] = (int) DISJOINT; // No 2nd inter-point.
+        types[1] = (int) DISJOINT;  
       } else {
         if (s2 == 0) {
           // R = l, R in [B, C] (tritri-21#0##).
           types[0] = (int) TOUCHEDGE;
           pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
           pos[1] = pw[2]; // R
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         } else {
           // R in [k, l] in [A, B, C] (tritri-21+-##).
           types[0] = (int) TOUCHFACE;
           pos[0] = 3; // Interior of [A, B, C]
           pos[1] = pw[2]; // R
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         }
       }
     } else if (z1 == 3) {  // (31)
@@ -2453,20 +2453,20 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) SHAREVERT;
         pos[0] = pu[0]; // A
         pos[1] = pw[2]; // R
-        types[1] = (int) DISJOINT; // No 2nd inter-point.
+        types[1] = (int) DISJOINT;  
       } else {
         if (s2 == 0) {
           // R = B (tritri-31#0##).
           types[0] = (int) SHAREVERT;
           pos[0] = pu[1]; // B
           pos[1] = pw[2]; // R
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         } else {
           // R in [A, B] (tritri-31+-##).
           types[0] = (int) TOUCHEDGE;
           pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // [A, B]
           pos[1] = pw[2]; // R
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         }
       }
     } else if (z1 == 4) { // (41)
@@ -2504,20 +2504,20 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[2]; // C
         pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
-        types[1] = (int) DISJOINT; // No 2nd inter-point.
+        types[1] = (int) DISJOINT;  
       } else {
         if (s2 == 0) {
           // C = i, C in [P, R] (tritri-10#0##).
           types[0] = (int) ACROSSVERT;
           pos[0] = pu[2]; // C
           pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         } else {
           // C in [i, j] in [P, Q, R] (tritri-10-+##).
           types[0] = (int) ACROSSVERT;
           pos[0] = pu[2]; // C
           pos[1] = 3; // Interior of [P, Q, R]
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         }
       }
     } else if (z2 == 2) {  // (12)
@@ -2526,20 +2526,20 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[2]; // C
         pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
-        types[1] = (int) DISJOINT; // No 2nd inter-point.
+        types[1] = (int) DISJOINT;  
       } else {
         if (s2 == 0) {
           // C = P (tritri-12#0##).
           types[0] = (int) SHAREVERT;
           pos[0] = pu[2]; // C
           pos[1] = pw[0]; // P
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         } else {
           // C in [i, j] in [P, Q, R] (tritri-12-+##).
           types[0] = (int) ACROSSVERT;
           pos[0] = pu[2]; // C
           pos[1] = 3; // Interior of [P, Q, R]
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         }
       }
     } else if (z2 == 3) {  // (13)
@@ -2548,20 +2548,20 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) SHAREVERT;
         pos[0] = pu[2]; // C
         pos[1] = pw[1]; // Q
-        types[1] = (int) DISJOINT; // No 2nd inter-point.
+        types[1] = (int) DISJOINT;  
       } else {
         if (s2 == 0) {
           // C = P (tritri-13#0##).
           types[0] = (int) SHAREVERT;
           pos[0] = pu[2]; // C
           pos[1] = pw[0]; // P
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         } else {
           // C in [P, Q] (tritri-13-+##).
           types[0] = (int) ACROSSVERT;
           pos[0] = pu[2]; // C
           pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // [P, Q]
-          types[1] = (int) DISJOINT; // No 2nd inter-point.
+          types[1] = (int) DISJOINT;  
         }
       }
     }
@@ -2593,28 +2593,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           if (s4 > 0) {
             // [i, j] overlaps [k, l] (tritri-00-+++).
             types[0] = (int) ACROSSEDGE;
-            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSFACE;
-            pos[2] = 3;     // Int([A, B, C])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [k, l] (tritri-00-++0).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               // [i, j] contains [k, l] (tritri-00-++-).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -2623,28 +2623,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 > 0) {
               // i = k, [i, j] overlaps [k, l] (tritri-00-+0+).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
               types[1] = (int) ACROSSFACE;
-              pos[2] = 3;     // Int([A, B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [i, j] = [k, l] (tritri-00-+00).
                 types[0] = (int) ACROSSEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 // i = k, [i, j] contains [k, l] (tritri-00-+0-).
                 types[0] = (int) ACROSSEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = 3;     // Int([P, Q, R]) 
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = 3;     // [P, Q, R] 
               }
             }
           } else { // s3 < 0
@@ -2652,46 +2652,46 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [i, j] in [k, l] in [A, B, C] (tritri-00-+-+).
                 types[0] = (int) ACROSSFACE;
-                pos[0] = 3;     // Int([A, B, C])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSFACE;
-                pos[2] = 3;     // Int([A, B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = 3;     // [A, B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = l, [i, j] in [k, l] (tritri-00-+-0)
                   types[0] = (int) ACROSSFACE;
-                  pos[0] = 3;     // Int([A, B, C])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[0] = 3;     // [A, B, C]
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [i, j] overlaps [k, l] (tritri-00-+--)
                   types[0] = (int) ACROSSFACE;
-                  pos[0] = 3;     // Int([A, B, C])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[0] = 3;     // [A, B, C]
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
               assert(s4 < 0); // SELF_CHECK
               // i = l, [P, R] intersects [B, C] (tritri-00#0##).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
-              types[1] = (int) DISJOINT; // No 2nd intersection.
+              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
+              types[1] = (int) DISJOINT;
             }
           }
         }
       } else { // s1 == 0
         // j = k, [Q, R] intersects [A, B] (tritri-000###).
         types[0] = (int) ACROSSEDGE;
-        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
-        types[1] = (int) DISJOINT; // No 2nd intersection.
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 2) {  // (02)
       if (s1 < 0) {
@@ -2700,28 +2700,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           if (s4 > 0) {
             // [P, j] overlaps [k, l] (tritri-02-+++).
             types[0] = (int) ACROSSEDGE;
-            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSFACE;
-            pos[2] = 3;     // Int([A, B, C])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = k, [i, j] contains [k, l] (tritri-02-++0).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else { // s4 < 0
               // [i, j] contains [k, l] (tritri-02-++-).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -2730,28 +2730,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 > 0) {
               // P = k, [P, j] in [k, l] (tritri-02-+0+).
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = pv[0]; // P
               types[1] = (int) ACROSSFACE;
-              pos[2] = 3;     // Int([A, B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [P, j] = [k, l] (tritri-02-+00).
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pv[0]; // P
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {  // s4 < 0
                 // P = k, [P, j] contains [k, l] (tritri-02-+0-).
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pv[0]; // P
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = 3;     // Int([P, Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = 3;     // [P, Q, R]
               }
             }
           } else { // s3 < 0.
@@ -2759,46 +2759,46 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [P, j] in [k, l] in [A, B, C] (tritri-02-+-+).
                 types[0] = (int) TOUCHFACE;
-                pos[0] = 3;     // Int([A, B, C])
+                pos[0] = 3;     // [A, B, C]
                 pos[1] = pv[0]; // P
                 types[1] = (int) ACROSSFACE;
-                pos[2] = 3;     // Int([A, B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = 3;     // [A, B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = l, [P, j] overlaps [k, l] (tritri-02-+-0).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pv[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [P, j] overlaps [k, l] (tritri-02-+--).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pv[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else {  // s2 == 0
               assert(s4 < 0); // SELF_CHECK
               // P = k, P in [B, C] (tritri-02#0##).
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[1] = pw[0]; // P
-              types[1] = (int) DISJOINT;  // No 2nd intersection
+              types[1] = (int) DISJOINT;
             }
           }
         }
       } else { // s1 == 0
         // j = k, [Q, R] intersects [A, C] (tritri-020###).
         types[0] = (int) ACROSSEDGE;
-        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
-        types[1] = (int) DISJOINT;  // No 2nd intersection
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 3) {  // (03)
       if (s1 < 0) {
@@ -2807,27 +2807,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           if (s4 > 0) {
             // [P, Q] overlaps [k, l] (tritri-03-+++).
             types[0] = (int) ACROSSEDGE;
-            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
             pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
             types[1] = (int) TOUCHFACE;
-            pos[2] = 3;     // Int([A, B, C])
+            pos[2] = 3;     // [A, B, C]
             pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
               // Q = l, [P, Q] contains [k, l] (tritri-03-++0).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               types[1] = (int) TOUCHEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[3] = pw[1]; // Q
             } else { // s4 < 0
               // [P, Q] contains [k, l] (tritri-03-++-).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
             }
           }
@@ -2837,27 +2837,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 > 0) {
               // P = k, [P, Q] in [k, l] (tritri-03-+0+).
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = pw[0]; // P
               types[1] = (int) TOUCHFACE;
-              pos[2] = 3;     // Int([A, B, C])
+              pos[2] = 3;     // [A, B, C]
               pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
                 // [P, Q] = [k, l] (tritri-03-+00).
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pw[0]; // P
                 types[1] = (int) TOUCHEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                 pos[3] = pw[1]; // Q
               } else {  // s4 < 0
                 // P = k, [P, Q] contains [k, l] (tritri-03-+0-).
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                 pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               }
             }
@@ -2866,45 +2866,45 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [P, Q] in [k, l] (tritri-03-+-+).
                 types[0] = (int) TOUCHFACE;
-                pos[0] = 3;     // Int([A, B, C])
+                pos[0] = 3;     // [A, B, C]
                 pos[1] = pw[0]; // P
                 types[1] = (int) TOUCHFACE;
-                pos[2] = 3;     // Int([A, B, C])
+                pos[2] = 3;     // [A, B, C]
                 pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
                   // Q = l, [P, Q] in [k, l] (tritri-03-+-0).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) TOUCHEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                   pos[3] = pw[1]; // Q
                 } else { // s4 < 0
                   // [P, Q] overlaps [k, l] (tritri-03-+--).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                   pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
                 }
               }
             } else {  // s2 == 0
               // P = l in [B, C] (tritri-03#0##).
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[1] = pw[0]; // P
-              types[1] = (int) DISJOINT; // No 2nd intersection
+              types[1] = (int) DISJOINT;
             }
           }
         }
       } else {
         // Q = k in [A, C] (tritri-030###).
         types[0] = (int) TOUCHEDGE;
-        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
         pos[1] = pw[1]; // Q
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        types[1] = (int) DISJOINT;
       }
     }
 
@@ -2921,27 +2921,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             // [i, j] overlaps [A, l] (tritri-20-+++).
             types[0] = (int) ACROSSVERT;
             pos[0] = pu[0]; // A
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSFACE;
-            pos[2] = 3;     // Int([A, B, C])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = l, [i, j] contains [A, l] (tritri-20-++0).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {  // s4 < 0
               // [i, j] contains [A, l] (tritri-20-++-).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -2951,27 +2951,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               // i = A, [i, j] overlaps [A, l] (tritri-20-+0+).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
               types[1] = (int) ACROSSFACE;
-              pos[2] = 3;     // Int([A, B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [i, j] = [A, l] (tritri-20-+00).
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[0]; // A
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else { // s4 < 0
                 // i = A, [i, j] contains [A, l] (tritri-20-+0-).
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[0]; // A
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = 3;     // Int([P, Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = 3;     // [P, Q, R]
               }
             }
           } else { // s3 < 0
@@ -2979,36 +2979,36 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [i, j] in [A, l] in [A, B, C] (tritri-20-+-+).
                 types[0] = (int) ACROSSFACE;
-                pos[0] = 3;     // Int([A, B, C])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSFACE;
-                pos[2] = 3;     // Int([A, B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = 3;     // [A, B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = l, [i, j] in [A, l] (tritri-20-+-0).
                   types[0] = (int) ACROSSFACE;
-                  pos[0] = 3;     // Int([A, B, C])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[0] = 3;     // [A, B, C]
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [i, j] overlaps [A, l] (tritri-20-+--).
                   types[0] = (int) ACROSSFACE;
-                  pos[0] = 3;     // Int([A, B, C])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[0] = 3;     // [A, B, C]
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
               // i = l, [P, R] intersects [B, C] (tritri-20#0##).
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
-              types[1] = (int) DISJOINT; // No 2nd intersection
+              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
+              types[1] = (int) DISJOINT;
             }
           }
         }
@@ -3016,8 +3016,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-200###).
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[0]; // A
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 2) {  // (22)
       if (s1 < 0) {
@@ -3027,27 +3027,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             // [P, j] overlaps [A, l] (tritri-22-+++).
             types[0] = (int) ACROSSVERT;
             pos[0] = pu[0]; // A
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSFACE;
-            pos[2] = 3;     // Int([A, B, C])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = l, [P, j] contains [A, l] (tritri-22-++0).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else { // s4 < 0
               // [P, j] contains [A, l] (tritri-22-++-).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -3059,8 +3059,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               pos[0] = pu[0]; // A
               pos[1] = pw[0]; // P
               types[1] = (int) ACROSSFACE;
-              pos[2] = 3;     // Int([A, B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [P, j] = [A, l] (tritri-22-+00).
@@ -3068,16 +3068,16 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 pos[0] = pu[0]; // A
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else { // s4 < 0
                 // P = A, [P, j] contains [A, l] (tritri-22-+0-).
                 types[0] = (int) SHAREVERT;
                 pos[0] = pu[0]; // A
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                pos[3] = 3;     // Int([P, Q, R])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                pos[3] = 3;     // [P, Q, R]
               }
             }
           } else { // s3 < 0
@@ -3085,28 +3085,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [P, j] in [A, l] in [A, B, C] (tritri-22-+-+).
                 types[0] = (int) TOUCHFACE;
-                pos[0] = 3;     // Int([A, B, C])
+                pos[0] = 3;     // [A, B, C]
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSFACE;
-                pos[2] = 3;     // Int([A, B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = 3;     // [A, B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = l, [P, j] in [A, l] (tritri-22-+-0).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // P, j] overlaps [A, l] (tritri-22-+--).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
@@ -3114,7 +3114,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               types[0] = (int) TOUCHEDGE;
               pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int({[B, C])
               pos[1] = pw[0]; // P
-              types[1] = (int) DISJOINT; // No 2nd intersection
+              types[1] = (int) DISJOINT;
             }
           }
         }
@@ -3122,8 +3122,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-220###).
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[0]; // A
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 3) {  // (23)
       if (s1 < 0) {
@@ -3135,7 +3135,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             pos[0] = pu[0]; // A
             pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
             types[1] = (int) TOUCHFACE;
-            pos[2] = 3;     // Int([A, B, C])
+            pos[2] = 3;     // [A, B, C]
             pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
@@ -3144,7 +3144,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               pos[0] = pu[0]; // A
               pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               types[1] = (int) TOUCHEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[3] = pw[1]; // Q
             } else { // s4 < 0
               // [P, Q] contains [A, l] (tritri-23-++-).
@@ -3152,7 +3152,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               pos[0] = pu[0]; // A
               pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               types[1] = (int) ACROSSEDGE;
-              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
             }
           }
@@ -3165,7 +3165,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               pos[0] = pu[0]; // A
               pos[1] = pw[0]; // P
               types[1] = (int) TOUCHFACE;
-              pos[2] = 3;     // Int([A, B, C])
+              pos[2] = 3;     // [A, B, C]
               pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
@@ -3174,7 +3174,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 pos[0] = pu[0]; // A
                 pos[1] = pw[0]; // P
                 types[1] = (int) TOUCHEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                 pos[3] = pw[1]; // Q
               } else {  // s4 < 0
                 // [P, Q] contains [A, l] (tritri-23-+0-).
@@ -3182,7 +3182,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 pos[0] = pu[0]; // A
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSEDGE;
-                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                 pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               }
             }
@@ -3191,36 +3191,36 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [P, Q] in [A, l] (tritri-23-+-+).
                 types[0] = (int) TOUCHFACE;
-                pos[0] = 3;     // Int([A, B, C])
+                pos[0] = 3;     // [A, B, C]
                 pos[1] = pw[0]; // P
                 types[1] = (int) TOUCHFACE;
-                pos[2] = 3;     // Int([A, B, C])
+                pos[2] = 3;     // [A, B, C]
                 pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
                   // Q = l, [P, Q] in [A, l] (tritri-23-+-0).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) TOUCHEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                   pos[3] = pw[1]; // Q
                 } else { // s4 < 0
                   // [P, Q] overlaps [A, l] (tritri-23-+--).
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
                   pos[3] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
                 }
               }
             } else { // s2 == 0
               // P = l in [B, C] (tritri-23#0##).
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
+              pos[0] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
               pos[1] = pw[0]; // P
-              types[1] = (int) DISJOINT; // No 2nd intersection
+              types[1] = (int) DISJOINT;
             }
           }
         }
@@ -3229,7 +3229,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) SHAREVERT;
         pos[0] = pu[0]; // A
         pos[1] = pw[1]; // Q
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        types[1] = (int) DISJOINT;
       }
     }
 
@@ -3246,27 +3246,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             // [i, j] overlaps [A, B] (tritri-30-+++).
             types[0] = (int) ACROSSVERT;
             pos[0] = pu[0]; // A
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSEDGE;
             pos[2] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = B, [i, j] contains [A, B] (tritri-30-++0).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else { // s4 < 0
               // [i, j] contains [A, B] (tritri-30-++-).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -3276,27 +3276,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               // i = A, [i, j] in [A, B] (tritri-30-+0+).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
               types[1] = (int) ACROSSEDGE;
               pos[2] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [i, j] = [A, B] (tritri-30-+00).
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[0]; // A
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else { // s4 < 0
                 // i = A, [i, j] contains [A, B] (tritri-30-+0-).
                 types[0] = (int) ACROSSVERT;
                 pos[0] = pu[0]; // A
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = 3;     // Int([P, Q, R])
+                pos[3] = 3;     // [P, Q, R]
               }
             }
           } else { // s3 < 0
@@ -3305,35 +3305,35 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 // [i, j] in [A, B] (tritri-30-+-+).
                 types[0] = (int) ACROSSEDGE;
                 pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSEDGE;
                 pos[2] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = B, [i, j] in [A, B] (tritri-30-+-0).
                   types[0] = (int) ACROSSEDGE;
                   pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [i, j] overlaps [A, B] (tritri-30-+--).
                   types[0] = (int) ACROSSEDGE;
                   pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
               // i = B in [P, R] (tritri-30#0##).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[1]; // B
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
-              types[1] = (int) DISJOINT; // No 2nd intersection
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
+              types[1] = (int) DISJOINT;
             }
           }
         }
@@ -3341,8 +3341,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-300###).
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[0]; // A
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 2) {  // (32)
       if (s1 < 0) {
@@ -3352,27 +3352,27 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             // [P, j] overlaps [A, B] (tritri-32-+++).
             types[0] = (int) ACROSSVERT;
             pos[0] = pu[0]; // A
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSEDGE;
             pos[2] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = B, [P, j] contains [A, B] (tritri-32-++0).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else { // s4 < 0
               // [P, j] contains [A, B] (tritri-32-++-).
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // A
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -3385,7 +3385,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               pos[1] = pw[0]; // P
               types[1] = (int) ACROSSEDGE;
               pos[2] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [P, j] = [A, B] (tritri-32-+00).
@@ -3394,7 +3394,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else { // s4 < 0
                 // P = A, [P, j] contains [A, B] (tritri-32-+0-).
                 types[0] = (int) SHAREVERT;
@@ -3402,7 +3402,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = 3;     // Int([P, Q, R])
+                pos[3] = 3;     // [P, Q, R]
               }
             }
           } else { // s3 < 0
@@ -3414,7 +3414,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSEDGE;
                 pos[2] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = B, [P, j] in [A, B] (tritri-32-+-0).
@@ -3423,7 +3423,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [P, j] overlaps [A, B] (tritri-32-+--).
                   types[0] = (int) TOUCHEDGE;
@@ -3431,7 +3431,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
@@ -3439,7 +3439,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               types[0] = (int) SHAREVERT;
               pos[0] = pu[1]; // B
               pos[1] = pw[0]; // P
-              types[1] = (int) DISJOINT; // No 2nd intersection
+              types[1] = (int) DISJOINT;
             }
           }
         }
@@ -3447,8 +3447,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         // j = A in [Q, R] (tritri-320###).
         types[0] = (int) ACROSSVERT;
         pos[0] = pu[0]; // A
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
-        types[1] = (int) DISJOINT; // No 2nd intersection
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
+        types[1] = (int) DISJOINT;
       }
     } else if (z2 == 3) {  // (33)
       if (s1 < 0) {
@@ -3545,7 +3545,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               types[0] = (int) SHAREVERT;
               pos[0] = pu[1]; // B
               pos[1] = pw[0]; // P
-              types[1] = (int) DISJOINT;  // No 2nd intersection
+              types[1] = (int) DISJOINT;
             }
           }
         }
@@ -3554,7 +3554,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
         types[0] = (int) SHAREVERT;
         pos[0] = pu[0]; // A
         pos[1] = pw[1]; // Q
-        types[1] = (int) DISJOINT;  // No 2nd intersection
+        types[1] = (int) DISJOINT;
       }
     }
 
@@ -3579,16 +3579,16 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 == 0) {
               // j = B, [i, j] overlaps [k, B] (tritri-40-++0)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else { // s4 < 0
               // [i, j] contains [k, B] (tritri-40-++-)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
               pos[3] = 3; // [P, Q, R]
@@ -3600,25 +3600,25 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 > 0) {
               // i = k, [i, j] in [k, B] (tritri-40-+0+)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
               types[1] = (int) ACROSSFACE;
-              pos[2] = 3;     // Int([A, B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [i, j] = [k, B] (tritri-40-+00)
                 types[0] = (int) ACROSSEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else { // s4 < 0
                 // i = k, [i, j] contains [k, B] (tritri-40-+0-)
                 types[0] = (int) ACROSSEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
                 pos[3] = 3; // [P, Q, R]
@@ -3629,28 +3629,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [i, j] in [k, B] (tritri-40-+-+)
                 types[0] = (int) ACROSSFACE;
-                pos[0] = 3;     // Int([A, B, C])
-                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                pos[0] = 3;     // [A, B, C]
+                pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                 types[1] = (int) ACROSSFACE;
-                pos[2] = 3;     // Int([A, B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = 3;     // [A, B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = B, [i, j] in [k, B] (tritri-40-+-0)
                   types[0] = (int) ACROSSFACE;
-                  pos[0] = 3;     // Int([A, B, C])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[0] = 3;     // [A, B, C]
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [i, j] overlaps [k, B] (tritri-40-+--)
                   types[0] = (int) ACROSSFACE;
-                  pos[0] = 3;     // Int([A, B, C])
-                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+                  pos[0] = 3;     // [A, B, C]
+                  pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
@@ -3658,7 +3658,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               // i = B (tritri-40#0##)
               types[0] = (int) ACROSSVERT;
               pos[0] = pu[0]; // B
-              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // Int([R, P])
+              pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
               types[1] = (int) DISJOINT;
             }
           }
@@ -3666,8 +3666,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
       } else { // s1 == 0
         // j = k (tritri-400###)
         types[0] = (int) ACROSSEDGE;
-        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
         types[1] = (int) DISJOINT;
       }
     } else if (z2 == 2) { // (42)
@@ -3677,28 +3677,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           if (s4 > 0) {
             // [P, j] overlaps [k, B] (tritri-42-+++)
             types[0] = (int) ACROSSEDGE;
-            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-            pos[1] = 3;     // Int([P, Q, R])
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+            pos[1] = 3;     // [P, Q, R]
             types[1] = (int) ACROSSFACE;
-            pos[2] = 3;     // Int([A, B, C])
-            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+            pos[2] = 3;     // [A, B, C]
+            pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
           } else {
             if (s4 == 0) {
               // j = B, [P, j] contains [k, B] (tritri-42-++0)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else { // s4 < 0
               // [P, j] contains [k, B] (tritri-42-++-)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-              pos[1] = 3;     // Int([P, Q, R])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+              pos[1] = 3;     // [P, Q, R]
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
-              pos[3] = 3;     // Int([P, Q, R])
+              pos[3] = 3;     // [P, Q, R]
             }
           }
         } else {
@@ -3707,28 +3707,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 > 0) {
               // P = k, [P, j] in [k, B] (tritri-42-+0+)
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = pv[0]; // P
               types[1] = (int) ACROSSFACE;
-              pos[2] = 3;     // Int([A, B, C])
-              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+              pos[2] = 3;     // [A, B, C]
+              pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
             } else {
               if (s4 == 0) {
                 // [P, j] = [k, B] (tritri-42-+00)
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pv[0]; // P
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else { // s4 < 0
                 // P = k, [P, j] in [k, B] (tritri-42-+0-)
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pv[0]; // P
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
-                pos[3] = 3;     // Int([P, Q, R])
+                pos[3] = 3;     // [P, Q, R]
               }
             }
           } else { // s3 < 0
@@ -3736,28 +3736,28 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [P, j] in [k, B] (tritri-42-+-+)
                 types[0] = (int) TOUCHFACE;
-                pos[0] = 3;     // Int([A, B, C])
+                pos[0] = 3;     // [A, B, C]
                 pos[1] = pv[0]; // P
                 types[1] = (int) ACROSSFACE;
-                pos[2] = 3;     // Int([A, B, C])
-                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                pos[2] = 3;     // [A, B, C]
+                pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
               } else {
                 if (s4 == 0) {
                   // j = B, [P, j] in [k, B] (tritri-42-+-0)
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pv[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [P, j] overlaps [k, B] (tritri-42-+--)
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pv[0]; // P
                   types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // Int([B, C])
-                  pos[3] = 3;     // Int([P, Q, R])
+                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  pos[3] = 3;     // [P, Q, R]
                 }
               }
             } else { // s2 == 0
@@ -3773,8 +3773,8 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
       } else { // s1 == 0
         // j = k (tritri-420###)
         types[0] = (int) ACROSSEDGE;
-        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
-        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // Int([Q, R])
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
+        pos[1] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
         types[1] = (int) DISJOINT;
       }
     } else if (z2 == 3) { // (43)
@@ -3784,16 +3784,16 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
           if (s4 > 0) {
             // [P, Q] overlaps [k, B] (tritri-43-+++)
             types[0] = (int) ACROSSEDGE;
-            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+            pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
             pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
             types[1] = (int) TOUCHFACE;
-            pos[2] = 3;     // Int([A, B, C])
+            pos[2] = 3;     // [A, B, C]
             pos[3] = pw[1]; // Q
           } else {
             if (s4 == 0) {
               // Q = B, [P, Q] contains [k, B] (tritri-43-++0)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               types[1] = (int) SHAREVERT;
               pos[2] = pu[1]; // B
@@ -3801,7 +3801,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             } else { // s4 < 0
               // [P, Q] contains [k, B] (tritri-43-++-)
               types[0] = (int) ACROSSEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
               types[1] = (int) ACROSSVERT;
               pos[2] = pu[1]; // B
@@ -3814,16 +3814,16 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
             if (s4 > 0) {
               // P = k, [P, Q] in [k, B] (tritri-43-+0+)
               types[0] = (int) TOUCHEDGE;
-              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+              pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
               pos[1] = pw[0]; // P
               types[1] = (int) TOUCHFACE;
-              pos[2] = 3;     // Int([A, B, C])
+              pos[2] = 3;     // [A, B, C]
               pos[3] = pw[1]; // Q
             } else {
               if (s4 == 0) {
                 // [P, Q] = [k, B] (tritri-43-+00)
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pw[0]; // P
                 types[1] = (int) SHAREVERT;
                 pos[2] = pu[1]; // B
@@ -3831,7 +3831,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               } else { // s4 < 0
                 // P = k, [P, Q] contains [k, B] (tritri-43-+0-)
                 types[0] = (int) TOUCHEDGE;
-                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+                pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
                 pos[1] = pw[0]; // P
                 types[1] = (int) ACROSSVERT;
                 pos[2] = pu[1]; // B
@@ -3843,16 +3843,16 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               if (s4 > 0) {
                 // [P, Q] in [k, B] (tritri-43-+-+)
                 types[0] = (int) TOUCHFACE;
-                pos[0] = 3;     // Int([A, B, C])
+                pos[0] = 3;     // [A, B, C]
                 pos[1] = pw[0]; // P
                 types[1] = (int) TOUCHFACE;
-                pos[2] = 3;     // Int([A, B, C])
+                pos[2] = 3;     // [A, B, C]
                 pos[3] = pw[1]; // Q
               } else {
                 if (s4 == 0) {
                   // Q = B, [P, Q] in [k, B] (tritri-43-+-0)
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) SHAREVERT;
                   pos[2] = pu[1]; // B
@@ -3860,7 +3860,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 } else { // s4 < 0
                   // [P, Q] overlaps [k, B] (tritri-43-+--)
                   types[0] = (int) TOUCHFACE;
-                  pos[0] = 3;     // Int([A, B, C])
+                  pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
                   types[1] = (int) ACROSSVERT;
                   pos[2] = pu[1]; // B
@@ -3880,7 +3880,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
       } else { // s1 == 0
         // Q = k (tritri-430###)
         types[0] = (int) TOUCHEDGE;
-        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // Int([C, A])
+        pos[0] = (iu == 0 ? pu[2] : mi1mo3[pu[2]]); // [C, A]
         pos[1] = pw[1]; // Q
         types[1] = (int) DISJOINT;
       }

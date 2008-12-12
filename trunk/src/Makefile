@@ -53,6 +53,9 @@ RM = /bin/rm
 
 # The action starts here.
 
+behavior.o:	behavior.cxx
+	$(CXX) -I./ $(CXXFLAGS) -c behavior.cxx
+
 io.o:	io.cxx
 	$(CXX) -I./ $(CXXFLAGS) -c io.cxx
 
@@ -86,8 +89,8 @@ meshstat.o:	meshstat.cxx
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o meshio.o meshstat.o predicates.o
-	ar r libtet.a io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o meshio.o meshstat.o predicates.o
+tetlib:	behavior.o io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o meshio.o meshstat.o predicates.o
+	ar r libtet.a behavior.o io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o meshio.o meshstat.o predicates.o
 
 tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet
