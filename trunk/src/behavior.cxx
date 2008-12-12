@@ -1,5 +1,5 @@
-#ifndef mainCXX
-#define mainCXX
+#ifndef behaviorCXX
+#define behaviorCXX
 
 #include "tetgen.h"
 
@@ -524,3 +524,5 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
 
   return true;
 }
+
+#endif // ifndef behaviorCXX

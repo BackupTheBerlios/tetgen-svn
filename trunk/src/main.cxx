@@ -13,10 +13,14 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
 {
   tetgenmesh m;
   tetgenmesh::face s1, s2;
-  tetgenmesh::point A, B, C, P, Q, R;
+  tetgenmesh::point U[3], V[3], T1[3], T2[3];
   tetgenmesh::intersection dir;
   int types[2], pos[4];
   int i, j;
+
+  // For checking results.
+  tetgenmesh::point pa, pb;
+  int horror = 0;
 
   m.b = b;
   m.in = in;
@@ -29,106 +33,39 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
   s1.sh = m.shellfacetraverse(m.subfacepool);
   s2.sh = m.shellfacetraverse(m.subfacepool);
 
-  A = (tetgenmesh::point) s1.sh[3];
-  B = (tetgenmesh::point) s1.sh[4];
-  C = (tetgenmesh::point) s1.sh[5];
+  V[0] = (tetgenmesh::point) s1.sh[3]; // P
+  V[1] = (tetgenmesh::point) s1.sh[4]; // Q
+  V[2] = (tetgenmesh::point) s1.sh[5]; // R
 
-  P = (tetgenmesh::point) s2.sh[3];
-  Q = (tetgenmesh::point) s2.sh[4];
-  R = (tetgenmesh::point) s2.sh[5];
+  U[0] = (tetgenmesh::point) s2.sh[3]; // A
+  U[1] = (tetgenmesh::point) s2.sh[4]; // B
+  U[2] = (tetgenmesh::point) s2.sh[5]; // C
+
+  // The permuations of {0, 1, 2}
+  int perm[6][3] = { 
+    {0, 1, 2}, 
+    {2, 0, 1}, 
+    {1, 2, 0},
+    {1, 0, 2}, 
+    {2, 1, 0}, 
+    {0, 2, 1}};
 
   b->epsilon = 0;
   b->verbose = 3;
 
   for (j = 0; j < 36; j++) {
 
-    // Permut the vertices.
-    switch (j) {
-    case 0:
-      printf("\n");
-      i = m.tri_tri_test(A, B, C, P, Q, R, NULL, 1, types, pos); break;
-    case 1:
-      i = m.tri_tri_test(C, A, B, P, Q, R, NULL, 1, types, pos); break;
-    case 2:
-      i = m.tri_tri_test(B, C, A, P, Q, R, NULL, 1, types, pos); break;
-    case 3:
-      i = m.tri_tri_test(B, A, C, P, Q, R, NULL, 1, types, pos); break;
-    case 4:
-      i = m.tri_tri_test(C, B, A, P, Q, R, NULL, 1, types, pos); break;
-    case 5:
-      i = m.tri_tri_test(A, C, B, P, Q, R, NULL, 1, types, pos); break;
+    // Get the permuation of the vertices.
+    T1[0] = U[perm[j/6][0]];
+    T1[1] = U[perm[j/6][1]];
+    T1[2] = U[perm[j/6][2]];
+    
+    T2[0] = V[perm[j%6][0]];
+    T2[1] = V[perm[j%6][1]];
+    T2[2] = V[perm[j%6][2]];
 
-    case 6:
-      printf("\n");
-      i = m.tri_tri_test(A, B, C, R, P, Q, NULL, 1, types, pos); break;
-    case 7:
-      i = m.tri_tri_test(C, A, B, R, P, Q, NULL, 1, types, pos); break;
-    case 8:
-      i = m.tri_tri_test(B, C, A, R, P, Q, NULL, 1, types, pos); break;
-    case 9:
-      i = m.tri_tri_test(B, A, C, R, P, Q, NULL, 1, types, pos); break;
-    case 10:
-      i = m.tri_tri_test(C, B, A, R, P, Q, NULL, 1, types, pos); break;
-    case 11:
-      i = m.tri_tri_test(A, C, B, R, P, Q, NULL, 1, types, pos); break;
-
-    case 12:
-      printf("\n");
-      i = m.tri_tri_test(A, B, C, Q, R, P, NULL, 1, types, pos); break;
-    case 13:
-      i = m.tri_tri_test(C, A, B, Q, R, P, NULL, 1, types, pos); break;
-    case 14:
-      i = m.tri_tri_test(B, C, A, Q, R, P, NULL, 1, types, pos); break;
-    case 15:
-      i = m.tri_tri_test(B, A, C, Q, R, P, NULL, 1, types, pos); break;
-    case 16:
-      i = m.tri_tri_test(C, B, A, Q, R, P, NULL, 1, types, pos); break;
-    case 17:
-      i = m.tri_tri_test(A, C, B, Q, R, P, NULL, 1, types, pos); break;
-
-    case 18:
-      printf("\n");
-      i = m.tri_tri_test(A, B, C, Q, P, R, NULL, 1, types, pos); break;
-    case 19:
-      i = m.tri_tri_test(C, A, B, Q, P, R, NULL, 1, types, pos); break;
-    case 20:
-      i = m.tri_tri_test(B, C, A, Q, P, R, NULL, 1, types, pos); break;
-    case 21:
-      i = m.tri_tri_test(B, A, C, Q, P, R, NULL, 1, types, pos); break;
-    case 22:
-      i = m.tri_tri_test(C, B, A, Q, P, R, NULL, 1, types, pos); break;
-    case 23:
-      i = m.tri_tri_test(A, C, B, Q, P, R, NULL, 1, types, pos); break;
-
-    case 24:
-      printf("\n");
-      i = m.tri_tri_test(A, B, C, R, Q, P, NULL, 1, types, pos); break;
-    case 25:
-      i = m.tri_tri_test(C, A, B, R, Q, P, NULL, 1, types, pos); break;
-    case 26:
-      i = m.tri_tri_test(B, C, A, R, Q, P, NULL, 1, types, pos); break;
-    case 27:
-      i = m.tri_tri_test(B, A, C, R, Q, P, NULL, 1, types, pos); break;
-    case 28:
-      i = m.tri_tri_test(C, B, A, R, Q, P, NULL, 1, types, pos); break;
-    case 29:
-      i = m.tri_tri_test(A, C, B, R, Q, P, NULL, 1, types, pos); break;
-
-    case 30:
-      printf("\n");
-      i = m.tri_tri_test(A, B, C, P, R, Q, NULL, 1, types, pos); break;
-    case 31:
-      i = m.tri_tri_test(C, A, B, P, R, Q, NULL, 1, types, pos); break;
-    case 32:
-      i = m.tri_tri_test(B, C, A, P, R, Q, NULL, 1, types, pos); break;
-    case 33:
-      i = m.tri_tri_test(B, A, C, P, R, Q, NULL, 1, types, pos); break;
-    case 34:
-      i = m.tri_tri_test(C, B, A, P, R, Q, NULL, 1, types, pos); break;
-    case 35:
-      i = m.tri_tri_test(A, C, B, P, R, Q, NULL, 1, types, pos); break;
-    } // switch (j)
-
+    i = m.tri_tri_test(T1[0], T1[1], T1[2], T2[0], T2[1], T2[2], NULL, 1, 
+                       types, pos);
     if (i == 0) {
       printf("  [%d] DISJOINT.\n", j);
       continue;
@@ -158,8 +95,43 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
         printf("  [%d] ACROSSFACE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::ACROSSTET: 
         printf("  [%d] ACROSSTET\n", j); break;
+      case tetgenmesh::TRIEDGEINT:
+        printf("  [%d] TRIEDGEINT %d %d\n", j, pos[i*2], pos[i*2+1]); break;
+      case tetgenmesh::EDGETRIINT:
+        printf("  [%d] EDGETRIINT %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       }
     }
+
+    /*
+    // Check the correctness of this test. Insert the code here
+    if (types[0] != (int) tetgenmesh::ACROSSEDGE) {
+      printf("  !! Wrong case.\n");
+      horror++;
+    }
+    pa = T1[pos[0]];
+    pb = T1[(pos[0] + 1) % 3];
+    if (!(
+        ((m.pmark(pa) == 15) && (m.pmark(pb) == 16)) ||
+        ((m.pmark(pa) == 16) && (m.pmark(pb) == 15))
+       )) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    pa = T2[pos[1]];
+    pb = T2[(pos[1] + 1) % 3];
+    if (!(
+        ((m.pmark(pa) == 11) && (m.pmark(pb) == 13)) ||
+        ((m.pmark(pa) == 13) && (m.pmark(pb) == 11))
+       )) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    if (horror == 0) {
+      printf("  test passed.\n");
+    } else {
+      exit(1);
+    }
+    */ 
   }
 }
 
