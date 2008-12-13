@@ -82,9 +82,9 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
       case tetgenmesh::SHAREEDGE: 
         printf("  [%d] SHAREEDGE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::SHAREFACE: 
-        printf("  [%d] SHAREFACE\n", i); break;
+        printf("  [%d] SHAREFACE\n", j); break;
       case tetgenmesh::TOUCHEDGE: 
-        printf("  [%d] TOUCHEDGE %d (%d\n", j, pos[i*2], pos[i*2+1]); break;
+        printf("  [%d] TOUCHEDGE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::TOUCHFACE: 
         printf("  [%d] TOUCHFACE %d %d\n", j, pos[i*2], pos[i*2+1]); break;
       case tetgenmesh::ACROSSVERT: 
@@ -102,36 +102,78 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
       }
     }
 
-    /*
     // Check the correctness of this test. Insert the code here
-    if (types[0] != (int) tetgenmesh::ACROSSEDGE) {
+    if (types[0] != (int) tetgenmesh::TOUCHFACE) {
       printf("  !! Wrong case.\n");
       horror++;
     }
-    pa = T1[pos[0]];
+    //<<<<<<<<<<<<< The first intersection 
+    if (pos[0] != 3) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    /*pa = T1[pos[0]];
     pb = T1[(pos[0] + 1) % 3];
+    if (!(
+        ((m.pmark(pa) == 16) && (m.pmark(pb) == 14)) ||
+        ((m.pmark(pa) == 14) && (m.pmark(pb) == 16))
+       )) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }*/
+    // >>>>>>>>>>>>>>>>
+    /*if (pos[1] != 3) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }*/
+    pa = T2[pos[1]];
+    pb = T2[(pos[1] + 1) % 3];
+    if (!(
+    //    ((m.pmark(pa) == 11) && (m.pmark(pb) == 13)) ||
+    //    ((m.pmark(pa) == 13) && (m.pmark(pb) == 11))
+       m.pmark(pa) == 11
+       )) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    // <<<<<<<<<<<<< The second intersection
+    if (types[1] != (int) tetgenmesh::ACROSSFACE) {
+      printf("  !! Wrong case.\n");
+      horror++;
+    }
+    if (pos[2] != 3) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    /*pa = T1[pos[2]];
+    pb = T1[(pos[2] + 1) % 3];
     if (!(
         ((m.pmark(pa) == 15) && (m.pmark(pb) == 16)) ||
         ((m.pmark(pa) == 16) && (m.pmark(pb) == 15))
        )) {
       printf("  !! Wrong report\n");
       horror++;
-    }
-    pa = T2[pos[1]];
-    pb = T2[(pos[1] + 1) % 3];
+    }*/
+    // >>>>>>>>>>>>>
+    /*if (pos[3] != 3) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }*/
+    pa = T2[pos[3]];
+    pb = T2[(pos[3] + 1) % 3];
     if (!(
-        ((m.pmark(pa) == 11) && (m.pmark(pb) == 13)) ||
-        ((m.pmark(pa) == 13) && (m.pmark(pb) == 11))
+        ((m.pmark(pa) == 12) && (m.pmark(pb) == 13)) ||
+        ((m.pmark(pa) == 13) && (m.pmark(pb) == 12))
        )) {
       printf("  !! Wrong report\n");
       horror++;
     }
+    // >>>>>>>>>>>>>>
     if (horror == 0) {
       printf("  test passed.\n");
     } else {
       exit(1);
     }
-    */ 
   }
 }
 
