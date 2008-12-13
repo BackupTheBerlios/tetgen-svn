@@ -21,8 +21,8 @@
 
 6  1
 
-3  14 15 16  4
 3  11 12 13  3
+3  14 15 16  4
 
 4  1 2 3 4  1
 4  2 5 6 3  1
@@ -40,3 +40,57 @@ p:show_string(4,5,6,"C")
 p:show_string(8,2,4,"P")
 p:show_string(4,2,4,"Q")
 p:show_string(6,8,4,"R")
+
+      Tri-tri (14 15 16)-(11 12 13) (--+)
+      Tri-tri (14 15 16)-(11 12 13) (++-)
+      Tri-tri (14 15 16)-(11 12 13) (0-0) (-+)
+      (tritri-00-+++)
+  [0] ACROSSEDGE 2 3
+  [0] ACROSSFACE 3 1
+
+/*
+    // Check the correctness of this test. Insert the code here
+    if (types[0] != (int) tetgenmesh::ACROSSEDGE) {
+      printf("  !! Wrong case.\n");
+      horror++;
+    }
+    //<<<<<<<<<<<<< The first intersection 
+    pa = T1[pos[0]];
+    pb = T1[(pos[0] + 1) % 3];
+    if (!(
+        ((m.pmark(pa) == 16) && (m.pmark(pb) == 14)) ||
+        ((m.pmark(pa) == 14) && (m.pmark(pb) == 16))
+       )) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    if (pos[1] != 3) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    // >>>>>>>>>>>>>
+    // <<<<<<<<<<<<< The second intersection
+    if (types[1] != (int) tetgenmesh::ACROSSFACE) {
+      printf("  !! Wrong case.\n");
+      horror++;
+    }
+    if (pos[2] != 3) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    pa = T2[pos[3]];
+    pb = T2[(pos[3] + 1) % 3];
+    if (!(
+        ((m.pmark(pa) == 12) && (m.pmark(pb) == 13)) ||
+        ((m.pmark(pa) == 13) && (m.pmark(pb) == 12))
+       )) {
+      printf("  !! Wrong report\n");
+      horror++;
+    }
+    // >>>>>>>>>>>>>>
+    if (horror == 0) {
+      printf("  test passed.\n");
+    } else {
+      exit(1);
+    }
+    */ 
