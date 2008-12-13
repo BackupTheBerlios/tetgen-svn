@@ -3498,9 +3498,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                 types[0] = (int) SHAREEDGE;
                 pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
                 pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
-                types[1] = (int) SHAREEDGE;
-                pos[0] = (iu == 0 ? pu[0] : mi1mo3[pu[0]]); // Int([A, B])
-                pos[1] = (iv == 0 ? pw[0] : mi1mo3[pw[0]]); // Int([P, Q])
+                types[1] = DISJOINT;
               } else { // s4 < 0
                 // P = A, [P, Q] contains [A, B] (tritri-33-+0-).
                 types[0] = (int) SHAREVERT;
