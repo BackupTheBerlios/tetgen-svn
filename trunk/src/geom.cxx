@@ -3657,7 +3657,7 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               // assert(s4 < 0); // SELF_CHECK
               // i = B (tritri-40#0##)
               types[0] = (int) ACROSSVERT;
-              pos[0] = pu[0]; // B
+              pos[0] = pu[1]; // B
               pos[1] = (iv == 0 ? pw[2] : mi1mo3[pw[2]]); // [R, P]
               types[1] = (int) DISJOINT;
             }
