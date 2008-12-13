@@ -1845,43 +1845,89 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
       s5 = orient3d(U[0], U[1], O, V[1]); // A, B, Q
       if (s5 < 0) {
         s6 = orient3d(U[0], U[1], O, V[2]); // A, B, R
-        if (s6 < 0) {
+        if (s6 < 0) { // (tritri2d-R6--)
           // P = A
           types[0] = (int) SHAREVERT;
           pos[0] = pu[0]; // A
           pos[1] = pv[0]; // P
           types[1] = (int) DISJOINT;
         } else {
-          if (s6 > 0) {
+          if (s6 > 0) { // (tritri2d-R6-+)
+            // Note: it must be orient3d(Q, R, A) > 0.
             // [P, Q] intersects [A, B, C]
             types[0] = (int) TRIEDGEINT;
             pos[0] = 3; // [A, B, C]
             pos[1] = pe[0]; // [P, Q]
             types[1] = (int) DISJOINT;
-          } else { // s6 == 0
-            // [R, P] intersects [A, B, C]
-            // [A, B] intersects [P, Q, R]
-            types[0] = (int) EDGETRIINT;
-            pos[0] = pu[0]; // [A, B]
-            pos[1] = 3; // [P, Q, R]
-            types[1] = (int) DISJOINT;
+          } else { // s6 == 0 (tritri2d-R6-0)
+            // Note: it must be orient3d(Q, R, A) > 0.
+            s7 = orient3d(V[1], V[2], O, U[1]); // Q, R, B
+            if (s7 == 0) {
+              // [R, P] = [A, B]
+              types[0] = (int) SHAREEDGE;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = pe[2]; // [R, P]
+              types[1] = (int) DISJOINT;
+            } else {
+              // [R, P] intersects [A, B, C]
+              // [A, B] intersects [P, Q, R]
+              types[0] = (int) EDGETRIINT;
+              pos[0] = pu[0]; // [A, B]
+              pos[1] = 3; // [P, Q, R]
+              types[1] = (int) DISJOINT;
+            }
           }
         }
       } else { // s5 >= 0
-        s6 = orient3d(U[0], U[2], O, V[1]); // A, C, Q
-        if (s6 < 0) {
-          // P = A
-          types[0] = (int) SHAREVERT;
-          pos[0] = pu[0]; // A
-          pos[1] = pv[0]; // P
-          types[1] = (int) DISJOINT;
-        } else { // s6 >= 0
-          // [P, Q] intersects [A, B, C]
-          // [A, B] intersects [P, Q, R] if s6 == 0
-          types[0] = (int) TRIEDGEINT;
-          pos[0] = 3; // [A, B, C]
-          pos[1] = pe[0]; // [P, Q]
-          types[1] = (int) DISJOINT;
+        if (s5 > 0) {
+          s6 = orient3d(U[0], U[2], O, V[1]); // A, C, Q
+          if (s6 < 0) { // (tritri2d-R6+-)
+            // [P, Q] intersects [A, B, C]
+            types[0] = (int) TRIEDGEINT;
+            pos[0] = 3; // [A, B, C]
+            pos[1] = pe[0]; // [P, Q]
+            types[1] = (int) DISJOINT;
+          } else { // s6 >= 0
+            if (s6 > 0) { // (tritri2d-R6++) (not draw)
+              // P = A
+              types[0] = (int) SHAREVERT;
+              pos[0] = pu[0]; // A
+              pos[1] = pv[0]; // P
+              types[1] = (int) DISJOINT;  
+            } else { // s6 == 0 // (tritri2d-R6+0)
+              s7 = orient3d(V[1], V[2], O, U[2]); // Q, R, O, C
+              if (s7 == 0) {
+                // [P, Q] = [C, A]
+                types[0] = (int) SHAREEDGE;
+                pos[0] = pu[2]; // [C, A]
+                pos[1] = pe[0]; // [P, Q]
+                types[1] = (int) DISJOINT;
+              } else {
+                // [P, Q] intersects [A, B, C]
+                // [A, C] intersects [P, Q, R]
+                types[0] = (int) TRIEDGEINT;
+                pos[0] = 3; // [A, B, C]
+                pos[1] = pe[0]; // [P, Q]
+                types[1] = (int) DISJOINT;
+              }
+            }
+          }
+        } else { // s5 == 0
+          s6 = orient3d(V[1], V[2], O, U[1]); // Q, R, B
+          if (s6 == 0) {
+            // [P, Q] = [A, B]
+            types[0] = (int) SHAREEDGE;
+            pos[0] = pu[0]; // [A, B]
+            pos[1] = pe[0]; // [P, Q]
+            types[1] = (int) DISJOINT;
+          } else {
+            // [P, Q] intersects [A, B, C]
+            // [A, B] intersects [P, Q, R]
+            types[0] = (int) TRIEDGEINT;
+            pos[0] = 3; // [A, B, C]
+            pos[1] = pe[0]; // [P, Q]
+            types[1] = (int) DISJOINT;
+          }
         }
       }
     } // if (level > 0)
@@ -2133,6 +2179,10 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
               z1 = 3; 
             } else { // (000)
               // (A, B, C) is coplanar with (P, Q, R).
+              SETVECTOR3(U, A, B, C);  // I3
+              SETVECTOR3(V, P, Q, R);  // I2
+              SETVECTOR3(pu, 0, 1, 2);
+              SETVECTOR3(pv, 0, 1, 2);
               z1 = -1;
             }
           }
