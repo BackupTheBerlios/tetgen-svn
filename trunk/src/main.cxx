@@ -102,8 +102,10 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
       }
     }
 
+    horror = 0;
+
     // Check the correctness of this test. Insert the code here
-    if (types[0] != (int) tetgenmesh::SHAREVERT) {
+    if (types[0] != (int) tetgenmesh::TOUCHEDGE) {
       printf("  !! Wrong case.\n");
       horror++;
     }
@@ -114,9 +116,9 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
     }*/
     pa = T1[pos[0]];
     pb = T1[(pos[0] + 1) % 3];
-    if (!(m.pmark(pa) == 14
-        //((m.pmark(pa) == 14) && (m.pmark(pb) == 15)) ||
-        //((m.pmark(pa) == 15) && (m.pmark(pb) == 14))
+    if (!(//m.pmark(pa) == 15
+        ((m.pmark(pa) == 14) && (m.pmark(pb) == 16)) ||
+        ((m.pmark(pa) == 16) && (m.pmark(pb) == 14))
        )) {
       printf("  !! Wrong report\n");
       horror++;
@@ -129,9 +131,8 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
     pa = T2[pos[1]];
     pb = T2[(pos[1] + 1) % 3];
     if (!(m.pmark(pa) == 12
-         //((m.pmark(pa) == 12) && (m.pmark(pb) == 11)) ||
-         //((m.pmark(pa) == 11) && (m.pmark(pb) == 12))
-        
+         //((m.pmark(pa) == 11) && (m.pmark(pb) == 12)) ||
+         //((m.pmark(pa) == 12) && (m.pmark(pb) == 11))
        )) {
       printf("  !! Wrong report\n");
       horror++;
@@ -147,7 +148,7 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
     }*/
     /*pa = T1[pos[2]];
     pb = T1[(pos[2] + 1) % 3];
-    if (!(m.pmark(pa) == 14
+    if (!(m.pmark(pa) == 15
         //((m.pmark(pa) == 15) && (m.pmark(pb) == 14)) ||
         //((m.pmark(pa) == 14) && (m.pmark(pb) == 15))
        )) {
@@ -161,9 +162,9 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
     }*/
     /*pa = T2[pos[3]];
     pb = T2[(pos[3] + 1) % 3];
-    if (!(// m.pmark(pa) == 12
-        ((m.pmark(pa) == 12) && (m.pmark(pb) == 11)) ||
-        ((m.pmark(pa) == 11) && (m.pmark(pb) == 12))
+    if (!(m.pmark(pa) == 12
+        //((m.pmark(pa) == 12) && (m.pmark(pb) == 11)) ||
+        //((m.pmark(pa) == 11) && (m.pmark(pb) == 12))
        )) {
       printf("  !! Wrong report\n");
       horror++;
@@ -172,7 +173,7 @@ void test_tri_tri(tetgenbehavior *b, tetgenio *in)
     if (horror == 0) {
       printf("  test passed.\n");
     } else {
-      exit(1);
+      //exit(1);
     }
   }
 }

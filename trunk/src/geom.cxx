@@ -595,9 +595,7 @@ int tetgenmesh::tri_edge_2d(point A, point B, point C, point P, point Q,
               types[0] = (int) SHAREEDGE;
               pos[0] = pu[0]; // [A, B]
               pos[1] = pv[0]; // [P, Q]
-              types[1] = (int) SHAREEDGE;
-              pos[2] = pu[0]; // [A, B]
-              pos[3] = pv[0]; // [P, Q]
+              types[1] = (int) DISJOINT;
             } else { // s4 < 0
               // P= A, [P, Q] in [A, B] (-+0-).
               types[0] = (int) SHAREVERT;
@@ -3745,16 +3743,16 @@ int tetgenmesh::tri_tri_test(point A, point B, point C, point P, point Q,
                   types[0] = (int) TOUCHFACE;
                   pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
-                  types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
                   pos[3] = (iv == 0 ? pw[1] : mi1mo3[pw[1]]); // [Q, R]
                 } else { // s4 < 0
                   // [P, j] overlaps [k, B] (tritri-42-+--)
                   types[0] = (int) TOUCHFACE;
                   pos[0] = 3;     // [A, B, C]
                   pos[1] = pw[0]; // P
-                  types[1] = (int) ACROSSEDGE;
-                  pos[2] = (iu == 0 ? pu[1] : mi1mo3[pu[1]]); // [B, C]
+                  types[1] = (int) ACROSSVERT;
+                  pos[2] = pu[1]; // B
                   pos[3] = 3;     // [P, Q, R]
                 }
               }
