@@ -1788,13 +1788,47 @@ int tetgenmesh::tri_tri_2d(point A, point B, point C, point P, point Q,
               if (s7 > 0) {
                 assert(0); // Not possible (see tritri2d-R2-5b)
               } else { // s7 == 0
-                assert(z1 == 3); // (tritri2d-R3-5b)
-                // [P, Q] intersects [A, B, C]
-                // [A, B] intersects [P, Q, R]
-                types[0] = (int) EDGETRIINT;
-                pos[0] = pu[0]; // [A, B]
-                pos[1] = 3; // [P, Q, R]
-                types[1] = (int) DISJOINT;
+                if (z1 == 3) {// (tritri2d-R3-5b)
+                  // [P, Q] intersects [A, B, C]
+                  // [A, B] intersects [P, Q, R]
+                  types[0] = (int) EDGETRIINT;
+                  pos[0] = pu[0]; // [A, B]
+                  pos[1] = 3; // [P, Q, R]
+                  types[1] = (int) DISJOINT;
+                } else { // (tritri2d-R2-5b)
+                  s8 = orient3d(U[0], U[1], O, V[2]); // A, B, R
+                  if (s8 < 0) {
+                    // Q = B 
+                    types[0] = (int) SHAREVERT;
+                    pos[0] = pu[1]; // B
+                    pos[1] = pv[1]; // Q
+                    types[1] = (int) DISJOINT;
+                  } else {
+                    if (s8 > 0) {
+                      // [A, B] intersect [P, Q, R]
+                      types[0] = (int) EDGETRIINT;
+                      pos[0] = pu[0]; // [A, B]
+                      pos[1] = 3; // [P, Q, R]
+                      types[1] = (int) DISJOINT;
+                    } else { // s8 == 0
+                      s9 = orient3d(U[0], U[2], O, V[2]); // A, C, R
+                      if (s9 == 0) {
+                        // [A, B] = [Q, R]
+                        types[0] = (int) SHAREEDGE;
+                        pos[0] = pu[0]; // [A, B]
+                        pos[1] = pe[2]; // [R, P]
+                        types[1] = (int) DISJOINT;
+                      } else {
+                        // [P, Q] intersects [A, B, C]
+                        // [A, B] intersect [P, Q, R]
+                        types[0] = (int) EDGETRIINT;
+                        pos[0] = pu[0]; // [A, B]
+                        pos[1] = 3; // [P, Q, R]
+                        types[1] = (int) DISJOINT;
+                      }
+                    }
+                  }
+                }
               }
             }
           } else { // s6 == 0 (tritri2d-R2-6)
