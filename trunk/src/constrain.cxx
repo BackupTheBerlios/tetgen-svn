@@ -96,9 +96,10 @@ enum tetgenmesh::intersection tetgenmesh::finddirection(triface* searchtet,
     }
 
     // Now assume that the base face abc coincides with the horizon plane,
-    //   and d lies above the horizon. We test the orientations of the
-    //   search point with respect to three planes: abc (horizon plnae),
-    //   bad (right plane), and acd (left plane). 
+    //   and d lies above the horizon.  The search point 'endpt' may lie
+    //   above or below the horizon.  We test the orientations of 'endpt'
+    //   with respect to three planes: abc (horizon), bad (right plane),
+    //   and acd (left plane). 
     hori = orient3d(pa, pb, pc, endpt);
     rori = orient3d(pb, pa, pd, endpt);
     lori = orient3d(pa, pc, pd, endpt);
@@ -385,6 +386,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   REAL angmax, ang;
   long facecount;
   bool orgflag;
+  int types[2], poss[4];
   int shver, pos, i;
 
   tetrahedron ptr;
@@ -461,7 +463,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   }
   facecount = across_face_count;
 
-  enextfnextself(*searchtet); // Go the opposite face.
+  enextfnextself(*searchtet); // Go to the opposite face.
   symedgeself(*searchtet); // Enter the adjacent tet.
 
   pa = org(*searchtet);
@@ -530,9 +532,15 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         pa = org(neightet);
         pb = dest(neightet);
         pc = apex(neightet);
-        pd = oppo(neightet);
-        // dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
-        if (dir != DISJOINT) break;
+        pd = oppo(neightet); // The above point.
+        if (tri_edge_test(pa, pb, pc, startpt, endpt, pd, 1, types, poss)) {
+          dir = (enum intersection) types[0];
+          pos = poss[0];
+          break;
+        } else {
+          dir = DISJOINT;
+          pos = 0;
+        }
       }
       assert(dir != DISJOINT);  // SELF_CHECK
     } else { // dir == ACROSSEDGE
@@ -544,9 +552,15 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         pa = org(neightet);
         pb = dest(neightet);
         pc = apex(neightet);
-        pd = oppo(neightet);
-        // dir = tri_edge_inter(pa, pb, pc, startpt, endpt, pd, &pos);
-        if (dir != DISJOINT) break;
+        pd = oppo(neightet); // The above point.
+        if (tri_edge_test(pa, pb, pc, startpt, endpt, pd, 1, types, poss)) {
+          dir = (enum intersection) types[0];
+          pos = poss[0];
+          break;
+        } else {
+          dir = DISJOINT;
+          pos = 0;
+        }
       }
       if (dir == DISJOINT) {
         // No intersection. Go to the next tet.
@@ -739,7 +753,7 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
     d2 = DIST(vt, ej);
     if (d1 > d2) {
       // Use rule-3.
-      d3 = DIST(ei, ej);
+      d3 = DIST(ei, refpt);
       if (d1 < 0.5 * d3) {
         split = (d - d1) / L;
       } else {
