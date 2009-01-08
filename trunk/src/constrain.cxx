@@ -852,52 +852,13 @@ void tetgenmesh::delaunizesegments()
   face *psseg, sseg, nsseg, splitshs[2];
   point refpt, newpt;
   enum intersection dir;
-  REAL bakeps;
-  int s, i;
+  int s;
 
   shellface sptr;
 
-  if (!b->quiet) {
-    printf("Delaunizing segments.\n");
+  if (b->verbose) {
+    printf("  Delaunizing segments.\n");
   }
-
-  // Construct a map from point to tets for speeding point location.
-  makepoint2tetmap();
-
-  // Mark acutes vertices.
-  markacutevertices();
-
-  // Put all segments into the list.
-  if (b->order == 4) {  // '-o4' option (for debug)
-    // The sequential order.
-    subsegpool->traversalinit();
-    for (i = 0; i < subsegpool->items; i++) {
-      sseg.sh = shellfacetraverse(subsegpool);
-      sinfect(sseg);  // Only save it once.
-      subsegstack->newindex((void **) &psseg);
-      *psseg = sseg;
-    }
-  } else {
-    // Randomly order the segments.
-    subsegpool->traversalinit();
-    for (i = 0; i < subsegpool->items; i++) {
-      s = randomnation(i + 1);
-      // Move the s-th seg to the i-th.
-      subsegstack->newindex((void **) &psseg);
-      *psseg = * (face *) fastlookup(subsegstack, s);
-      // Put i-th seg to be the s-th.
-      sseg.sh = shellfacetraverse(subsegpool);
-      sinfect(sseg);  // Only save it once.
-      psseg = (face *) fastlookup(subsegstack, s);
-      *psseg = sseg;
-    }
-  }
-
-  // Segments will be introduced.
-  checksubsegs = 1;
-  // Bakup the epsilon.
-  bakeps = b->epsilon;
-  b->epsilon = 0;
 
   // Loop until 'subsegstack' is empty.
   while (subsegstack->objects > 0l) {
@@ -967,9 +928,6 @@ void tetgenmesh::delaunizesegments()
   if (b->verbose) {
     printf("  %d protecting points.\n", r1count + r2count + r3count);
   }
-
-  checksubsegs = 0;
-  b->epsilon = bakeps;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -980,19 +938,19 @@ void tetgenmesh::delaunizesegments()
 // at the place where the two tets sharing at it.                            //
 //                                                                           //
 // The returned value indicates onre of the following cases:                 //
-//   - COPLANAR, abc exists and is inserted;                                 //
-//   - ACROSSVERT, a vertex (the origin of 'searchtet') lies on the facet.   //
-//   - ACROSSEDGE, an edge (in 'searchtet') intersects ab;                   //
-//   - ACROSSFACE, a face (in 'searchtet') intersects ab;                    //
+//   - SHAREFACE, abc exists and is inserted;                                //
+//   - TOUCHEDGE, a vertex (the origin of 'searchtet') lies on ab.           //
+//   - TOUCHFACE, a vertex (the origin of 'searchtet') lies on abc.          //
+//   - EDGETRIINT, all three edges of abc are missing.                       //
+//   - ACROSSFACE, a face (in 'searchtet') intersects ac or bc.              //
 //   - ACROSSTET, a tet (in 'searchtet') crosses the facet containg abc.     //
 //                                                                           //
-// If the returned value is ACROSSEDGE or ACROSSFACE, it means none of the   //
-// three edges of abc exists in T.                                           //
-//                                                                           //
 // If the retunred value is ACROSSTET, let 'searchtet' be abde. The edge de  //
-// intersects the facet containing abc. The vertex d lies exactly below the  //
-// facet, while the vertex e may lie exactly on the facet, i.e., a, b, c,    //
-// and e are coplanar.                                                       //
+// intersects the facet containing abc. The vertices d and e lie below and   //
+// above the facet, respectively.                                            //
+//                                                                           //
+// If the retunred value is ACROSSFACE, let 'searchtet' be abde. The vertex  //
+// d lies below the facet, and the vertex e lies on the facet.               //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1038,14 +996,14 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
       } else {
         // A vertex lies on the search edge. Return it.
         enextself(*searchtet);
-        return ACROSSVERT;
+        return TOUCHEDGE;
       }
     }
   }
 
   if (i == 3) {
     // None of the three edges exists.
-    return dir;  // ACROSSEDGE or ACROSSFACE.
+    return EDGETRIINT; // ab intersects the face in 'searchtet'.
   }
 
   ssub->shver = (i << 1);
@@ -1106,7 +1064,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
       enext0fnext(spintet, *searchtet);
       esymself(*searchtet);  // b->a.
       enext2self(*searchtet);  // e->a.
-      return ACROSSVERT;
+      return TOUCHFACE;
     }
   }
 
@@ -1115,9 +1073,76 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
     printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
       pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
   }
-
   *searchtet = spintet;
-  return ACROSSTET;
+
+  if (ori == 0) {
+    return ACROSSFACE;  // abc and 'searchtet''s face are coplanar.
+  } else {
+    return ACROSSTET;  // abc intersects the volume of 'searchtet'.
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// formskeleton()    Form a constrained tetrahedralization.                  //
+//                                                                           //
+// The segments and facets of a PLS will be recivered.                       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::formskeleton()
+{
+  face *psseg, sseg;
+  REAL bakeps;
+  int s, i;
+
+  if (!b->quiet) {
+    printf("Recovering boundaries.\n");
+  }
+
+  // Construct a map from point to tets for speeding point location.
+  makepoint2tetmap();
+
+  // Mark acutes vertices.
+  markacutevertices();
+
+  // Put all segments into the list.
+  if (b->order == 4) {  // '-o4' option (for debug)
+    // The sequential order.
+    subsegpool->traversalinit();
+    for (i = 0; i < subsegpool->items; i++) {
+      sseg.sh = shellfacetraverse(subsegpool);
+      sinfect(sseg);  // Only save it once.
+      subsegstack->newindex((void **) &psseg);
+      *psseg = sseg;
+    }
+  } else {
+    // Randomly order the segments.
+    subsegpool->traversalinit();
+    for (i = 0; i < subsegpool->items; i++) {
+      s = randomnation(i + 1);
+      // Move the s-th seg to the i-th.
+      subsegstack->newindex((void **) &psseg);
+      *psseg = * (face *) fastlookup(subsegstack, s);
+      // Put i-th seg to be the s-th.
+      sseg.sh = shellfacetraverse(subsegpool);
+      sinfect(sseg);  // Only save it once.
+      psseg = (face *) fastlookup(subsegstack, s);
+      *psseg = sseg;
+    }
+  }
+
+  // Segments will be introduced.
+  checksubsegs = 1;
+
+  // Bakup the epsilon.
+  bakeps = b->epsilon;
+  b->epsilon = 0;
+
+  delaunizesegments();
+
+  // checksubsegs = 0;
+  b->epsilon = bakeps;
 }
 
 #endif // #ifndef constrainCXX

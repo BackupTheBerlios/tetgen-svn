@@ -1576,6 +1576,8 @@ enum intersection scoutsubface(face* ssub, triface* searchtet);
 enum intersection scoutcrosstets(face* ssub, triface* crosstet, arraypool*);
 void constrainedfacets();
 
+void formskeleton();
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Mesh input & output functions.                                            //
