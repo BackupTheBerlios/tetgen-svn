@@ -1128,6 +1128,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   pointmark(pc) = -(idx + 1);
   // Mark this face as tested.
   smarktest(*psub);
+
   // Mark all vertices of the facet.
   for (i = 0; i < misregion->objects; i++) {
     worksh = * (face *) fastlookup(misregion, i);
@@ -1151,19 +1152,22 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
     }
   }
 
-  // Get a crossing tet abde.
-  ptet = (triface *) fastlookup(crosstets, 0);
+  // Get a crossing tet abde. 
+  ptet = (triface *) fastlookup(crosstets, 0); // face abd.
   // The edge de crosses the facet. d lies below abc.
   enext2fnext(*ptet, crosstet);
   enext2self(crosstet); 
   esymself(crosstet); // the edge d->e at face (d,e,a)
   infect(crosstet);
   *ptet = crosstet; // Save it in list.
+
   // Temporarily re-use 'topfaces'.
   crossedges = topfaces;
   crossedges->newindex((void **) &ptet);
   *ptet = crosstet;
-  // Collect all crossing tets.
+
+  // Collect all crossing tets.  Each cross tet is saved in the standard
+  //   form deab, where de is a corrsing edge, orient3d(d,e,a,b) < 0. 
   for (i = 0; i < crossedges->objects; i++) {
     crosstet = * (triface *) fastlookup(crossedges, i);
     // Collect all tets sharing at the edge.
@@ -1197,11 +1201,11 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
         assert(ori != 0);
         if (ori < 0) {
           // The edge d->f corsses the facet.
-          enext2(spintet, neightet);
+          enext2fnext(spintet, neightet);
           esymself(neightet); // d->f.
         } else {
           // The edge f->e crosses the face.
-          enext(spintet, neightet);
+          enextfnext(spintet, neightet);
           esymself(neightet); // f->e.
         }
         if (!edgemarked(neightet)) {
@@ -1230,6 +1234,48 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
     }
   }
   crossedges->restart();
+
+  // Collect the top and bottom faces.  
+  //   Remember that each cross tet was saved in the standard form: deab,
+  //   where de is a corrsing edge, orient3d(d,e,a,b) < 0.
+  for (i = 0; i < crosstets->objects; i++) {
+    crosstet = * (triface *) fastlookup(crosstets, i);
+    enextfnext(crosstet, spintet);
+    enextself(spintet);
+    sym(spintet, neightet);
+    if (!infected(neightet)) {
+      // A top face.
+      topfaces->newindex((void **) &ptet);
+      *ptet = neightet;
+    }
+    enext2fnext(crosstet, spintet);
+    enext2self(spintet);
+    sym(spintet, neightet);
+    if (!infected(neightet)) {
+      // A bottom face.
+      botfaces->newindex((void **) &ptet);
+      *ptet = neightet;
+    }
+  }
+
+  // Unmark all facet vertices.
+  idx = pointmark(pa);
+  pointmark(pa) = -(idx + 1);
+  idx = pointmark(pb);
+  pointmark(pb) = -(idx + 1);
+  idx = pointmark(pc);
+  pointmark(pc) = -(idx + 1);
+  // Mark all vertices of the facet.
+  for (i = 0; i < misregion->objects; i++) {
+    worksh = * (face *) fastlookup(misregion, i);
+    sunmarktest(worksh);
+    pf = sapex(worksh);
+    idx = pointmark(pf);
+    if (idx < 0) {
+      pointmark(pf) = -(idx + 1);
+    }
+  }
+  misregion->restart();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
