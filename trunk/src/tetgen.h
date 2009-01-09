@@ -1089,7 +1089,7 @@ void bond(triface& t1, triface& t2) {
 #define marktested(t) ((elemmarker((t).tet) & 2) != 0)
 
 // markface(), unmarkface(), facemarked() -- primitives to flag or unflag a
-//   face of a tetrahedron.  From the last third to sixth bits are used for
+//   face of a tetrahedron.  From the last 3rd to 6th bits are used for
 //   face markers, e.g., the last third bit corresponds to loc = 0. 
 // One use of the face marker is in flip algorithm. Each queued face (check
 //   for locally Delaunay) is marked.
@@ -1099,6 +1099,19 @@ void bond(triface& t1, triface& t2) {
 #define unmarkface(t) elemmarker((t).tet) &= ~(4<<(t).loc)
 
 #define facemarked(t) ((elemmarker((t).tet) & (4<<(t).loc)) != 0)
+
+// markedge(), unmarkedge(), edgemarked() -- primitives to flag or unflag an
+//   edge of a tetrahedron.  From the last 7th to 12th bits are used for
+//   edge markers, e.g., the last 7th bit corresponds to the 0th edge, etc. 
+// Remark: The last 7th bit is marked by 2^6 = 64.
+
+#define markedge(t) elemmarker((t).tet) |= (64<<locver2edge[(t).loc][(t).ver])
+
+#define unmarkedge(t) \
+  elemmarker((t).tet) &= ~(64<<locver2edge[(t).loc][(t).ver])
+
+#define edgemarked(t) \
+  ((elemmarker((t).tet) & (64<<locver2edge[(t).loc][(t).ver])) != 0)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1222,6 +1235,17 @@ void bond(triface& t1, triface& t2) {
   (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] & ~(unsigned long) 4l)
 
 #define sinfected(s) (((unsigned long) (s).sh[6] & (unsigned long) 4l) != 0)
+
+// smarktest(), smarktested(), sunmarktest() -- primitives to flag or unflag
+//   a subface. The last third bit of the second subsegment is flaged.
+
+#define smarktest(s) \
+  (s).sh[7] = (shellface) ((unsigned long) (s).sh[7] | (unsigned long) 4l)
+
+#define sunmarktest(s) \
+  (s).sh[7] = (shellface) ((unsigned long) (s).sh[7] & ~(unsigned long) 4l)
+
+#define smarktested(s) (((unsigned long) (s).sh[7] & (unsigned long) 4l) != 0)
 
 // farsorg(), farsdest() -- s is a subsegment, return the origin or
 //   destination of the segment containing s.
@@ -1573,7 +1597,7 @@ void markacutevertices();
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
-enum intersection scoutcrosstets(face* ssub, triface* crosstet, arraypool*);
+void formcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void constrainedfacets();
 
 void formskeleton();

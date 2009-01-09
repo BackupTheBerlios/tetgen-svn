@@ -1084,6 +1084,156 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// formcavity()    Form the cavity of a missing region.                      //
+//                                                                           //
+// This routine finds the missing region R and the set of crossing tets of R.//
+// The cavity C includes R as its internal facet, and the boundary faces lie //
+// above and below R, respectively.                                          //
+//                                                                           //
+// On input, 'misregion' contains only one missing subface, abc, and 'cross- //
+// tets' contains one crossing tet, abde, where d and e lie below and above  //
+// abc, respectively.  On finish, 'misregion' contains all missing subfaces, //
+// 'crosstets' returns all crossing tets of R.                               //
+//                                                                           //
+// 'topfaces' and 'botfaces' are empty on input and return the upper and low-//
+// er boundary faces of the cavity, respectively.                            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
+  arraypool* topfaces, arraypool* botfaces)
+{
+  arraypool *crossedges;
+  triface *ptet, crosstet, spintet, neightet;
+  face *psub, worksh, neighsh;
+  face checkseg;
+  point pa, pb, pc, pf, pg;
+  REAL ori;
+  int idx, i, j;
+
+  int *iptr;
+
+  // Get the first missing subface abc.
+  psub = (face *) fastlookup(misregion, 0);
+  pa = sorg(*psub);
+  pb = sdest(*psub);
+  pc = sapex(*psub);
+
+  // Mark the vertices of this face.
+  idx = pointmark(pa);
+  pointmark(pa) = -(idx + 1);
+  idx = pointmark(pb);
+  pointmark(pb) = -(idx + 1);
+  idx = pointmark(pc);
+  pointmark(pc) = -(idx + 1);
+  // Mark this face as tested.
+  smarktest(*psub);
+  // Mark all vertices of the facet.
+  for (i = 0; i < misregion->objects; i++) {
+    worksh = * (face *) fastlookup(misregion, i);
+    for (j = 0; j < 2; j++) {
+      senextself(worksh);
+      sspivot(worksh, checkseg);
+      if (checkseg.sh == NULL) {
+        spivot(worksh, neighsh);
+        assert(neighsh.sh != NULL); // SELF_CHECK
+        if (!smarktested(neighsh)) {
+          pf = sapex(neighsh);
+          idx = pointmark(pf);
+          if (idx >= 0) {
+            pointmark(pf) = -(idx + 1);
+          }
+          smarktest(neighsh);
+          misregion->newindex((void **) &psub);
+          *psub = neighsh;
+        }
+      }
+    }
+  }
+
+  // Get a crossing tet abde.
+  ptet = (triface *) fastlookup(crosstets, 0);
+  // The edge de crosses the facet. d lies below abc.
+  enext2fnext(*ptet, crosstet);
+  enext2self(crosstet); 
+  esymself(crosstet); // the edge d->e at face (d,e,a)
+  infect(crosstet);
+  *ptet = crosstet; // Save it in list.
+  // Temporarily re-use 'topfaces'.
+  crossedges = topfaces;
+  crossedges->newindex((void **) &ptet);
+  *ptet = crosstet;
+  // Collect all crossing tets.
+  for (i = 0; i < crossedges->objects; i++) {
+    crosstet = * (triface *) fastlookup(crossedges, i);
+    // Collect all tets sharing at the edge.
+    pg = apex(crosstet);
+    spintet = crosstet;
+    while (1) {
+      // Mark this edge as tested.
+      markedge(spintet);
+      // Check the validity of the PLC.
+      tspivot(spintet, worksh);
+      if (worksh.sh != NULL) {
+        printf("Error:  Invalid PLC.\n");
+        terminatetetgen(1);
+      }
+      if (!infected(spintet)) {
+        infect(spintet);
+        crosstets->newindex((void **) &ptet);
+        *ptet = spintet;
+      }
+      // Go to the neighbor tet.
+      fnextself(spintet);
+      if (apex(spintet) == pg) break;
+    }
+    // Detect new cross edges.
+    while (1) {
+      // Remember: spintet is edge d->e, d lies below abc.
+      pf = apex(spintet);
+      if (pointmark(pf) >= 0) {
+        // There exist a crossing edge, either d->f, or f->e.
+        ori = orient3d(pa, pb, pc, pf);
+        assert(ori != 0);
+        if (ori < 0) {
+          // The edge d->f corsses the facet.
+          enext2(spintet, neightet);
+          esymself(neightet); // d->f.
+        } else {
+          // The edge f->e crosses the face.
+          enext(spintet, neightet);
+          esymself(neightet); // f->e.
+        }
+        if (!edgemarked(neightet)) {
+          // Add a new cross edge.
+          crossedges->newindex((void **) &ptet);
+          *ptet = neightet;
+        }
+      }
+      fnextself(spintet);
+      if (apex(spintet) == pg) break;
+    }
+  }
+
+  // All cross tets are found. Unmark cross edges.
+  for (i = 0; i < crossedges->objects; i++) {
+    crosstet = * (triface *) fastlookup(crossedges, i);
+    pg = apex(crosstet);
+    spintet = crosstet;
+    while (1) {
+      // Unmark this edge.
+      assert(edgemarked(spintet)); // SELF_CHECK
+      unmarkedge(spintet);
+      // Go to the neighbor tet.
+      fnextself(spintet);
+      if (apex(spintet) == pg) break;
+    }
+  }
+  crossedges->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // formskeleton()    Form a constrained tetrahedralization.                  //
 //                                                                           //
 // The segments and facets of a PLS will be recivered.                       //
