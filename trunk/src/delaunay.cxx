@@ -477,17 +477,17 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
   bond(worktet, worktet1); // dc
 
   // Set the vertex type.
-  if (pointtype(pa) == UNUSEDVERTEX) {
-    pointtype(pa) = VOLVERTEX;
+  if (getpointtype(pa) == UNUSEDVERTEX) {
+    setpointtype(pa, VOLVERTEX);
   }
-  if (pointtype(pb) == UNUSEDVERTEX) {
-    pointtype(pb) = VOLVERTEX;
+  if (getpointtype(pb) == UNUSEDVERTEX) {
+    setpointtype(pb, VOLVERTEX);
   }
-  if (pointtype(pc) == UNUSEDVERTEX) {
-    pointtype(pc) = VOLVERTEX;
+  if (getpointtype(pc) == UNUSEDVERTEX) {
+    setpointtype(pc, VOLVERTEX);
   }
-  if (pointtype(pd) == UNUSEDVERTEX) {
-    pointtype(pd) = VOLVERTEX;
+  if (getpointtype(pd) == UNUSEDVERTEX) {
+    setpointtype(pd, VOLVERTEX);
   }
 
   // Remember the first tetrahedron.
@@ -565,7 +565,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         pointmark(insertpt), pointmark(org(*searchtet)));
     }
     point2ppt(insertpt) = org(*searchtet);
-    pointtype(insertpt) = DUPLICATEDVERTEX;
+    setpointtype(insertpt, DUPLICATEDVERTEX);
     dupverts++;
     return;
   }
@@ -868,8 +868,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   }
 
   // Set the point type.
-  if (pointtype(insertpt) == UNUSEDVERTEX) {
-    pointtype(insertpt) = VOLVERTEX;
+  if (getpointtype(insertpt) == UNUSEDVERTEX) {
+    setpointtype(insertpt, VOLVERTEX);
   }
 
   cavetetlist->restart();
@@ -921,7 +921,7 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
         pointmark(insertpt), pointmark(org(*searchtet)));
     }
     point2ppt(insertpt) = org(*searchtet);
-    pointtype(insertpt) = DUPLICATEDVERTEX;
+    setpointtype(insertpt, DUPLICATEDVERTEX);
     dupverts++;
     return;
   }
@@ -941,8 +941,8 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
   recenttet = *searchtet; // Remember a handle.
 
   // Set the point type.
-  if (pointtype(insertpt) == UNUSEDVERTEX) {
-    pointtype(insertpt) = VOLVERTEX;
+  if (getpointtype(insertpt) == UNUSEDVERTEX) {
+    setpointtype(insertpt, VOLVERTEX);
   }
 
   // If flipflag == 1, do Delaunay flip.

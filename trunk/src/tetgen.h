@@ -1360,11 +1360,19 @@ void tssdissolve1(triface& t) {
 
 #define pointmark(pt) ((int *) (pt))[pointmarkindex]
     
-#define pointtype(pt) ((enum verttype *) (pt))[pointmarkindex + 1]
-    
 #define point2tet(pt) ((tetrahedron *) (pt))[point2tetindex]
     
 #define point2ppt(pt) ((point *) (pt))[point2tetindex]
+
+// #define pointtype(pt) ((enum verttype *) (pt))[pointmarkindex + 1]
+
+enum verttype getpointtype(point pt) {
+  return (enum verttype) (((int *) (pt))[pointmarkindex + 1] >> 1);
+}
+
+void setpointtype(point pt, enum verttype type) {
+  ((int *) (pt))[pointmarkindex + 1] = ((int) type << 1);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

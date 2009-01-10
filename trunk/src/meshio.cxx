@@ -79,7 +79,7 @@ void tetgenmesh::jettisonnodes()
   while (pointloop != (point) NULL) {
     // jetflag = (pointtype(pointloop) == DUPLICATEDVERTEX) || 
     //   (pointtype(pointloop) == UNUSEDVERTEX);
-    jetflag = (pointtype(pointloop) == DUPLICATEDVERTEX);
+    jetflag = (getpointtype(pointloop) == DUPLICATEDVERTEX);
     if (jetflag) {
       // It is a duplicated point, delete it.
       pointdealloc(pointloop);

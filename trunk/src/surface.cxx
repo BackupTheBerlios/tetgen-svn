@@ -320,12 +320,12 @@ void tetgenmesh::mergefacets()
               j = pointmark(eorg);
               segspernodelist[j]--;
               if (segspernodelist[j] == 0) {
-                pointtype(eorg) = FACETVERTEX;
+                setpointtype(eorg, FACETVERTEX);
               }
               j = pointmark(edest);
               segspernodelist[j]--;
               if (segspernodelist[j] == 0) {
-                pointtype(edest) = FACETVERTEX;
+                setpointtype(edest, FACETVERTEX);
               }
               // Add the edge to flip stack.
               futureflip = flipshpush(futureflip, &parentsh);
@@ -392,7 +392,7 @@ void tetgenmesh::meshsurface()
         for (j = 0; j < p->numberofvertices; j++) {
           end1 = p->vertexlist[j];
           tstart = idx2verlist[end1];
-          if (pointtype(tstart) == DUPLICATEDVERTEX) {
+          if (getpointtype(tstart) == DUPLICATEDVERTEX) {
             // Reset the index of vertex-j.
             tend = point2ppt(tstart);
             end2 = pointmark(tend);

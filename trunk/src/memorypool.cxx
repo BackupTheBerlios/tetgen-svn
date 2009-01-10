@@ -721,7 +721,7 @@ tetgenmesh::badface* tetgenmesh::badfacetraverse(memorypool *pool)
 
 void tetgenmesh::pointdealloc(point dyingpoint)
 {
-  pointtype(dyingpoint) = DEADVERTEX;
+  setpointtype(dyingpoint, DEADVERTEX);
   pointpool->dealloc((void *) dyingpoint);
 }
 
@@ -740,7 +740,7 @@ tetgenmesh::point tetgenmesh::pointtraverse()
     if (newpoint == (point) NULL) {
       return (point) NULL;
     }
-  } while (pointtype(newpoint) == DEADVERTEX); // Skip dead ones.
+  } while (getpointtype(newpoint) == DEADVERTEX); // Skip dead ones.
   return newpoint;
 }
 
@@ -819,7 +819,7 @@ void tetgenmesh::makepoint(point* pnewpt)
   // Initialize the point marker (starting from in->firstnumber).
   pointmark(*pnewpt) = (int) pointpool->items - (in->firstnumber ? 0 : 1);
   point2tet(*pnewpt) = NULL;
-  pointtype(*pnewpt) = UNUSEDVERTEX;
+  setpointtype(*pnewpt, UNUSEDVERTEX);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

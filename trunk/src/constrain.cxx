@@ -640,8 +640,8 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
   ei = sorg(*sseg);
   ej = sdest(*sseg);
 
-  if (pointtype(ei) == ACUTEVERTEX) {
-    if (pointtype(ej) == ACUTEVERTEX) {
+  if (getpointtype(ei) == ACUTEVERTEX) {
+    if (getpointtype(ej) == ACUTEVERTEX) {
       // Both ei and ej are ACUTEVERTEX.
       stype = 0;
     } else {
@@ -649,17 +649,17 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
       stype = 1;
     }
   } else {
-    if (pointtype(ei) == RIDGEVERTEX) {
-      if (pointtype(ej) == ACUTEVERTEX) {
+    if (getpointtype(ei) == RIDGEVERTEX) {
+      if (getpointtype(ej) == ACUTEVERTEX) {
         stype = 1; sign = -1;
       } else {
-        if (pointtype(ej) == RIDGEVERTEX) {
+        if (getpointtype(ej) == RIDGEVERTEX) {
           // Both ei and ej are non-acute.
           stype = 0;
         } else {
           // ej is a STEINERVETEX.
           ek = farsdest(*sseg);
-          if (pointtype(ek) == ACUTEVERTEX) {
+          if (getpointtype(ek) == ACUTEVERTEX) {
             stype = 1; sign = -1;
           } else {
             stype = 0;
@@ -668,23 +668,23 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
       }
     } else {
       // ei is a STEINERVERTEX.
-      if (pointtype(ej) == ACUTEVERTEX) {
+      if (getpointtype(ej) == ACUTEVERTEX) {
         stype = 1; sign = -1;
       } else {
         ek = farsorg(*sseg);
-        if (pointtype(ej) == RIDGEVERTEX) {
-          if (pointtype(ek) == ACUTEVERTEX) {
+        if (getpointtype(ej) == RIDGEVERTEX) {
+          if (getpointtype(ek) == ACUTEVERTEX) {
             stype = 1;
           } else {
             stype = 0;
           }
         } else {
           // Both ei and ej are STEINERVETEXs. ei has priority.
-          if (pointtype(ek) == ACUTEVERTEX) {
+          if (getpointtype(ek) == ACUTEVERTEX) {
             stype = 1;
           } else {
             ek = farsdest(*sseg);
-            if (pointtype(ek) == ACUTEVERTEX) {
+            if (getpointtype(ek) == ACUTEVERTEX) {
               stype = 1; sign = -1;
             } else {
               stype = 0;
@@ -826,7 +826,7 @@ void tetgenmesh::markacutevertices()
         printf("    Mark %d as %s.\n", pointmark(pa), acuteflag ?
           "ACUTEVERTEX" : "RIDGEVERTEX");
       }
-      pointtype(pa) = acuteflag ? ACUTEVERTEX : RIDGEVERTEX;
+      setpointtype(pa, acuteflag ? ACUTEVERTEX : RIDGEVERTEX);
       acutecount += (acuteflag ? 1 : 0);
     }
     pa = pointtraverse();
@@ -883,7 +883,7 @@ void tetgenmesh::delaunizesegments()
         getsegmentsplitpoint(&sseg, refpt, newpt);
         // Split the segment by newpt.
         flipn2nf(newpt, splitshs, 1);
-        pointtype(newpt) = STEINERVERTEX;
+        setpointtype(newpt, STEINERVERTEX);
         sspivot(splitshs[0], sseg);
         sspivot(splitshs[1], nsseg);
         // Some subfaces may be non-Delaunay.
@@ -893,8 +893,8 @@ void tetgenmesh::delaunizesegments()
       } else {
         // Split the segment by refpt.
         flipn2nf(refpt, splitshs, 1);
-        if (pointtype(refpt) != ACUTEVERTEX) {
-          pointtype(refpt) = RIDGEVERTEX;
+        if (getpointtype(refpt) != ACUTEVERTEX) {
+          setpointtype(refpt, RIDGEVERTEX);
         }
         sspivot(splitshs[0], sseg);
         sspivot(splitshs[1], nsseg);
@@ -1059,7 +1059,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
   }
 
   if (ori == 0) {
-    if (pointtype(pe) == VOLVERTEX) {
+    if (getpointtype(pe) == VOLVERTEX) {
       // A vertex lies on the facet.
       enext0fnext(spintet, *searchtet);
       esymself(*searchtet);  // b->a.
