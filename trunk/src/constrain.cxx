@@ -1109,7 +1109,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   face checkseg;
   point pa, pb, pc, pf, pg;
   REAL ori;
-  int idx, i, j;
+  int i, j;
 
   int *iptr;
 
@@ -1120,12 +1120,9 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   pc = sapex(*psub);
 
   // Mark the vertices of this face.
-  idx = pointmark(pa);
-  pointmark(pa) = -(idx + 1);
-  idx = pointmark(pb);
-  pointmark(pb) = -(idx + 1);
-  idx = pointmark(pc);
-  pointmark(pc) = -(idx + 1);
+  pinfect(pa);
+  pinfect(pb);
+  pinfect(pc);
   // Mark this face as tested.
   smarktest(*psub);
 
@@ -1140,9 +1137,8 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
         assert(neighsh.sh != NULL); // SELF_CHECK
         if (!smarktested(neighsh)) {
           pf = sapex(neighsh);
-          idx = pointmark(pf);
-          if (idx >= 0) {
-            pointmark(pf) = -(idx + 1);
+          if (!pinfected(pf)) {
+            pinfect(pf);
           }
           smarktest(neighsh);
           misregion->newindex((void **) &psub);
@@ -1195,7 +1191,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
     while (1) {
       // Remember: spintet is edge d->e, d lies below abc.
       pf = apex(spintet);
-      if (pointmark(pf) >= 0) {
+      if (!pinfected(pf)) {
         // There exist a crossing edge, either d->f, or f->e.
         ori = orient3d(pa, pb, pc, pf);
         assert(ori != 0);
@@ -1259,21 +1255,15 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   }
 
   // Unmark all facet vertices.
-  idx = pointmark(pa);
-  pointmark(pa) = -(idx + 1);
-  idx = pointmark(pb);
-  pointmark(pb) = -(idx + 1);
-  idx = pointmark(pc);
-  pointmark(pc) = -(idx + 1);
+  puninfect(pa);
+  puninfect(pb);
+  puninfect(pc);
   // Mark all vertices of the facet.
   for (i = 0; i < misregion->objects; i++) {
     worksh = * (face *) fastlookup(misregion, i);
     sunmarktest(worksh);
     pf = sapex(worksh);
-    idx = pointmark(pf);
-    if (idx < 0) {
-      pointmark(pf) = -(idx + 1);
-    }
+    puninfect(pf);
   }
   misregion->restart();
 }

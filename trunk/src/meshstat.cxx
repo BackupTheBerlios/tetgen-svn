@@ -555,13 +555,18 @@ void tetgenmesh::ptet(triface* t)
     ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
     printf("  ori = %g.\n", ori);
   } else {
-    printf("  (hull tet)");
+    printf("  (hull tet).\n");
   }
+  // Report the status of this tet.
+  printf("      ");
   if (infected(*t)) {
-    printf(" (infected)");
+    printf("(infected) ");
   }
   if (marktested(*t)) {
-    printf(" (marktested)");
+    printf("(marktested) ");
+  }
+  if (edgemarked(*t)) {
+    printf("(edgemarked)");
   }
   printf("\n");
 
@@ -580,9 +585,6 @@ void tetgenmesh::ptet(triface* t)
       }
       if (infected(prtface)) {
         printf(" (infected)");
-      }
-      if (marktested(prtface)) {
-        printf(" (marktested)");
       }
       printf("\n");
     }
@@ -939,6 +941,26 @@ void tetgenmesh::psubface(int i, int j, int k)
 int tetgenmesh::pmark(point p)
 {
   return pointmark(p);
+}
+
+void tetgenmesh::pvert(point pt)
+{
+  triface adjtet;
+  int idx;
+
+  idx = ((int *) (pt))[pointmarkindex];
+  printf("  vertex %d: x%lx\n", idx, (unsigned long) pt);
+  idx = ((int *) (pt))[pointmarkindex + 1];
+  printf("  type: %d (%s infected).\n", idx >> 1, idx & 1 ? " " : "not");
+
+  decode(point2tet(pt), adjtet);
+  if (adjtet.tet != NULL) {
+    printf("  adjtet: x%lx (%d, %d, %d, %d).\n", (unsigned long) adjtet.tet,
+      pointmark(adjtet.tet[4]), pointmark(adjtet.tet[5]),
+      pointmark(adjtet.tet[6]), pointmark(adjtet.tet[7]));
+  } else {
+    printf("  No adjacent tet.\n");
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

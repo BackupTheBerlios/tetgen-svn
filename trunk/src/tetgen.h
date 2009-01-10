@@ -1371,8 +1371,20 @@ enum verttype getpointtype(point pt) {
 }
 
 void setpointtype(point pt, enum verttype type) {
-  ((int *) (pt))[pointmarkindex + 1] = ((int) type << 1);
+  ((int *) (pt))[pointmarkindex + 1] = 
+    ((int) type << 1) + (((int *) (pt))[pointmarkindex + 1] & 1);
 }
+
+// pinfect(), puninfect(), pinfected() -- primitives to flag or unflag
+//   a point. The last bit of the integer '[pointindex+1]' is flaged.
+
+#define pinfect(pt) \
+  ((int *) (pt))[pointmarkindex + 1] = ((int *) (pt))[pointmarkindex + 1] | 1
+
+#define puninfect(pt) \
+  ((int *) (pt))[pointmarkindex + 1] = ((int *) (pt))[pointmarkindex + 1] & ~1
+
+#define pinfected(pt) ((((int *) (pt))[pointmarkindex + 1] & 1) != 0)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1738,6 +1750,7 @@ bool pedge(int i, int j);
 void psubface(int i, int j, int k);
 void psubseg(int i, int j);
 int pmark(point p);
+void pvert(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
 void print_tetarray(int n, triface *tetarray);
