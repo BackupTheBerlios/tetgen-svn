@@ -1273,34 +1273,41 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
 // delaunizecavity()    Fill a cavity by Delaunay tetrahedra.                //
 //                                                                           //
 // The tetrahedralizing cavity is the half (top or bottom part) of the whole //
-// cavity.  The boundary faces of the half cavity are given in 'cavfaces'.   //
+// cavity.  The boundary faces of the half cavity are given in 'cavfaces',   //
+// the bounday faces of the internal facet are not given.  These faces will  //
+// automatically appear as hull faces of the DT.                             //
 //                                                                           //
 // Assume an initial DT exists.  This routine first constructs the DT of the //
 // vertices of the cavity by incrmentally inserting the vertices.  Then it   //
-// identifies the boundary faces of the cavity in DT (they must exist in DT).//
-// The it classifies inner and outer tets of the DT. The inner tets are ret- //
-// urned in 'newtets', the outer tets are deleted.                           //
+// identifies the boundary faces of the cavity in DT (they must exist). Then //
+// it classifies inner and outer tets of the DT. The inner tets are returned //
+// in 'newtets', the outer tets are deleted.                                 //
 //                                                                           //
-// Since the horizon face of the cavity are not given in 'cavfaces',  there  //
-// are 'open' faces in 'newtets'. They are returned in 'openfaces'.          //
+// 'tmptets' is a work array. It is used to hold all tets of the DT. Some of //
+// them may be outside the cavity and will be deleted.                       //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
-  arraypool *openfaces)
+void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
+  arraypool *tmptets)
 {
-  triface *pface, searchtet;
+  triface *ptet, searchtet, neightet;
   face tmpsh;
-  point pt[3];
+  point pt[3], pa;
   enum intersection dir;
+  REAL ori;
   int i, j;
+
+  tetrahedron ptr;
+
+  // Todo: bakup global variables, hullsize, checksubsegs.
 
   // Create DT. Incrementally insert vertices.
   for (i = 0; i < cavfaces->objects; i++) {
-    pface = (triface *) fastlookup(cavfaces, i);
-    pt[0] = org(*pface);
-    pt[1] = dest(*pface);
-    pt[2] = apex(*pface);
+    ptet = (triface *) fastlookup(cavfaces, i);
+    pt[0] = org(*ptet);
+    pt[1] = dest(*ptet);
+    pt[2] = apex(*ptet);
     for (j = 0; j < 3; j++) {
       if (!pinfected(pt[j])) {
         searchtet = recenttet;
@@ -1310,13 +1317,29 @@ bool tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     }
   }
 
-  // Indentify boundary faces.
+  // Collect all tets of the DT. Re-use 'tmptets'.
+  marktest(recenttet);
+  tmptets->newindex((void **) &ptet);
+  *ptet = recenttet;
+  for (i = 0; i < tmptets->objects; i++) {
+    searchtet = * (triface *) fastlookup(tmptets, i);
+    for (searchtet.loc = 0; searchtet.loc < 4; searchtet.loc++) {
+      sym(searchtet, neightet);
+      if (!marktested(neightet)) {
+        marktest(neightet);
+        tmptets->newindex((void **) &ptet);
+        *ptet = neightet;
+      }
+    }
+  }
+
+  // Indentify boundary faces. Mark interior tets.
   for (i = 0; i < cavfaces->objects; i++) {
-    pface = (triface *) fastlookup(cavfaces, i);
-    pface.ver = 0;  // Choose the 0th edge ring.
-    pt[0] = org(*pface);
-    pt[1] = dest(*pface);
-    pt[2] = apex(*pface);
+    ptet = (triface *) fastlookup(cavfaces, i);
+    ptet->ver = 0;  // Choose the 0th edge ring.
+    pt[0] = org(*ptet);
+    pt[1] = dest(*ptet);
+    pt[2] = apex(*ptet);
     // Uninfect the vertices.
     for (j = 0; j < 3; j++) {
       puninfect(pt[j]);
@@ -1324,18 +1347,84 @@ bool tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     // Create a temp subface.
     makeshellface(subfacepool, &tmpsh);
     setshvertices(tmpsh, pt[0], pt[1], pt[2]);
-    // Connect pface and tmpsh. They do NOT connect normally.
-    pface.tet[pface.loc] = (tetrahedron) sencode(tmpsh);
-    tmpsh.sh[0] = (shellface) encode(pface);
+    // Connect ptet and tmpsh. They do NOT connect normally.
+    ptet->tet[ptet->loc] = (tetrahedron) sencode(tmpsh);
+    tmpsh.sh[0] = (shellface) encode(*ptet);
     // Insert tmpsh in DT.
     searchtet.tet = NULL; 
     dir = scoutsubface(&tmpsh, &searchtet);
     if (dir != SHAREFACE) {
       assert(0); // Face unmatched. Not process yet.
     }
+    // Get a tet in DT containing tmpsh.
+    stpivot(tmpsh, neightet);
+    pa = oppo(neightet);
+    if (pa != dummypoint) {
+      // Test if pa is inside or outside.
+      ori = orient3d(pt[0], pt[1], pt[2], pa);
+      assert(ori != 0); // SELF_CHECK
+      if (ori < 0) {
+        symself(neightet); // Its adjacent tet is inside.
+      }
+    } else {
+      // A hull tet, its adjacent tet is inside.
+      symself(neightet);
+    }
+    if (!infected(neightet)) {
+      // Mark the tet as interior.
+      infect(neightet);
+      // Add this tet in newtets.
+      newtets->newindex((void **) &ptet);
+      *ptet = neightet;
+    }
   }
 
-  // Classify inter and outer tets.
+  // Collect all interior tets.
+  for (i = 0; i < newtets->objects; i++) {
+    searchtet = * (triface *) fastlookup(newtets, i);
+    for (searchtet.loc = 0; searchtet.loc < 4; searchtet.loc++) {
+      tspivot(searchtet, tmpsh);
+      if (tmpsh.sh == NULL) {
+        sym(searchtet, neightet);
+        if (!infected(neightet)) {
+          if ((point) neightet.tet[7] != dummypoint) {
+            // It is an interior tet.
+            infect(neightet);
+            newtets->newindex((void **) &ptet);
+            *ptet = neightet;
+          } else {
+            // A hull tet. This face is on the internal facet of the
+            //   whole cavity. It will be connected later.
+            searchtet.tet[searchtet.loc] = NULL;
+          }
+        }
+      }
+    }
+  }
+
+  // Delete all outer tets.
+  for (i = 0; i < tmptets->objects; i++) {
+    searchtet = * (triface *) fastlookup(tmptets, i);
+    if (!infected(searchtet)) {
+      tetrahedrondealloc(searchtet.tet);
+    } else {
+      // An interior tet. Unmark and uninfect it.
+      unmarktest(searchtet);
+      uninfect(searchtet);
+    }
+  }
+  tmptets->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// constrainedfacets()    Recover subfaces saved in 'subfacestack'.          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::constrainedfacets()
+{
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1348,6 +1437,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
 
 void tetgenmesh::formskeleton()
 {
+  face *pssub, ssub;
   face *psseg, sseg;
   REAL bakeps;
   int s, i;
@@ -1355,6 +1445,10 @@ void tetgenmesh::formskeleton()
   if (!b->quiet) {
     printf("Recovering boundaries.\n");
   }
+
+  // Bakup the epsilon.
+  bakeps = b->epsilon;
+  b->epsilon = 0;
 
   // Construct a map from point to tets for speeding point location.
   makepoint2tetmap();
@@ -1390,12 +1484,22 @@ void tetgenmesh::formskeleton()
 
   // Segments will be introduced.
   checksubsegs = 1;
-
-  // Bakup the epsilon.
-  bakeps = b->epsilon;
-  b->epsilon = 0;
-
+  // Recover segments.
   delaunizesegments();
+
+  // Put all subfaces into list (in sequential order).
+  subfacepool->traversalinit();
+  for (i = 0; i < subfacepool->items; i++) {
+    ssub.sh = shellfacetraverse(subfacepool);
+    sinfect(ssub);  // Only save it once.
+    subfacstack->newindex((void **) &pssub);
+    *pssub = ssub;
+  }
+
+  // Subfaces will be introduced.
+  checksubfaces = 1;
+  // Recover facets.
+  constrainedfacets();
 
   // checksubsegs = 0;
   b->epsilon = bakeps;
