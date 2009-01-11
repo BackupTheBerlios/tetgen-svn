@@ -1231,7 +1231,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   }
   crossedges->restart();
 
-  // Collect the top and bottom faces.  
+  // Collect the top and bottom faces. 
   //   Remember that each cross tet was saved in the standard form: deab,
   //   where de is a corrsing edge, orient3d(d,e,a,b) < 0.
   for (i = 0; i < crosstets->objects; i++) {
@@ -1266,6 +1266,76 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
     puninfect(pf);
   }
   misregion->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// delaunizecavity()    Fill a cavity by Delaunay tetrahedra.                //
+//                                                                           //
+// The tetrahedralizing cavity is the half (top or bottom part) of the whole //
+// cavity.  The boundary faces of the half cavity are given in 'cavfaces'.   //
+//                                                                           //
+// Assume an initial DT exists.  This routine first constructs the DT of the //
+// vertices of the cavity by incrmentally inserting the vertices.  Then it   //
+// identifies the boundary faces of the cavity in DT (they must exist in DT).//
+// The it classifies inner and outer tets of the DT. The inner tets are ret- //
+// urned in 'newtets', the outer tets are deleted.                           //
+//                                                                           //
+// Since the horizon face of the cavity are not given in 'cavfaces',  there  //
+// are 'open' faces in 'newtets'. They are returned in 'openfaces'.          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+bool tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
+  arraypool *openfaces)
+{
+  triface *pface, searchtet;
+  face tmpsh;
+  point pt[3];
+  enum intersection dir;
+  int i, j;
+
+  // Create DT. Incrementally insert vertices.
+  for (i = 0; i < cavfaces->objects; i++) {
+    pface = (triface *) fastlookup(cavfaces, i);
+    pt[0] = org(*pface);
+    pt[1] = dest(*pface);
+    pt[2] = apex(*pface);
+    for (j = 0; j < 3; j++) {
+      if (!pinfected(pt[j])) {
+        searchtet = recenttet;
+        insertvertex(pt[j], &searchtet, true);
+        pinfect(pt[j]);
+      }
+    }
+  }
+
+  // Indentify boundary faces.
+  for (i = 0; i < cavfaces->objects; i++) {
+    pface = (triface *) fastlookup(cavfaces, i);
+    pface.ver = 0;  // Choose the 0th edge ring.
+    pt[0] = org(*pface);
+    pt[1] = dest(*pface);
+    pt[2] = apex(*pface);
+    // Uninfect the vertices.
+    for (j = 0; j < 3; j++) {
+      puninfect(pt[j]);
+    }
+    // Create a temp subface.
+    makeshellface(subfacepool, &tmpsh);
+    setshvertices(tmpsh, pt[0], pt[1], pt[2]);
+    // Connect pface and tmpsh. They do NOT connect normally.
+    pface.tet[pface.loc] = (tetrahedron) sencode(tmpsh);
+    tmpsh.sh[0] = (shellface) encode(pface);
+    // Insert tmpsh in DT.
+    searchtet.tet = NULL; 
+    dir = scoutsubface(&tmpsh, &searchtet);
+    if (dir != SHAREFACE) {
+      assert(0); // Face unmatched. Not process yet.
+    }
+  }
+
+  // Classify inter and outer tets.
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -775,7 +775,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
   // Set a handle for speeding point location.
   recenttet = newtet;
-  if (checksubsegs) {
+  if (checksubsegs || checksubfaces) {
     point2tet(insertpt) = encode(newtet);
   }
 
@@ -796,7 +796,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         } while (neightet.tet[neightet.loc] != NULL);
         bond(newtet, neightet); // Connect newtet <==> neightet.
       }
-      if (checksubsegs) {
+      if (checksubsegs || checksubfaces) {
         point2tet(org(*cavetet)) = encode(*cavetet);
       }
       enextself(*cavetet);
