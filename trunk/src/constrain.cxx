@@ -1277,11 +1277,10 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
 // the bounday faces of the internal facet are not given.  These faces will  //
 // automatically appear as hull faces of the DT.                             //
 //                                                                           //
-// Assume an initial DT exists.  This routine first constructs the DT of the //
-// vertices of the cavity by incrmentally inserting the vertices.  Then it   //
-// identifies the boundary faces of the cavity in DT (they must exist). Then //
-// it classifies inner and outer tets of the DT. The inner tets are returned //
-// in 'newtets', the outer tets are deleted.                                 //
+// This routine first constructs the DT of the vertices by the Bowyer-Watson //
+// algorithm.  Then it identifies the boundary faces of the cavity in DT     //
+// (they must exist).  Then it classifies inner and outer tets.  The inter   //
+// tets are returned in 'newtets', the outer tets are deleted.               //
 //                                                                           //
 // 'tmptets' is a work array. It is used to hold all tets of the DT. Some of //
 // them may be outside the cavity and will be deleted.                       //
@@ -1293,17 +1292,48 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
 {
   triface *ptet, searchtet, neightet;
   face tmpsh;
-  point pt[3], pa;
+  point pa, pb, pc, pd, pt[3];
   enum intersection dir;
   REAL ori;
   int i, j;
 
   tetrahedron ptr;
 
-  // Todo: bakup global variables, hullsize, checksubsegs.
+  ptet = (triface *) fastlookup(cavfaces, 0);
+  pa = org(*ptet);
+  pb = dest(*ptet);
+  pc = apex(*ptet);
+  pinfect(pa);
+  pinfect(pb);
+  pinfect(pc);
+  pd = NULL;
+  for (i = 1; i < cavfaces->objects; i++) {
+    ptet = (triface *) fastlookup(cavfaces, i);
+    pt[0] = org(*ptet);
+    pt[1] = dest(*ptet);
+    pt[2] = apex(*ptet);
+    for (j = 0; j < 3; j++) {
+      if (!pinfected(pt[j])) {
+        ori = orient3d(pa, pb, pc, pt[j]);
+        if (ori != 0) {
+          pd = pt[j];
+          if (ori > 0) {  // Swap pa and pb.
+            pt[j] = pa; pa = pb; pb = pt[j]; 
+          }
+          break;
+        }
+      }
+    }
+    if (pd != NULL) break;
+  }
+  assert(i < cavfaces->objects); // SELF_CHECK
+  pinfect(pd);
 
-  // Create DT. Incrementally insert vertices.
-  for (i = 0; i < cavfaces->objects; i++) {
+  // Create an init DT.
+  initialDT(pa, pb, pc, pd);
+
+  // Incrementally insert other vertices.
+  for (i = 1; i < cavfaces->objects; i++) {
     ptet = (triface *) fastlookup(cavfaces, i);
     pt[0] = org(*ptet);
     pt[1] = dest(*ptet);
@@ -1358,10 +1388,10 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     }
     // Get a tet in DT containing tmpsh.
     stpivot(tmpsh, neightet);
-    pa = oppo(neightet);
-    if (pa != dummypoint) {
+    pd = oppo(neightet);
+    if (pd != dummypoint) {
       // Test if pa is inside or outside.
-      ori = orient3d(pt[0], pt[1], pt[2], pa);
+      ori = orient3d(pt[0], pt[1], pt[2], pd);
       assert(ori != 0); // SELF_CHECK
       if (ori < 0) {
         symself(neightet); // Its adjacent tet is inside.
@@ -1425,6 +1455,44 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
 void tetgenmesh::constrainedfacets()
 {
 
+/*
+  // Loop until 'subfacstack' is empty.
+  while (subfacstack->objects > 0l) {
+    // The list is used as a stack.
+    subfacstack->objects--;
+    pssub = (face *) fastlookup(subfacstack, subfacstack->objects);
+    ssub = *pssub;
+
+    if (!sinfected(ssub)) continue; // Not a missing subface.
+    suninfect(ssub);
+
+    // Insert the subface.
+    searchtet.tet = NULL;
+    dir = scoutsubface(&ssub, &searchtet);
+    if (dir == SHAREFACE) continue;
+
+    // The subface is missing.
+    if (dir == ACROSSTET) {
+      // Recover the subface.
+      bakhullsize = hullsize;
+      checksubsegs = 0;
+      misregion->newindex((void **) &pssub);
+      *pssub = ssub;
+      crosstets->newindex((void **) &ptet);
+      *ptet = searchtet;
+      // For a cavity of crossing tets.
+      formcavity(misregion, crosstets, topfaces, botfaces);
+      // Tetrahedralize the top part.
+      delaunizecavity(topfaces, topnewtets, tmptets);
+      // Tetrahedralize the bottom part.
+      delaunizecavity(botfaces, botnewtets, tmptets);
+      // Glue the two tetrahedralizations.
+      // Delete crossing tets.
+      hullsize = bakhullsize;
+      checksubsegs = 1;
+    }
+  }
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////
