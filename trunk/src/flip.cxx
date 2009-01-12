@@ -1158,7 +1158,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   if (checksubsegs) {
     // Bond segments to new (flipped) tets.
     for (i = 0; i < 3; i++) {
-      tssdissolve1(fliptets[0]); // Clear the old bond.
+      tssdissolve(fliptets[0]); // Clear the old bond.
       tsspivot1(topcastets[i], checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(fliptets[0], checkseg);
@@ -1169,7 +1169,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     for (i = 0; i < 3; i++) {
       enext0fnext(fliptets[0], newface);
       enextself(newface); // edge b->d, c->d, a->d.
-      tssdissolve1(newface);
+      tssdissolve(newface);
       fnext(fliptets[0], casface);
       enextself(casface);
       tsspivot1(casface, checkseg);
@@ -1180,7 +1180,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     }
     // Process the bottom tet bace.
     for (i = 0; i < 3; i++) {
-      tssdissolve1(fliptets[1]); // Clear the old bond.
+      tssdissolve(fliptets[1]); // Clear the old bond.
       tsspivot1(botcastets[i], checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(fliptets[1], checkseg);
@@ -1191,7 +1191,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     for (i = 0; i < 3; i++) {
       enext0fnext(fliptets[1], newface);
       enext2self(newface); // edge b<-e, c<-e, a<-e.
-      tssdissolve1(newface);
+      tssdissolve(newface);
       fnext(fliptets[1], casface);
       enext2self(casface);
       tsspivot1(casface, checkseg);

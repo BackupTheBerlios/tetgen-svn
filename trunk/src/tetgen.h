@@ -1313,8 +1313,16 @@ void tsbond(triface& t, face& s) {
     }
   }
   // Bond t <==> s.
-  ((shellface *) (t).tet[9])[(t).loc] = sencode((s));
+  ((shellface *) (t).tet[9])[(t).loc] = sencode(s);
   (s).sh[9] = (shellface) encode(t);
+}
+
+// tsdissolve1() -- dissolve a tet-ssubface bond at the tet side.
+
+void tsdissolve(triface& t) {
+  if ((t).tet[9] != NULL) {
+    ((shellface *) (t).tet[9])[(t).loc] = NULL;
+  }
 }
 
 // tsspivot1() -- given a tet's edge t, return a subsegment s at this edge.
@@ -1346,7 +1354,7 @@ void tssbond1(triface& t, face& s) {
 
 // tssdissolve1() -- dissolve a tet-seg bond at the tet edge.
 
-void tssdissolve1(triface& t) {
+void tssdissolve(triface& t) {
   if ((t).tet[8] != NULL) {
     ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = NULL;
   }

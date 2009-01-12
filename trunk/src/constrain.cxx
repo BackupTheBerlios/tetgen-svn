@@ -1291,7 +1291,7 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
   arraypool *tmptets)
 {
   triface *ptet, searchtet, neightet;
-  face tmpsh;
+  face checksh, tmpsh;
   point pa, pb, pc, pd, pt[3];
   enum intersection dir;
   REAL ori;
@@ -1377,9 +1377,8 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     // Create a temp subface.
     makeshellface(subfacepool, &tmpsh);
     setshvertices(tmpsh, pt[0], pt[1], pt[2]);
-    // Connect ptet and tmpsh. They do NOT connect normally.
+    // Remember tmpsh (use the adjacent tet slot). 
     ptet->tet[ptet->loc] = (tetrahedron) sencode(tmpsh);
-    tmpsh.sh[0] = (shellface) encode(*ptet);
     // Insert tmpsh in DT.
     searchtet.tet = NULL; 
     dir = scoutsubface(&tmpsh, &searchtet);
@@ -1430,6 +1429,38 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
         }
       }
     }
+  }
+
+  // Connect newtets to tets outside the cavity.
+  for (i = 0; i < cavfaces->objects; i++) {
+    ptet = (triface *) fastlookup(cavfaces, i);
+    pt[0] = org(*ptet);
+    pt[1] = dest(*ptet);
+    // Get the saved temp subface.
+    sdecode(ptet->tet[ptet->loc], tmpsh);
+    // Get the adjacent new tet.
+    stpivot(tmpsh, neightet);
+    if (!infected(neightet)) {
+      symself(neightet);
+      assert(infected(neightet)); // SELF_CHECK
+    }
+    // Adjust the edge.
+    neightet.ver = 0;
+    for (j = 0; j < 3; j++) {
+      if (org(neightet) == pt[1]) break;
+    }
+    assert(j < 3); // SELF_CHECK
+    assert(dest(neightet) == pt[0]); // SELF_CHECK
+    // Bond the tets and possible tet<==>subface.
+    bond(*ptet, neightet);
+    tspivot(*ptet, checksh);
+    if (checksh.sh != NULL) {
+      tsbond(neightet, checksh);
+    } else {
+      tsdissolve(neightet); // No subface, clear the pointer.
+    }
+    // Delete the temp subface.
+    shellfacedealloc(subfacepool, tmpsh.sh);
   }
 
   // Delete all outer tets.
