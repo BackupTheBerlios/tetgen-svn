@@ -364,7 +364,7 @@ void tetgenmesh::checksegments()
             // Loop all tets sharing at this edge.
             neightet = tetloop;
             do {
-              tsspivot1(neightet, checkseg);
+              tsspivot(neightet, checkseg);
               if (checkseg.sh != sseg.sh) {
                 printf("  !! Wrong tet-seg connection.\n");
                 printf("    Tet: x%lx (%d, %d, %d, %d) - ", 

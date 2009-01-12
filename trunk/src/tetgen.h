@@ -1317,7 +1317,7 @@ void tsbond(triface& t, face& s) {
   (s).sh[9] = (shellface) encode(t);
 }
 
-// tsdissolve1() -- dissolve a tet-ssubface bond at the tet side.
+// tsdissolve() -- dissolve a tet-ssubface bond at the tet side.
 
 void tsdissolve(triface& t) {
   if ((t).tet[9] != NULL) {
@@ -1325,11 +1325,11 @@ void tsdissolve(triface& t) {
   }
 }
 
-// tsspivot1() -- given a tet's edge t, return a subsegment s at this edge.
+// tsspivot() -- given a tet's edge t, return a subsegment s at this edge.
 //   t and s is bonded through tssbond1(). if s.sh == NULL, the edge is
 //   not a subsegment.
 
-void tsspivot1(triface& t, face& s) {
+void tsspivot(triface& t, face& s) {
   if ((t).tet[8] != NULL) {
     sdecode(((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]], s);
   } else {
@@ -1352,7 +1352,7 @@ void tssbond1(triface& t, face& s) {
   ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = sencode((s));
 } 
 
-// tssdissolve1() -- dissolve a tet-seg bond at the tet edge.
+// tssdissolve() -- dissolve a tet-seg bond at the tet edge.
 
 void tssdissolve(triface& t) {
   if ((t).tet[8] != NULL) {
@@ -1627,6 +1627,7 @@ void delaunizesegments();
 enum intersection scoutsubface(face* ssub, triface* searchtet);
 void formcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*, arraypool*);
+void connectcavities(arraypool*, arraypool*, arraypool*);
 void constrainedfacets();
 
 void formskeleton();

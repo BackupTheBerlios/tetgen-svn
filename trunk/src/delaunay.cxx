@@ -687,7 +687,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           for (j = 0; j < 6; j++) {
             cavetet->loc = edge2locver[j][0];
             cavetet->ver = edge2locver[j][1];
-            tsspivot1(*cavetet, sseg);
+            tsspivot(*cavetet, sseg);
             if ((sseg.sh != NULL) && !sinfected(sseg)) {
               if (b->verbose > 2) {
                   printf("      Queue encroached segment (%d, %d).\n",
@@ -755,7 +755,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
     if (checksubsegs) {
       newtet.ver &= ~1;  // Keep in 0th edge ring.
       for (j = 0; j < 3; j++) {
-        tsspivot1(neightet, sseg);
+        tsspivot(neightet, sseg);
         if (sseg.sh != NULL) {
           if (sinfected(sseg)) {
             // The segment is not missing.
