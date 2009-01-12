@@ -1265,7 +1265,6 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
     pf = sapex(worksh);
     puninfect(pf);
   }
-  misregion->restart();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1534,7 +1533,7 @@ void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
     esymself(toptet);
     esymself(bottet);
     bond(toptet, bottet);
-    // Remember: the subsegments are bonded in delaunizecavity().
+    // Remember: the tet-segment is bonded in delaunizecavity().
     // Add this face into list.
     midfaces->newindex((void **) &ptet);
     *ptet = toptet;
@@ -1575,6 +1574,7 @@ void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
             esymself(spintet);
             esymself(bottet);
             bond(spintet, bottet);
+            // Remember: the tet-segment is bonded in delaunizecavity().
             // Add this face into list.
             midfaces->newindex((void **) &ptet);
             *ptet = spintet;
@@ -1585,6 +1585,7 @@ void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
       }
     }
   }
+  midfaces->restart();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1595,8 +1596,24 @@ void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
 
 void tetgenmesh::constrainedfacets()
 {
+  arraypool *crosstets, *topfaces, *botfaces;
+  arraypool *topnewtets, *botnewtets, *tmptets;
+  arraypool *misregion;
+  triface *ptet, searchtet;
+  face *pssub, ssub;
+  enum intersection dir;
+  int bakhullsize;
+  int i;
 
-/*
+  // Initialize arrays.
+  crosstets = new arraypool(sizeof(triface), 10);
+  topfaces = new arraypool(sizeof(triface), 10);
+  botfaces = new arraypool(sizeof(triface), 10);
+  topnewtets = new arraypool(sizeof(triface), 10);
+  botnewtets = new arraypool(sizeof(triface), 10);
+  tmptets = new arraypool(sizeof(triface), 10);
+  misregion = new arraypool(sizeof(face), 8);
+
   // Loop until 'subfacstack' is empty.
   while (subfacstack->objects > 0l) {
     // The list is used as a stack.
@@ -1611,6 +1628,11 @@ void tetgenmesh::constrainedfacets()
     searchtet.tet = NULL;
     dir = scoutsubface(&ssub, &searchtet);
     if (dir == SHAREFACE) continue;
+
+    // Push the face back into stack.
+    sinfect(ssub);
+    subfacstack->newindex((void **) pssub);
+    *pssub = ssub;
 
     // The subface is missing.
     if (dir == ACROSSTET) {
@@ -1630,11 +1652,31 @@ void tetgenmesh::constrainedfacets()
       // Glue the two tetrahedralizations.
       connectcavities(topfaces, botfaces, tmptets);
       // Delete crossing tets.
+      for (i = 0; i < crosstets->objects; i++) {
+        ptet = (triface *) fastlookup(crosstets, i);
+        tetrahedrondealloc(ptet->tet);
+      }
+      crosstets->restart();
+      topfaces->restart();
+      botfaces->restart();
+      topnewtets->restart();
+      botnewtets->restart();
+      misregion->restart();
       hullsize = bakhullsize;
       checksubsegs = 1;
+    } else {
+      assert(0); // Not handled yet.
     }
   }
-*/
+
+  // Delete arrays.
+  delete crosstets;
+  delete topfaces;
+  delete botfaces;
+  delete topnewtets;
+  delete botnewtets;
+  delete tmptets;
+  delete misregion;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
