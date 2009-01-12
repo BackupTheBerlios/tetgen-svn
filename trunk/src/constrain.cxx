@@ -1462,9 +1462,8 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
       tsdissolve(neightet); // No subface, clear the pointer to tmpsh.
     }
     // Bond a subsegment (if it exists).
-    searchtet = *ptet;
     for (j = 0; j < 3; j++) {
-      tsspivot(searchtet, checkseg);
+      tsspivot(*ptet, checkseg);
       if (checkseg.sh != NULL) {
         // Make sure no new tet is missed, do a full rotation.
         spintet = neightet;
@@ -1473,9 +1472,11 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
           tssbond1(spintet, checkseg);
           fnextself(spintet);
           if (apex(spintet) == pd) break;
+          sym(spintet, searchtet);
+          if (searchtet.tet == NULL) break;
         }
       }
-      enextself(searchtet);
+      enextself(*ptet);
       enext2self(neightet);
     }
     // Delete the temp subface.
@@ -1505,7 +1506,11 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
 void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
   arraypool* midfaces)
 {
-  /*
+  triface *ptet, toptet, bottet, neightet, spintet;
+  face checkseg;
+  bool bflag;
+  int i, j;
+
   toptet = * (triface *) fastlookup(topfaces, 0);  // F [a, b, c]
   bottet = * (triface *) fastlookup(botfaces, 0);  // F [b, a, d]
   // By assumption, toptet and bottet share the same edge.
@@ -1529,6 +1534,7 @@ void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
     esymself(toptet);
     esymself(bottet);
     bond(toptet, bottet);
+    // Remember: the subsegments are bonded in delaunizecavity().
     // Add this face into list.
     midfaces->newindex((void **) &ptet);
     *ptet = toptet;
@@ -1539,28 +1545,46 @@ void tetgenmesh::connectcavities(arraypool* topfaces, arraypool* botfaces,
   // Loop in midfaces, connect open faces.
   for (i = 0; i < midfaces->objects; i++) {
     // Get a middle face [a, b, c]
-    ptet = (triface *) fastlookup(midfaces, i);
-    toptet = *ptet;
+    toptet = * (triface *) fastlookup(midfaces, i);
     // Check the neighbors at edges [b, c] and [c, a]. 
     for (j = 0; j < 2; j++) {
       enextself(toptet); // [b, c] or [c, a].
-      sspivot(toptet, checkseg);
+      tsspivot(toptet, checkseg);
       if (checkseg.sh == NULL) {
-        pd = apex(toptet);
         spintet = toptet;
         bflag = false;
         while (1) {
           fnextself(spintet);
-          if (apex(spintet) == pa) {
+          if (apex(spintet) == apex(toptet)) {
             // The neighbor face is connected.
             bflag = true; break;
           }
           sym(spintet, neightet);
           if (neightet.tet == NULL) break;
         }
+        if (!bflag) {
+          // Not connected yet.
+          esym(toptet, bottet);
+          while (1) {
+            fnextself(bottet);
+            sym(bottet, neightet);
+            if (neightet.tet == NULL) break;
+          }
+          if (apex(bottet) == apex(spintet)) {
+            // Connect two tets together.
+            esymself(spintet);
+            esymself(bottet);
+            bond(spintet, bottet);
+            // Add this face into list.
+            midfaces->newindex((void **) &ptet);
+            *ptet = spintet;
+          } else {
+            assert(0); // Face unmatched! Not process yet.
+          }
+        }
       }
     }
-  } */
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1604,6 +1628,7 @@ void tetgenmesh::constrainedfacets()
       // Tetrahedralize the bottom part.
       delaunizecavity(botfaces, botnewtets, tmptets);
       // Glue the two tetrahedralizations.
+      connectcavities(topfaces, botfaces, tmptets);
       // Delete crossing tets.
       hullsize = bakhullsize;
       checksubsegs = 1;
