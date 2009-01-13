@@ -1621,7 +1621,6 @@ void meshsurface();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
-void markacutevertices();
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
@@ -1630,6 +1629,7 @@ void delaunizecavity(arraypool*, arraypool*, arraypool*);
 void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void constrainedfacets();
 
+void markacutevertices();
 void formskeleton();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1763,9 +1763,12 @@ int pmark(point p);
 void pvert(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
-void print_tetarray(int n, triface *tetarray);
 void print_cavebdrylist();
 void print_flipstack();
+void print_tetarray(arraypool* tetarray, bool nohulltet);
+void print_facearray(arraypool* facearray);
+void print_subfacearray(arraypool* subfacearray);
+void dump_cavity(arraypool *topfaces, arraypool *botfaces);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;

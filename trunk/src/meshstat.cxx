@@ -1032,20 +1032,6 @@ REAL tetgenmesh::test_insphere(int i, int j, int k, int l, int m)
 ///////////////////////////////////////////////////////////////////////////////
 // Print an array of tetrahedra (in draw command)
 
-void tetgenmesh::print_tetarray(int n, triface *tetarray)
-{
-  int i;
-
-  for (i = 0; i < n; i++) {
-    printf("p:draw_tet(%d, %d, %d, %d) -- %d\n", 
-      pointmark(org(tetarray[i])), pointmark(dest(tetarray[i])),
-      pointmark(apex(tetarray[i])), pointmark(oppo(tetarray[i])), i + 1);
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Print an array of tetrahedra (in draw command)
-
 void tetgenmesh::print_cavebdrylist()
 {
   FILE *fout;
@@ -1083,6 +1069,82 @@ void tetgenmesh::print_flipstack()
     traveface = traveface->nextitem;
     i++;
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Print an array of tetrahedra, faces, subfaces (in draw command)
+// If 'nohulltet' is TRUE, ignore hull tets.
+
+void tetgenmesh::print_tetarray(arraypool *tetarray, bool nohulltet)
+{
+  triface *parytet;
+  int i;
+
+  for (i = 0; i < tetarray->objects; i++) {
+    parytet = (triface *) fastlookup(tetarray, i);
+    if (nohulltet) {
+      if ((point) parytet->tet[7] == dummypoint) continue;
+    }
+    printf("p:draw_tet(%d, %d, %d, %d) -- %d\n", 
+      pointmark(org(*parytet)), pointmark(dest(*parytet)),
+      pointmark(apex(*parytet)), pointmark(oppo(*parytet)), i + 1);
+  }
+}
+
+void tetgenmesh::print_facearray(arraypool *facearray)
+{
+  triface *parytet;
+  int i;
+
+  for (i = 0; i < facearray->objects; i++) {
+    parytet = (triface *) fastlookup(facearray, i);
+    printf("p:draw_subface(%d, %d, %d) -- %d\n", 
+      pointmark(org(*parytet)), pointmark(dest(*parytet)),
+      pointmark(apex(*parytet)), i + 1);
+  }
+}
+
+void tetgenmesh::print_subfacearray(arraypool *subfacearray)
+{
+  face *parysub;
+  int i;
+
+  for (i = 0; i < subfacearray->objects; i++) {
+    parysub = (face *) fastlookup(subfacearray, i);
+    printf("p:draw_subface(%d, %d, %d) -- %d\n", 
+      pointmark(sorg(*parysub)), pointmark(sdest(*parysub)),
+      pointmark(sapex(*parysub)), i + 1);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// dump the boundary faces of a cavity into file "cavity.lua"
+// 'topfaces' and 'botfaces' are two arrays. 
+
+void tetgenmesh::dump_cavity(arraypool *topfaces, arraypool *botfaces = NULL)
+{
+  FILE *fout;
+  arraypool *cavfaces;
+  triface *paryface;
+  int i, k;
+
+  printf("  dump %ld faces to cavity.lua\n", topfaces->objects + 
+    botfaces->objects);
+  fout = fopen("cavity.lua", "w");
+
+  for (k = 0; k < 2; k++) {
+    cavfaces = (k == 0 ? topfaces : botfaces);
+    if (cavfaces != NULL) {
+      for (i = 0; i < cavfaces->objects; i++) {
+        paryface = (triface *) fastlookup(cavfaces, i);
+        fprintf(fout, "p:draw_subface(%d, %d, %d) -- %d\n", 
+          pointmark(org(*paryface)), pointmark(dest(*paryface)),
+          pointmark(apex(*paryface)), i + 1);
+      }
+    }
+  }
+
+  fclose(fout);
 }
 
 #endif // #ifndef meshstatCXX
