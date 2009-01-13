@@ -1627,7 +1627,7 @@ void delaunizesegments();
 enum intersection scoutsubface(face* ssub, triface* searchtet);
 void formcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*, arraypool*);
-void connectcavities(arraypool*, arraypool*, arraypool*);
+void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void constrainedfacets();
 
 void formskeleton();

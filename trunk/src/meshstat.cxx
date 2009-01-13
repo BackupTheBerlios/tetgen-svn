@@ -642,6 +642,25 @@ void tetgenmesh::ptet(triface* t)
       }
     }
   }
+
+  if (checksubfaces) {
+    if (t->tet[9] != NULL) {
+      shells = (shellface *) t->tet[9];
+      for (facecount = 0; facecount < 4; facecount++) {
+        sdecode(shells[facecount], checksh);
+        if (checksh.sh != NULL) {
+          printf("      [%d] x%lx %d.", facecount, (unsigned long) checksh.sh,
+            checksh.shver);
+        } else {
+          printf("      [%d] NULL.", facecount);
+        }
+        if (t->loc == facecount) {
+          printf(" (*)");  // It is the current face.
+        }
+        printf("\n");
+      }
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
