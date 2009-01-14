@@ -1105,6 +1105,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
     } else { // Flip edge [c, a]
       senext2(*pssub, flipfaces[0]);
     }
+    // Push flipfaces[0] back into stack.
+    sinfect(flipfaces[0]);
+    subfacstack->newindex((void **) pssub);
+    *pssub = flipfaces[0];
     sspivot(flipfaces[0], checkseg); // SELF_CHECK
     assert(checkseg.sh == NULL); // SELF_CHECK
     spivot(flipfaces[0], flipfaces[1]);
@@ -1119,6 +1123,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
     assert(sorg(*pssub) == pa); // SELF_CHECK
     assert(sdest(*pssub) == pb); // SELF_CHECK
     // Recover this subface recursively.
+    suninfect(*pssub);
     return scoutsubface(pssub, searchtet);
   } else {
     // Return a crossing tet.
