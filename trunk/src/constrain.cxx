@@ -1014,8 +1014,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
   pc = sapex(*pssub);
 
   if (b->verbose > 1) {
-    printf("    Scout subface (%d, %d, %d).\n", pointmark(pa), pointmark(pb),
-      pointmark(pc));
+    printf("    Scout subface (%d, %d, %d) (%ld).\n", pointmark(pa),
+      pointmark(pb), pointmark(pc), subfacstack->objects);
   }
 
   // Searchtet holds edge pa->pb. Search a face with apex pc.
@@ -1261,6 +1261,11 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
       if (apex(spintet) == pg) break;
     }
   }
+
+  if (b->verbose) {
+    printf("    Formed cavity: %ld (%ld) cross tets (edges).\n", 
+      crosstets->objects, crossedges->objects);
+  }
   crossedges->restart();
 
   // Collect the top and bottom faces. 
@@ -1330,6 +1335,10 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
   int i, j;
 
   tetrahedron ptr;
+
+  if (b->verbose) {
+    printf("    Delaunizing cavity: %ld faces.\n", cavfaces->objects);
+  }
 
   parytet = (triface *) fastlookup(cavfaces, 0);
   pa = org(*parytet);
@@ -1584,13 +1593,15 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   while (1) {
     enext0fnextself(toptet); // The next face in the same tet.
     if (toptet.tet[toptet.loc] == NULL) break;
+    symedgeself(toptet);
   }
   pc = apex(toptet);
   while (1) {
     enext0fnextself(bottet); // The next face in the same tet.
-    sym(bottet, neightet);
+    decode(bottet.tet[bottet.loc], neightet);
     if (apex(bottet) == pc) break;
     assert(neightet.tet != NULL); // SELF_CHECK
+    symedgeself(bottet);
   }
   if (neightet.tet == NULL) {
     // Connect two tets together.

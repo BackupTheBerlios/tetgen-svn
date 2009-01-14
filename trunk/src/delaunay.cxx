@@ -490,6 +490,14 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
     setpointtype(pd, VOLVERTEX);
   }
 
+  // Update the point-to-tet map.
+  if (checksubsegs || checksubfaces) {
+    point2tet(pa) = encode(firsttet);
+    point2tet(pb) = encode(firsttet);
+    point2tet(pc) = encode(firsttet);
+    point2tet(pd) = encode(firsttet);
+  }
+
   // Remember the first tetrahedron.
   recenttet = firsttet;
 }
