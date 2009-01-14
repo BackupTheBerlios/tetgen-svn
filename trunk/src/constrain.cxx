@@ -954,60 +954,64 @@ void tetgenmesh::delaunizesegments()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
+enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
   triface* searchtet)
 {
   triface spintet;
-  face checksh;
+  face flipfaces[2], checksh;
+  face checkseg;
   point pa, pb, pc, pd, pe;
   enum intersection dir;
-  REAL ori;
+  REAL ori, ori1;
   int i;
 
   tetrahedron ptr;
   int *iptr, tver;
 
-  // Search an edge of 'ssub' in tetrahedralization.
-  for (i = 0; i < 3; i++) {
-    pa = (point) ssub->sh[3 + i];
-    pb = (point) ssub->sh[3 + (i + 1) % 3];
-    
-    // Get a tet whose origin is pa.
-    decode(point2tet(pa), *searchtet);
-    assert(searchtet->tet != NULL); // SELF_CHECK
-    if ((point) searchtet->tet[4] == pa) {
-      searchtet->loc = 0; searchtet->ver = 0;
-    } else if ((point) searchtet->tet[5] == pa) {
-      searchtet->loc = 0; searchtet->ver = 2;
-    } else if ((point) searchtet->tet[6] == pa) {
-      searchtet->loc = 0; searchtet->ver = 4;
-    } else {
-      assert((point) searchtet->tet[7] == pa); // SELF_CHECK
-      searchtet->loc = 1; searchtet->ver = 2;
-    }
-
-    // Search the edge from pa->pb.
-    dir = finddirection(searchtet, pb);
-    if (dir == ACROSSVERT) {
-      pd = dest(*searchtet); 
-      if (pd == pb) {
-        // Found the edge. Break the loop.
-        break;
+  if (searchtet->tet == NULL) {
+    // Search an edge of 'ssub' in tetrahedralization.
+    pssub->shver = 0;
+    for (i = 0; i < 3; i++) {
+      pa = sorg(*pssub);
+      pb = sdest(*pssub);
+      // Get a tet whose origin is pa.
+      decode(point2tet(pa), *searchtet);
+      assert(searchtet->tet != NULL); // SELF_CHECK
+      if ((point) searchtet->tet[4] == pa) {
+        searchtet->loc = 0; searchtet->ver = 0;
+      } else if ((point) searchtet->tet[5] == pa) {
+        searchtet->loc = 0; searchtet->ver = 2;
+      } else if ((point) searchtet->tet[6] == pa) {
+        searchtet->loc = 0; searchtet->ver = 4;
       } else {
-        // A vertex lies on the search edge. Return it.
-        enextself(*searchtet);
-        return TOUCHEDGE;
+        assert((point) searchtet->tet[7] == pa); // SELF_CHECK
+        searchtet->loc = 1; searchtet->ver = 2;
       }
+      // Search the edge from pa->pb.
+      dir = finddirection(searchtet, pb);
+      if (dir == ACROSSVERT) {
+        if (dest(*searchtet) == pb) {
+          // Found the edge. Break the loop.
+          break;
+        } else {
+          // A vertex lies on the search edge. Return it.
+          enextself(*searchtet);
+          return TOUCHEDGE;
+        }
+      }
+      senextself(*pssub);
     }
+    if (i == 3) {
+      // None of the three edges exists.
+      return EDGETRIINT; // ab intersects the face in 'searchtet'.
+    }
+  } else {
+    // 'searchtet' holds the current edge of 'pssub'.
+    pa = org(*searchtet);
+    pb = dest(*searchtet);
   }
 
-  if (i == 3) {
-    // None of the three edges exists.
-    return EDGETRIINT; // ab intersects the face in 'searchtet'.
-  }
-
-  ssub->shver = (i << 1);
-  pc = sapex(*ssub);
+  pc = sapex(*pssub);
 
   if (b->verbose > 1) {
     printf("    Scout subface (%d, %d, %d).\n", pointmark(pa), pointmark(pb),
@@ -1021,13 +1025,13 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
     pd = apex(spintet);
     if (pd == pc) {
       // Found! Insert the subface.
-      tspivot(spintet, checksh);
+      tspivot(spintet, checksh); // SELF_CHECK
       assert(checksh.sh == NULL); // SELF_CHECK
-      tsbond(spintet, *ssub);
+      tsbond(spintet, *pssub);
       symedgeself(spintet);
-      tspivot(spintet, checksh);
+      tspivot(spintet, checksh); // SELF_CHECK
       assert(checksh.sh == NULL); // SELF_CHECK
-      tsbond(spintet, *ssub);
+      tsbond(spintet, *pssub);
       return SHAREFACE;
     }
     if (pd == apex(*searchtet)) break;
@@ -1037,17 +1041,19 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
   if (searchtet->ver & 01) {
     // Adjust to 0th edge ring.
     esymself(*searchtet);
-    sesymself(*ssub);
-    pd = pa; pa = pb; pb = pd;
+    sesymself(*pssub);
+    pa = org(*searchtet);
+    pb = dest(*searchtet);
   }
 
   // Get a face containing ab and its apex lies below abc.
+  pd = apex(*searchtet);
   spintet = *searchtet;
   while (1) {
-    pd = apex(spintet);
     ori = orient3d(pa, pb, pc, pd);
     if (ori > 0) break;
     fnextself(spintet);
+    pd = apex(spintet);
     assert(pd != apex(*searchtet)); // SELF_CHECK
   }
   // Search a tet whose apex->oppo crosses the facet containig abc.
@@ -1059,26 +1065,52 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* ssub,
   }
 
   if (ori == 0) {
+    fnext(spintet, *searchtet);
+    pd = apex(*searchtet);
+    pe = oppo(*searchtet);
+    if (b->verbose > 1) {
+      printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
+        pointmark(pa), pointmark(pb), pointmark(pd), pointmark(pe));
+    }
     if (getpointtype(pe) == VOLVERTEX) {
-      // A vertex lies on the facet.
-      enext0fnext(spintet, *searchtet);
-      esymself(*searchtet);  // b->a.
-      enext2self(*searchtet);  // e->a.
+      // A vertex (pd) lies on the facet.
+      enext2self(*searchtet); // org(*searchtet) == pd
       return TOUCHFACE;
     }
-  }
-
-  // Return a crossing tet.
-  if (b->verbose > 1) {
-    printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
-      pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
-  }
-  *searchtet = spintet;
-
-  if (ori == 0) {
-    return ACROSSFACE;  // abc and 'searchtet''s face are coplanar.
+    // Found a coplanar non-matching face [a, b, d]. That means, a, b, c
+    //   and d are cocircular. [a, b, d] should be produced by flip22()
+    //   during surface meshing. 
+    // We can easily recover it if there is only one edge flip diffence.
+    ori1 = orient3d(pb, pc, pe, pd);
+    assert(ori1 != 0); // SELF_CHECK
+    if (ori1 < 0) { // Flip edge [b, c]
+      senext(*pssub, flipfaces[0]);
+    } else { // Flip edge [c, a]
+      senext2(*pssub, flipfaces[0]);
+    }
+    sspivot(flipfaces[0], checkseg); // SELF_CHECK
+    assert(checkseg.sh == NULL); // SELF_CHECK
+    spivot(flipfaces[0], flipfaces[1]);
+    assert(sinfected(flipfaces[1])); // SELF_CHECK
+    flip22(flipfaces, 0);
+    // Find the edge [a, b].
+    if (ori1 < 0) { // Flip edge [b, c]
+      senext(flipfaces[1], *pssub);
+    } else { // Flip edge [c, a]
+      senext2(flipfaces[0], *pssub);
+    }
+    assert(sorg(*pssub) == pa); // SELF_CHECK
+    assert(sdest(*pssub) == pb); // SELF_CHECK
+    // Recover this subface recursively.
+    return scoutsubface(pssub, searchtet);
   } else {
-    return ACROSSTET;  // abc intersects the volume of 'searchtet'.
+    // Return a crossing tet.
+    *searchtet = spintet;
+    if (b->verbose > 1) {
+      printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
+        pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
+    }
+    return ACROSSTET; // abc intersects the volume of 'searchtet'.
   }
 }
 
@@ -1669,9 +1701,8 @@ void tetgenmesh::constrainedfacets()
     subfacstack->newindex((void **) pssub);
     *pssub = ssub;
 
-    // The subface is missing.
     if (dir == ACROSSTET) {
-      // Recover the subface.
+      // The subface is missing. Recover it by local retetrahedralization.
       bakhullsize = hullsize;
       checksubsegs = 0;
       misregion->newindex((void **) &pssub);
