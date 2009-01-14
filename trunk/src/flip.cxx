@@ -1200,6 +1200,9 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
       }
       enext2self(fliptets[1]);
     }
+  }
+
+  if (checksubsegs || checksubfaces) {
     // Update the point-to-tet map.
     point2tet(pa) = encode(fliptets[0]);
     point2tet(pb) = encode(fliptets[0]);

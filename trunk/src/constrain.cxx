@@ -962,7 +962,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
   face checkseg;
   point pa, pb, pc, pd, pe;
   enum intersection dir;
-  REAL ori, ori1;
+  REAL ori, ori1, len, n[3];
   int i;
 
   tetrahedron ptr;
@@ -1079,9 +1079,26 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
     }
     // Found a coplanar non-matching face [a, b, d]. That means, a, b, c
     //   and d are cocircular. [a, b, d] should be produced by flip22()
-    //   during surface meshing. 
-    // We can easily recover it if there is only one edge flip diffence.
+    //   during surface meshing.  Flip the edges.
+    if (pe == dummypoint) {
+      // Calculate a point above the faces.
+      facenormal(pa, pb, pd, n, 1);
+      len = sqrt(DOT(n, n));
+      n[0] /= len;
+      n[1] /= len;
+      n[2] /= len;
+      len = DIST(pa, pb);
+      len += DIST(pb, pd);
+      len += DIST(pd, pa);
+      len /= 3.0;
+      pe[0] = pa[0] + len * n[0];
+      pe[1] = pa[1] + len * n[1];
+      pe[2] = pa[2] + len * n[2];
+    }
     ori1 = orient3d(pb, pc, pe, pd);
+    if (pe == dummypoint) {
+      pe[0] = pe[1] = pe[2] = 0;
+    }
     assert(ori1 != 0); // SELF_CHECK
     if (ori1 < 0) { // Flip edge [b, c]
       senext(*pssub, flipfaces[0]);
