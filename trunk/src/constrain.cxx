@@ -1037,7 +1037,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
     if (pd == apex(*searchtet)) break;
   }
 
-  // Search an edge crossing the facet containing abc.
+  return ACROSSTET;
+
+  /*// Search an edge crossing the facet containing abc.
   if (searchtet->ver & 01) {
     // Adjust to 0th edge ring.
     esymself(*searchtet);
@@ -1135,6 +1137,196 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
     }
     return ACROSSTET; // abc intersects the volume of 'searchtet'.
   }
+  */
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// scoutcrosstet()    Scout the first crossing tetrahedron.                  //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion, 
+  triface* searchtet)
+{
+  triface spintet;
+  face *pssub, worksh, neighsh;
+  face checkseg;
+  point pa, pb, pc, pd, pe, pf;
+  REAL ori;
+  int i, j;
+
+  // Get the first missing subface abc.
+  pssub = (face *) fastlookup(misregion, 0);
+  pa = sorg(*pssub);
+  pb = sdest(*pssub);
+  pc = sapex(*pssub);
+
+  // Mark the vertices of this face.
+  pinfect(pa);
+  pinfect(pb);
+  pinfect(pc);
+  // Mark this face as tested.
+  smarktest(*pssub);
+
+  // Mark all vertices of the facet.
+  for (i = 0; i < misregion->objects; i++) {
+    worksh = * (face *) fastlookup(misregion, i);
+    for (j = 0; j < 2; j++) {
+      senextself(worksh);
+      sspivot(worksh, checkseg);
+      if (checkseg.sh == NULL) {
+        spivot(worksh, neighsh);
+        assert(neighsh.sh != NULL); // SELF_CHECK
+        if (!smarktested(neighsh)) {
+          pf = sapex(neighsh);
+          if (!pinfected(pf)) {
+            pinfect(pf);
+          }
+          smarktest(neighsh);
+          misregion->newindex((void **) &pssub);
+          *pssub = neighsh;
+        }
+      }
+    }
+  }
+
+  // Search an edge crossing the facet containing abc.
+  if (searchtet->ver & 01) {
+    // Adjust to 0th edge ring.
+    esymself(*searchtet);
+    sesymself(*pssub);
+    pa = org(*searchtet);
+    pb = dest(*searchtet);
+  }
+
+  // Get a face containing ab and its apex lies below abc.
+  pd = apex(*searchtet);
+  spintet = *searchtet;
+  while (1) {
+    if (pd == dummypoint) break;
+    ori = orient3d(pa, pb, pc, pd);
+    if (ori > 0) break;
+    fnextself(spintet);
+    pd = apex(spintet);
+    assert(pd != apex(*searchtet)); // SELF_CHECK
+  }
+  // Search a tet whose apex->oppo crosses the facet containig abc.
+  while (1) {
+    pe = oppo(spintet);
+    ori = orient3d(pa, pb, pc, pe);
+    if ((ori != 0) && pinfected(pe)) {
+      ori = 0; // Force pe be coplanar with abc.
+    }
+    if (ori <= 0) break;  // stop at pd->pe.    
+    fnextself(spintet);
+  }
+
+  if (ori == 0) {
+    fnext(spintet, *searchtet);
+    pd = apex(*searchtet);
+    pe = oppo(*searchtet);
+    if (b->verbose > 1) {
+      printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
+        pointmark(pa), pointmark(pb), pointmark(pd), pointmark(pe));
+    }
+    if (getpointtype(pd) == VOLVERTEX) {
+      // A vertex (pd) lies on the facet.
+      enext2self(*searchtet); // org(*searchtet) == pd
+      return TOUCHFACE;
+    }
+    return ACROSSFACE;
+  } else {
+    // Return a crossing tet.
+    *searchtet = spintet;
+    if (b->verbose > 1) {
+      printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
+        pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
+    }
+    return ACROSSTET; // abc intersects the volume of 'searchtet'.
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// adjustsurfmesh()    Adjust surface mesh to match the volume mesh.         //
+//                                                                           //
+// An edge flip (flip22) is performed to adjust the surface mesh.            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
+{
+  face *pssub, worksh, flipfaces[2];
+  face checkseg;
+  point pa, pb, pc, pd, pe, pf;
+  REAL ori1, len, n[3];
+  int i;
+
+  // Get the first missing subface abc.
+  pssub = (face *) fastlookup(misregion, 0);
+  pa = sorg(*pssub);
+  pb = sdest(*pssub);
+  pc = sapex(*pssub);
+
+  // The crosstet is abde.
+  pd = apex(*crosstet);
+  pe = oppo(*crosstet);
+
+  if (pe == dummypoint) {
+    // Calculate a point above the faces.
+    facenormal(pa, pb, pd, n, 1);
+    len = sqrt(DOT(n, n));
+    n[0] /= len;
+    n[1] /= len;
+    n[2] /= len;
+    len = DIST(pa, pb);
+    len += DIST(pb, pd);
+    len += DIST(pd, pa);
+    len /= 3.0;
+    pe[0] = pa[0] + len * n[0];
+    pe[1] = pa[1] + len * n[1];
+    pe[2] = pa[2] + len * n[2];
+  }
+  ori1 = orient3d(pb, pc, pe, pd);
+  if (pe == dummypoint) {
+    pe[0] = pe[1] = pe[2] = 0;
+  }
+  assert(ori1 != 0); // SELF_CHECK
+  if (ori1 < 0) { // Flip edge [b, c]
+    senext(*pssub, flipfaces[0]);
+  } else { // Flip edge [c, a]
+    senext2(*pssub, flipfaces[0]);
+  }
+
+  sspivot(flipfaces[0], checkseg); // SELF_CHECK
+  assert(checkseg.sh == NULL); // SELF_CHECK
+  spivot(flipfaces[0], flipfaces[1]);
+  assert(sinfected(flipfaces[1])); // SELF_CHECK
+
+  flip22(flipfaces, 0);
+
+  /*// Find the edge [a, b].
+  if (ori1 < 0) { // Flip edge [b, c]
+    senext(flipfaces[1], *pssub);
+  } else { // Flip edge [c, a]
+    senext2(flipfaces[0], *pssub);
+  }
+  assert(sorg(*pssub) == pa); // SELF_CHECK
+  assert(sdest(*pssub) == pb); // SELF_CHECK
+  */
+
+  // Unmark all facet vertices.
+  puninfect(pa);
+  puninfect(pb);
+  puninfect(pc);
+  // Mark all vertices of the facet.
+  for (i = 0; i < misregion->objects; i++) {
+    worksh = * (face *) fastlookup(misregion, i);
+    sunmarktest(worksh);
+    pf = sapex(worksh);
+    puninfect(pf);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1160,7 +1352,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
 {
   arraypool *crossedges;
   triface *parytet, crosstet, spintet, neightet;
-  face *psub, worksh, neighsh;
+  face *pssub, worksh;
   face checkseg;
   point pa, pb, pc, pf, pg;
   REAL ori;
@@ -1169,17 +1361,17 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   int *iptr;
 
   // Get the first missing subface abc.
-  psub = (face *) fastlookup(misregion, 0);
-  pa = sorg(*psub);
-  pb = sdest(*psub);
-  pc = sapex(*psub);
+  pssub = (face *) fastlookup(misregion, 0);
+  pa = sorg(*pssub);
+  pb = sdest(*pssub);
+  pc = sapex(*pssub);
 
-  // Mark the vertices of this face.
+  /*// Mark the vertices of this face.
   pinfect(pa);
   pinfect(pb);
   pinfect(pc);
   // Mark this face as tested.
-  smarktest(*psub);
+  smarktest(*pssub);
 
   // Mark all vertices of the facet.
   for (i = 0; i < misregion->objects; i++) {
@@ -1196,12 +1388,12 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
             pinfect(pf);
           }
           smarktest(neighsh);
-          misregion->newindex((void **) &psub);
-          *psub = neighsh;
+          misregion->newindex((void **) &pssub);
+          *pssub = neighsh;
         }
       }
     }
-  }
+  }*/
 
   // Get a crossing tet abde. 
   parytet = (triface *) fastlookup(crosstets, 0); // face abd.
@@ -1229,12 +1421,6 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
       while (1) {
         // Mark this edge as tested.
         markedge(spintet);
-        // Check the validity of the PLC.
-        tspivot(spintet, worksh);
-        if (worksh.sh != NULL) {
-          printf("Error:  Invalid PLC.\n");
-          terminatetetgen(1);
-        }
         if (!infected(spintet)) {
           infect(spintet);
           crosstets->newindex((void **) &parytet);
@@ -1242,6 +1428,12 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
         }
         // Go to the neighbor tet.
         fnextself(spintet);
+        // Check the validity of the PLC.
+        tspivot(spintet, worksh);
+        if (worksh.sh != NULL) {
+          printf("Error:  Invalid PLC.\n");
+          terminatetetgen(1);
+        }
         if (apex(spintet) == pg) break;
       }
       // Detect new cross edges.
@@ -1740,12 +1932,16 @@ void tetgenmesh::constrainedfacets()
     subfacstack->newindex((void **) pssub);
     *pssub = ssub;
 
+    // Search for a crossing tet.
+    misregion->restart();
+    misregion->newindex((void **) &pssub);
+    *pssub = ssub;
+    dir = scoutcrosstet(misregion, &searchtet);
+
     if (dir == ACROSSTET) {
       // The subface is missing. Recover it by local retetrahedralization.
       bakhullsize = hullsize;
       checksubsegs = 0;
-      misregion->newindex((void **) &pssub);
-      *pssub = ssub;
       crosstets->newindex((void **) &parytet);
       *parytet = searchtet;
       // For a cavity of crossing tets.
@@ -1763,9 +1959,11 @@ void tetgenmesh::constrainedfacets()
       topnewtets->restart();
       botnewtets->restart();
       tmptets->restart();
-      misregion->restart();
       hullsize = bakhullsize;
       checksubsegs = 1;
+    } else if (dir == ACROSSFACE) {
+      // Recover subface(s) by edge flips.
+      adjustsurfmesh(misregion, &searchtet);
     } else {
       assert(0); // Not handled yet.
     }

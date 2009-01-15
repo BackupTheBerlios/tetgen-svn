@@ -1624,6 +1624,8 @@ void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
+enum intersection scoutcrosstet(arraypool*, triface* searchtet);
+void adjustsurfmesh(arraypool*, triface* crosstet);
 void formcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*, arraypool*);
 void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);

@@ -879,6 +879,7 @@ void tetgenmesh::pface(int i, int j, int k)
 bool tetgenmesh::pedge(int i, int j)
 {
   triface t, t1;
+  face sseg;
   int ii;
 
   t.ver = t1.ver = 0;
@@ -895,9 +896,20 @@ bool tetgenmesh::pedge(int i, int j)
       // Now t is the edge (i, j). Find all tets at (i, j).
       t1 = t;
       do {
-        printf("  tet x%lx (%d, %d, %d, %d) %d\n", (unsigned long) t1.tet,
+        printf("  tet x%lx (%d, %d, %d, %d)", (unsigned long) t1.tet,
           pointmark(org(t1)), pointmark(dest(t1)), pointmark(apex(t1)), 
-          pointmark(oppo(t1)), t1.loc);
+          pointmark(oppo(t1)));
+        if (checksubsegs || checksubfaces) {
+          tsspivot(t1, sseg);
+          if (sseg.sh != NULL) {
+            printf(" (seg)");
+          }
+        }
+        if (edgemarked(t1)) {
+          printf(" (marked)");
+        }
+        printf("\n");
+        // Go to the next tet.
         fnextself(t1);
       } while (t1.tet != t.tet);
       break;
