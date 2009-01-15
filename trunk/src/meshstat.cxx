@@ -1030,6 +1030,71 @@ REAL tetgenmesh::test_insphere(int i, int j, int k, int l, int m)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// test_tritri()    Test if two triangles are intersecting.
+
+int tetgenmesh::test_tritri(int a, int b, int c, int p,  int q, int r)
+{
+  point *idx2ptmap;
+  point A, B, C, P, Q, R;
+  enum intersection dir;
+  int ret, types[2], pos[4];
+  int idx, i;
+
+  idx = (int) pointpool->items;
+  if ((a > idx) || (b > idx) || (c > idx) || 
+      (p > idx) || (q > idx) || (r > idx) ||
+      (a<in->firstnumber) || (b<in->firstnumber) || (c<in->firstnumber) || 
+      (p<in->firstnumber) || (q<in->firstnumber) || (r<in->firstnumber)) {
+    printf("Input indices are invalid.\n");
+    return 0;
+  }
+
+  makeindex2pointmap(idx2ptmap);
+  A = idx2ptmap[a];
+  B = idx2ptmap[b];
+  C = idx2ptmap[c];
+  P = idx2ptmap[p];
+  Q = idx2ptmap[q];
+  R = idx2ptmap[r];
+
+  ret = tri_tri_test(A, B, C, P, Q, R, NULL, 1, types, pos);
+
+  // Report the intersection types and positions.
+  for (i = 0; i < 2; i++) {
+    dir = (enum tetgenmesh::intersection) types[i];
+    switch (dir) {
+    case tetgenmesh::DISJOINT: 
+      printf("  DISJOINT\n"); break;
+    case tetgenmesh::SHAREVERT: 
+      printf("  SHAREVERT %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::SHAREEDGE: 
+      printf("  SHAREEDGE %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::SHAREFACE: 
+      printf("  SHAREFACE\n"); break;
+    case tetgenmesh::TOUCHEDGE: 
+      printf("  TOUCHEDGE %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::TOUCHFACE: 
+      printf("  TOUCHFACE %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::ACROSSVERT: 
+      printf("  ACROSSVERT %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::ACROSSEDGE: 
+      printf("  ACROSSEDGE %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::ACROSSFACE: 
+      printf("  ACROSSFACE %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::ACROSSTET: 
+      printf("  ACROSSTET\n"); break;
+    case tetgenmesh::TRIEDGEINT:
+      printf("  TRIEDGEINT %d %d\n", pos[i*2], pos[i*2+1]); break;
+    case tetgenmesh::EDGETRIINT:
+      printf("  EDGETRIINT %d %d\n", pos[i*2], pos[i*2+1]); break;
+    }
+  }
+
+  delete [] idx2ptmap;
+  return ret;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Print an array of tetrahedra (in draw command)
 
 void tetgenmesh::print_cavebdrylist()

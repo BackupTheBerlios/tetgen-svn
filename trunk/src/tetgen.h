@@ -1763,6 +1763,7 @@ int pmark(point p);
 void pvert(point p);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
+int test_tritri(int a, int b, int c, int p,  int q, int r);
 void print_cavebdrylist();
 void print_flipstack();
 void print_tetarray(arraypool* tetarray, bool nohulltet);
