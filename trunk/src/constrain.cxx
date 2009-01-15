@@ -958,11 +958,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
   triface* searchtet)
 {
   triface spintet;
-  face flipfaces[2], checksh;
-  face checkseg;
-  point pa, pb, pc, pd, pe;
+  face checksh;
+  point pa, pb, pc, pd;
   enum intersection dir;
-  REAL ori, ori1, len, n[3];
   int i;
 
   tetrahedron ptr;
@@ -1195,6 +1193,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
   if (searchtet->ver & 01) {
     // Adjust to 0th edge ring.
     esymself(*searchtet);
+    pssub = (face *) fastlookup(misregion, 0);
     sesymself(*pssub);
     pa = org(*searchtet);
     pb = dest(*searchtet);
@@ -1259,7 +1258,7 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
 {
   face *pssub, worksh, flipfaces[2];
   face checkseg;
-  point pa, pb, pc, pd, pe, pf;
+  point pa, pb, pc, pd, pe;
   REAL ori1, len, n[3];
   int i;
 
@@ -1303,8 +1302,15 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
   assert(checkseg.sh == NULL); // SELF_CHECK
   spivot(flipfaces[0], flipfaces[1]);
   assert(sinfected(flipfaces[1])); // SELF_CHECK
+  // Temporarily uninfect them.
+  suninfect(flipfaces[0]);
+  suninfect(flipfaces[1]);
 
   flip22(flipfaces, 0);
+
+  // Infect them back (to be recovered).
+  sinfect(flipfaces[0]);
+  sinfect(flipfaces[1]);
 
   /*// Find the edge [a, b].
   if (ori1 < 0) { // Flip edge [b, c]
@@ -1317,15 +1323,19 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
   */
 
   // Unmark all facet vertices.
-  puninfect(pa);
-  puninfect(pb);
-  puninfect(pc);
+  // puninfect(pa);
+  // puninfect(pb);
+  // puninfect(pc);
   // Mark all vertices of the facet.
   for (i = 0; i < misregion->objects; i++) {
     worksh = * (face *) fastlookup(misregion, i);
     sunmarktest(worksh);
-    pf = sapex(worksh);
-    puninfect(pf);
+    pa = sorg(worksh);
+    pb = sdest(worksh);
+    pc = sapex(worksh);
+    puninfect(pa);
+    puninfect(pb);
+    puninfect(pc);
   }
 }
 
