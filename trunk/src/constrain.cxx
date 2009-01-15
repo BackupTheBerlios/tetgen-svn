@@ -1495,7 +1495,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
     }
   }
 
-  if (b->verbose) {
+  if (b->verbose > 1) {
     printf("    Formed cavity: %ld (%ld) cross tets (edges).\n", 
       crosstets->objects, crossedges->objects);
   }
@@ -1569,7 +1569,7 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
 
   tetrahedron ptr;
 
-  if (b->verbose) {
+  if (b->verbose > 1) {
     printf("    Delaunizing cavity: %ld faces.\n", cavfaces->objects);
   }
 
@@ -1913,8 +1913,13 @@ void tetgenmesh::constrainedfacets()
   triface *parytet, searchtet;
   face *pssub, ssub;
   enum intersection dir;
+  long surfflipcount, cavitycount;
   int bakhullsize;
   int i;
+
+  if (b->verbose) {
+    printf("  Constraining facets.\n");
+  }
 
   // Initialize arrays.
   crosstets = new arraypool(sizeof(triface), 10);
@@ -1924,6 +1929,9 @@ void tetgenmesh::constrainedfacets()
   botnewtets = new arraypool(sizeof(triface), 10);
   tmptets = new arraypool(sizeof(triface), 10);
   misregion = new arraypool(sizeof(face), 8);
+
+  surfflipcount = flip22count;
+  cavitycount = 0l;
 
   // Loop until 'subfacstack' is empty.
   while (subfacstack->objects > 0l) {
@@ -1953,6 +1961,7 @@ void tetgenmesh::constrainedfacets()
 
     if (dir == ACROSSTET) {
       // The subface is missing. Recover it by local retetrahedralization.
+      cavitycount++;
       bakhullsize = hullsize;
       checksubsegs = 0;
       crosstets->newindex((void **) &parytet);
@@ -1980,6 +1989,11 @@ void tetgenmesh::constrainedfacets()
     } else {
       assert(0); // Not handled yet.
     }
+  }
+
+  if (b->verbose) {
+    printf("  %ld flips in surface mesh.\n", flip22count - surfflipcount);
+    printf("  %ld cavities remeshed.\n", cavitycount);
   }
 
   // Delete arrays.
