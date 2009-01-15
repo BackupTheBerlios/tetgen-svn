@@ -1205,6 +1205,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
   while (1) {
     if (pd == dummypoint) break;
     ori = orient3d(pa, pb, pc, pd);
+    if ((ori != 0) && pinfected(pd)) {
+      ori = 0; // Force pd be coplanar with abc.
+    }
     if (ori > 0) break;
     fnextself(spintet);
     pd = apex(spintet);
