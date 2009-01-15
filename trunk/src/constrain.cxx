@@ -1050,6 +1050,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
   pd = apex(*searchtet);
   spintet = *searchtet;
   while (1) {
+    if (pd == dummypoint) break;
     ori = orient3d(pa, pb, pc, pd);
     if (ori > 0) break;
     fnextself(spintet);
@@ -1072,7 +1073,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
       printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
         pointmark(pa), pointmark(pb), pointmark(pd), pointmark(pe));
     }
-    if (getpointtype(pe) == VOLVERTEX) {
+    if (getpointtype(pd) == VOLVERTEX) {
       // A vertex (pd) lies on the facet.
       enext2self(*searchtet); // org(*searchtet) == pd
       return TOUCHFACE;
@@ -1220,67 +1221,72 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   //   form deab, where de is a corrsing edge, orient3d(d,e,a,b) < 0. 
   for (i = 0; i < crossedges->objects; i++) {
     crosstet = * (triface *) fastlookup(crossedges, i);
-    // Collect all tets sharing at the edge.
-    pg = apex(crosstet);
-    spintet = crosstet;
-    while (1) {
-      // Mark this edge as tested.
-      markedge(spintet);
-      // Check the validity of the PLC.
-      tspivot(spintet, worksh);
-      if (worksh.sh != NULL) {
-        printf("Error:  Invalid PLC.\n");
-        terminatetetgen(1);
-      }
-      if (!infected(spintet)) {
-        infect(spintet);
-        crosstets->newindex((void **) &parytet);
-        *parytet = spintet;
-      }
-      // Go to the neighbor tet.
-      fnextself(spintet);
-      if (apex(spintet) == pg) break;
-    }
-    // Detect new cross edges.
-    while (1) {
-      // Remember: spintet is edge d->e, d lies below abc.
-      pf = apex(spintet);
-      if (!pinfected(pf)) {
-        // There exist a crossing edge, either d->f, or f->e.
-        ori = orient3d(pa, pb, pc, pf);
-        assert(ori != 0);
-        if (ori < 0) {
-          // The edge d->f corsses the facet.
-          enext2fnext(spintet, neightet);
-          esymself(neightet); // d->f.
-        } else {
-          // The edge f->e crosses the face.
-          enextfnext(spintet, neightet);
-          esymself(neightet); // f->e.
+    // It may already be tested.
+    if (!edgemarked(crosstet)) {
+      // Collect all tets sharing at the edge.
+      pg = apex(crosstet);
+      spintet = crosstet;
+      while (1) {
+        // Mark this edge as tested.
+        markedge(spintet);
+        // Check the validity of the PLC.
+        tspivot(spintet, worksh);
+        if (worksh.sh != NULL) {
+          printf("Error:  Invalid PLC.\n");
+          terminatetetgen(1);
         }
-        if (!edgemarked(neightet)) {
-          // Add a new cross edge.
-          crossedges->newindex((void **) &parytet);
-          *parytet = neightet;
+        if (!infected(spintet)) {
+          infect(spintet);
+          crosstets->newindex((void **) &parytet);
+          *parytet = spintet;
         }
+        // Go to the neighbor tet.
+        fnextself(spintet);
+        if (apex(spintet) == pg) break;
       }
-      fnextself(spintet);
-      if (apex(spintet) == pg) break;
+      // Detect new cross edges.
+      while (1) {
+        // Remember: spintet is edge d->e, d lies below abc.
+        pf = apex(spintet);
+        if (!pinfected(pf)) {
+          // There exist a crossing edge, either d->f, or f->e.
+          ori = orient3d(pa, pb, pc, pf);
+          assert(ori != 0);
+          if (ori < 0) {
+            // The edge d->f corsses the facet.
+            enext2fnext(spintet, neightet);
+            esymself(neightet); // d->f.
+          } else {
+            // The edge f->e crosses the face.
+            enextfnext(spintet, neightet);
+            esymself(neightet); // f->e.
+          }
+          if (!edgemarked(neightet)) {
+            // Add a new cross edge.
+            crossedges->newindex((void **) &parytet);
+            *parytet = neightet;
+          }
+        }
+        fnextself(spintet);
+        if (apex(spintet) == pg) break;
+      }
     }
   }
 
   // All cross tets are found. Unmark cross edges.
   for (i = 0; i < crossedges->objects; i++) {
     crosstet = * (triface *) fastlookup(crossedges, i);
-    pg = apex(crosstet);
-    spintet = crosstet;
-    while (1) {
+    if (edgemarked(crosstet)) {
       // Unmark this edge.
-      assert(edgemarked(spintet)); // SELF_CHECK
-      unmarkedge(spintet);
-      // Go to the neighbor tet.
-      fnextself(spintet);
-      if (apex(spintet) == pg) break;
+      pg = apex(crosstet);
+      spintet = crosstet;
+      while (1) {
+        assert(edgemarked(spintet)); // SELF_CHECK
+        unmarkedge(spintet);
+        // Go to the neighbor tet.
+        fnextself(spintet);
+        if (apex(spintet) == pg) break;
+      }
     }
   }
 
