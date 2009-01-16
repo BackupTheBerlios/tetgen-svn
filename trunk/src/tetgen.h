@@ -1478,6 +1478,7 @@ long force_ptloc_count;
 long triedgcount, triedgcopcount, trivercopcount;
 long across_face_count, across_edge_count, across_max_count;
 long r1count, r2count, r3count;
+long maxcavsize, maxregionsize;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1711,6 +1712,7 @@ void initialize()
   triedgcount = triedgcopcount = trivercopcount = 0l;
   across_face_count = across_edge_count = across_max_count = 0l;
   r1count = r2count = r3count = 0l;
+  maxcavsize = maxregionsize = 0l;
 }
 
 void deinitialize()

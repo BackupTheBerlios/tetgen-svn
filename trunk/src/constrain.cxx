@@ -1578,6 +1578,11 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     printf("    Delaunizing cavity: %ld faces.\n", cavfaces->objects);
   }
 
+  if (cavfaces->objects > maxcavsize) {
+    maxcavsize = cavfaces->objects;
+  }
+
+  // Get four non-coplanar points (no dummypoint).
   for (i = 0; i < cavfaces->objects; i++) {
     parytet = (triface *) fastlookup(cavfaces, i);
     pt[0] = org(*parytet);
@@ -1985,6 +1990,10 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       }
     } // j
   } // i
+
+  if (midfaces->objects > maxregionsize) {
+    maxregionsize = midfaces->objects;
+  }
 
   // 'crosstets' contains "isolated" tets. Find all of them.
   for (i = 0; i < crosstets->objects; i++) {
