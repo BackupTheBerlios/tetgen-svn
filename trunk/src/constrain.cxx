@@ -1424,6 +1424,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
 
   // Collect all crossing tets.  Each cross tet is saved in the standard
   //   form deab, where de is a corrsing edge, orient3d(d,e,a,b) < 0. 
+  // NOTE: hull tets may be collected. See fig/dump-cavity-case2a(b).lua.
   for (i = 0; i < crossedges->objects; i++) {
     crosstet = * (triface *) fastlookup(crossedges, i);
     // It may already be tested.
@@ -1453,23 +1454,25 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
       while (1) {
         // Remember: spintet is edge d->e, d lies below abc.
         pf = apex(spintet);
-        if (!pinfected(pf)) {
-          // There exist a crossing edge, either d->f, or f->e.
-          ori = orient3d(pa, pb, pc, pf);
-          assert(ori != 0);
-          if (ori < 0) {
-            // The edge d->f corsses the facet.
-            enext2fnext(spintet, neightet);
-            esymself(neightet); // d->f.
-          } else {
-            // The edge f->e crosses the face.
-            enextfnext(spintet, neightet);
-            esymself(neightet); // f->e.
-          }
-          if (!edgemarked(neightet)) {
-            // Add a new cross edge.
-            crossedges->newindex((void **) &parytet);
-            *parytet = neightet;
+        if (pf != dummypoint) { // Do not grab a hull edge.
+          if (!pinfected(pf)) {
+            // There exist a crossing edge, either d->f, or f->e.
+            ori = orient3d(pa, pb, pc, pf);
+            assert(ori != 0);
+            if (ori < 0) {
+              // The edge d->f corsses the facet.
+              enext2fnext(spintet, neightet);
+              esymself(neightet); // d->f.
+            } else {
+              // The edge f->e crosses the face.
+              enextfnext(spintet, neightet);
+              esymself(neightet); // f->e.
+            }
+            if (!edgemarked(neightet)) {
+              // Add a new cross edge.
+              crossedges->newindex((void **) &parytet);
+              *parytet = neightet;
+            }
           }
         }
         fnextself(spintet);
@@ -1504,6 +1507,7 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   // Collect the top and bottom faces. 
   //   Remember that each cross tet was saved in the standard form: deab,
   //   where de is a corrsing edge, orient3d(d,e,a,b) < 0.
+  // NOTE: Hull tets may be collected. Process them as normal one.
   for (i = 0; i < crosstets->objects; i++) {
     crosstet = * (triface *) fastlookup(crosstets, i);
     enextfnext(crosstet, spintet);
@@ -1564,6 +1568,7 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
   face checkseg;
   point pa, pb, pc, pd, pt[3];
   enum intersection dir;
+  bool dummyflag;
   REAL ori;
   int i, j;
 
@@ -1573,7 +1578,17 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     printf("    Delaunizing cavity: %ld faces.\n", cavfaces->objects);
   }
 
-  parytet = (triface *) fastlookup(cavfaces, 0);
+  for (i = 0; i < cavfaces->objects; i++) {
+    parytet = (triface *) fastlookup(cavfaces, i);
+    pt[0] = org(*parytet);
+    pt[1] = dest(*parytet);
+    pt[2] = apex(*parytet);
+    for (j = 0; j < 3; j++) {
+      if (pt[j] == dummypoint) break; // Check if this is a hull face.
+    }
+    if (j == 3) break;
+  }
+  assert(i < cavfaces->objects); // SELF_CHECK
   pa = org(*parytet);
   pb = dest(*parytet);
   pc = apex(*parytet);
@@ -1581,20 +1596,22 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
   pinfect(pb);
   pinfect(pc);
   pd = NULL;
-  for (i = 1; i < cavfaces->objects; i++) {
+  for (i = 0; i < cavfaces->objects; i++) {
     parytet = (triface *) fastlookup(cavfaces, i);
     pt[0] = org(*parytet);
     pt[1] = dest(*parytet);
     pt[2] = apex(*parytet);
     for (j = 0; j < 3; j++) {
-      if (!pinfected(pt[j])) {
-        ori = orient3d(pa, pb, pc, pt[j]);
-        if (ori != 0) {
-          pd = pt[j];
-          if (ori > 0) {  // Swap pa and pb.
-            pt[j] = pa; pa = pb; pb = pt[j]; 
+      if (pt[j] != dummypoint) { // Do not include a hull point.
+        if (!pinfected(pt[j])) {
+          ori = orient3d(pa, pb, pc, pt[j]);
+          if (ori != 0) {
+            pd = pt[j];
+            if (ori > 0) {  // Swap pa and pb.
+              pt[j] = pa; pa = pb; pb = pt[j]; 
+            }
+            break;
           }
-          break;
         }
       }
     }
@@ -1607,16 +1624,18 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
   initialDT(pa, pb, pc, pd);
 
   // Incrementally insert other vertices.
-  for (i = 1; i < cavfaces->objects; i++) {
+  for (i = 0; i < cavfaces->objects; i++) {
     parytet = (triface *) fastlookup(cavfaces, i);
     pt[0] = org(*parytet);
     pt[1] = dest(*parytet);
     pt[2] = apex(*parytet);
     for (j = 0; j < 3; j++) {
-      if (!pinfected(pt[j])) {
-        searchtet = recenttet;
-        insertvertex(pt[j], &searchtet, true);
-        pinfect(pt[j]);
+      if (pt[j] != dummypoint) { // Do not include a hull point.
+        if (!pinfected(pt[j])) {
+          searchtet = recenttet;
+          insertvertex(pt[j], &searchtet, true);
+          pinfect(pt[j]);
+        }
       }
     }
   }
@@ -1643,9 +1662,23 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     pt[0] = org(*parytet);
     pt[1] = dest(*parytet);
     pt[2] = apex(*parytet);
+    // The face orients in its 0th edge ring.
+    assert((parytet->ver & 01) == 0); // SELF_CHECK
     // Uninfect the vertices.
     for (j = 0; j < 3; j++) {
       puninfect(pt[j]);
+    }
+    dummyflag = false;
+    for (j = 0; j < 3; j++) {
+      if (pt[j] == dummypoint) {
+        // Make dummypoint be its apex.
+        parytet->ver = 4;
+        pt[0] = org(*parytet);
+        pt[1] = dest(*parytet);
+        pt[2] = apex(*parytet);
+        dummyflag = true;
+        break;
+      }
     }
     // Create a temp subface.
     makeshellface(subfacepool, &tmpsh);
@@ -1660,17 +1693,34 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
     }
     // Get a tet in DT containing tmpsh.
     stpivot(tmpsh, neightet);
-    pd = oppo(neightet);
-    if (pd != dummypoint) {
-      // Test if pa is inside or outside.
-      ori = orient3d(pt[0], pt[1], pt[2], pd);
-      assert(ori != 0); // SELF_CHECK
-      if (ori < 0) {
-        symself(neightet); // Its adjacent tet is inside.
+    if (!dummyflag) {
+      pd = oppo(neightet);
+      if (pd != dummypoint) {
+        // Test if pa is inside or outside.
+        ori = orient3d(pt[0], pt[1], pt[2], pd);
+        assert(ori != 0); // SELF_CHECK
+        if (ori < 0) {
+          symself(neightet); // Its adjacent tet is inside.
+        }
+      } else {
+        // A hull tet, its adjacent tet is inside.
+        symself(neightet);
       }
     } else {
-      // A hull tet, its adjacent tet is inside.
-      symself(neightet);
+      // Find edge [pt[1], pt[0]] in neightet.
+      if (neightet.ver & 01) esymself(neightet);
+      for (j = 0; j < 3; j++) {
+        if ((org(neightet) == pt[1]) && dest(neightet) == pt[0]) break;
+        enextself(neightet);
+      }
+      if (j == 3) {
+        symself(neightet);
+        for (j = 0; j < 3; j++) { // SELF_CHECK
+          if ((org(neightet) == pt[1]) && dest(neightet) == pt[0]) break;
+          enextself(neightet);
+        }
+        assert(j < 3); // SELF_CHECK
+      }
     }
     if (!infected(neightet)) {
       // Mark the tet as interior.
@@ -1679,9 +1729,10 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets,
       newtets->newindex((void **) &parytet);
       *parytet = neightet;
     }
-    // Make sure that tmpsh is connected with an interior tet. Since the outer
-    //   tets of DT will be deleted. The connection in tmpsh will be used later
-    //   in fillcavity() to connect new tets to outer tets of the cavity.
+    // Make sure that tmpsh is connected with an interior tet. Since the 
+    //   outer tets of DT will be deleted. The connection in tmpsh will be
+    //   used later in fillcavity() to connect new tets to outer tets of 
+    //   the cavity.
     tsbond(neightet, tmpsh);
   }
 

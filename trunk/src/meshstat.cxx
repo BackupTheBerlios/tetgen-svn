@@ -1197,6 +1197,7 @@ void tetgenmesh::print_subfacearray(arraypool *subfacearray)
 ///////////////////////////////////////////////////////////////////////////////
 // dump the boundary faces of a cavity into file "cavity.lua"
 // 'topfaces' and 'botfaces' are two arrays. 
+// NOTE: hull tets may be included.
 
 void tetgenmesh::dump_cavity(arraypool *topfaces, arraypool *botfaces = NULL)
 {
