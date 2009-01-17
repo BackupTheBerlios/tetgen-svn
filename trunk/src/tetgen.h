@@ -1628,8 +1628,9 @@ enum intersection scoutsubface(face* ssub, triface* searchtet);
 enum intersection scoutcrosstet(arraypool*, triface* searchtet);
 void adjustsurfmesh(arraypool*, triface* crosstet);
 void formcavity(arraypool*, arraypool*, arraypool*, arraypool*);
-void delaunizecavity(arraypool*, arraypool*, arraypool*);
-void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
+void delaunizecavity(arraypool*, arraypool*);
+void fillcavity(arraypool*, arraypool*, arraypool*);
+void carveacvity();
 void constrainedfacets();
 
 void markacutevertices();
