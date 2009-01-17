@@ -1164,9 +1164,16 @@ void tetgenmesh::print_tetarray(arraypool *tetarray, bool nohulltet)
     if (nohulltet) {
       if ((point) parytet->tet[7] == dummypoint) continue;
     }
-    printf("p:draw_tet(%d, %d, %d, %d) -- %d\n", 
+    printf("p:draw_tet(%d, %d, %d, %d) -- %d", 
       pointmark(org(*parytet)), pointmark(dest(*parytet)),
       pointmark(apex(*parytet)), pointmark(oppo(*parytet)), i + 1);
+    if ((point) parytet->tet[7] == dummypoint) {
+      printf(" (hulltet)");
+    }
+    if (infected(*parytet)) {
+      printf(" (infect)");
+    }
+    printf("\n");
   }
 }
 
