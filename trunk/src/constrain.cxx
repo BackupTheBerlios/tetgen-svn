@@ -2066,13 +2066,14 @@ void tetgenmesh::constrainedfacets()
     dir = scoutsubface(&ssub, &searchtet);
     if (dir == SHAREFACE) continue;
 
+    if (dir == EDGETRIINT) assert(0); // Not handled yet.
+
     // Push the face back into stack.
     sinfect(ssub);
     subfacstack->newindex((void **) pssub);
     *pssub = ssub;
 
     // Search for a crossing tet.
-    misregion->restart();
     misregion->newindex((void **) &pssub);
     *pssub = ssub;
     dir = scoutcrosstet(misregion, &searchtet);
@@ -2107,6 +2108,7 @@ void tetgenmesh::constrainedfacets()
     } else {
       assert(0); // Not handled yet.
     }
+    misregion->restart();
   }
 
   if (b->verbose) {
