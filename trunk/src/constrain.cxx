@@ -1448,14 +1448,13 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets)
 {
   triface *parytet, searchtet, neightet, spintet;
   face checksh, tmpsh;
-  face checkseg;
   point pa, pb, pc, pd, pt[3];
   enum intersection dir;
-  bool dummyflag;
   REAL ori;
   int i, j;
 
   tetrahedron ptr;
+  int tver;
 
   if (b->verbose > 1) {
     printf("    Delaunizing cavity: %ld faces.\n", cavfaces->objects);
@@ -1518,7 +1517,7 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets)
     }
   }
 
-  // Collect all tets of the DT. Re-use 'newtets'.
+  // Collect all tets of the DT.
   marktest(recenttet);
   newtets->newindex((void **) &parytet);
   *parytet = recenttet;
@@ -1547,7 +1546,6 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets)
       puninfect(pt[j]);
     }
     // Does this face contain dummypoint?
-    dummyflag = false;
     for (j = 0; j < 3; j++) {
       if (pt[j] == dummypoint) {
         // Make dummypoint be its apex.
@@ -1555,7 +1553,6 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets)
         pt[0] = org(*parytet);
         pt[1] = dest(*parytet);
         pt[2] = apex(*parytet);
-        dummyflag = true;
         break;
       }
     }
@@ -1572,44 +1569,19 @@ void tetgenmesh::delaunizecavity(arraypool *cavfaces, arraypool *newtets)
     }
     // Identify the inter and outer tets at tempsh.
     stpivot(tmpsh, neightet);
-    if (!dummyflag) {
-      pd = oppo(neightet);
-      if (pd != dummypoint) {
-        // Test if pd is inside or outside.
-        ori = orient3d(pt[0], pt[1], pt[2], pd);
-        assert(ori != 0); // SELF_CHECK
-        if (ori < 0) {
-          symself(neightet); // Its adjacent tet is inside.
-        }
-      } else {
-        // A hull tet, its adjacent tet is inside.
-        symself(neightet);
-      }
-    } else {
-      // Find edge [pt[1], pt[0]] in neightet.
-      if (neightet.ver & 01) esymself(neightet);
-      for (j = 0; j < 3; j++) {
-        if ((org(neightet) == pt[1]) && dest(neightet) == pt[0]) break;
-        enextself(neightet);
-      }
-      if (j == 3) {
-        symself(neightet);
-        for (j = 0; j < 3; j++) { // SELF_CHECK
-          if ((org(neightet) == pt[1]) && dest(neightet) == pt[0]) break;
-          enextself(neightet);
-        }
-        assert(j < 3); // SELF_CHECK
-      }
+    // neightet and tmpsh refer to the same edge [pt[0], pt[1]].
+    //   Morover, neightet is in 0th edge ring (see decode()).
+    if (org(neightet) != pt[1]) {
+      symedgeself(neightet);
+      assert(org(neightet) == pt[1]); // SELF_CHECK
+      // Make sure that tmpsh is connected with an interior tet. 
+      tsbond(neightet, tmpsh);
     }
+    assert(dest(neightet) == pt[0]); // SELF_CHECK
+    // Mark neightet as interior.
     if (!infected(neightet)) {
-      // Mark the tet as interior.
       infect(neightet);
-      // Add this tet in newtets.
-      // newtets->newindex((void **) &parytet);
-      // *parytet = neightet;
     }
-    // Make sure that tmpsh is connected with an interior tet. 
-    tsbond(neightet, tmpsh);
   }
 }
 
