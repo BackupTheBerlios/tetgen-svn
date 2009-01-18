@@ -1621,13 +1621,7 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       sdecode(parytet->tet[parytet->loc], tmpsh);
       // Get the adjacent new tet.
       stpivot(tmpsh, neightet);
-      // Adjust the edge.
-      neightet.ver = 0;
-      for (j = 0; j < 3; j++) {
-        if (org(neightet) == pb) break;
-        enextself(neightet);
-      }
-      assert(j < 3); // SELF_CHECK
+      assert(org(neightet) == pb); // SELF_CHECK
       assert(dest(neightet) == pa); // SELF_CHECK
       // Bond the two tets.
       bond(*parytet, neightet); // Also cleared the pointer to tmpsh.
@@ -1647,37 +1641,7 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     }
   }
 
-  // Bond subsegments to new tets.
-  for (k = 0; k < 2; k++) {
-    cavfaces = (k == 0 ? topfaces : botfaces);
-    for (i = 0; i < cavfaces->objects; i++) {
-      parytet = (triface *) fastlookup(cavfaces, i);
-      symedge(*parytet, neightet);
-      // Bond a subsegment (if it exists).
-      for (j = 0; j < 3; j++) {
-        tsspivot(*parytet, checkseg);
-        if (checkseg.sh != NULL) {
-          // Make sure no new tet is missed, do a full rotation. Note that
-          //   Some tets contain "open faces" (not connected yet). So we
-          //   need to check if the neighbor exists or not before rotate.
-          pc = apex(neightet);
-          spintet = neightet;
-          while (1) {
-            tssbond1(spintet, checkseg);
-            enext0fnextself(spintet);
-            decode(spintet.tet[spintet.loc], toptet);
-            if ((point) toptet.tet[7] == dummypoint) break;
-            symedgeself(spintet); // Go to the face in next tet.
-            if (apex(spintet) == pc) break;
-          }
-        }
-        enextself(*parytet);
-        enext2self(neightet);
-      }
-    }
-  }
-
-  // Mark all facet vertices.
+  // Mark all facet vertices for detecting middle subfaces.
   worksh = * (face *) fastlookup(misregion, 0);
   pa = sorg(worksh);
   pb = sdest(worksh);
@@ -1692,7 +1656,6 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   }
 
   // The first pair of top and bottom tets share the same edge [a, b].
-  // We begin with the first pair of middle faces.
   toptet = * (triface *) fastlookup(topfaces, 0);
   bottet = * (triface *) fastlookup(botfaces, 0);
   symedgeself(toptet);
@@ -1717,193 +1680,92 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   // Both are interior tets.
   infect(toptet);
   infect(bottet);
-  // Add this face into list.
+  // Add this face into search list.
   esymself(toptet); // Choose the 0th edge ring.
   midfaces->newindex((void **) &parytet);
   *parytet = toptet;
 
-  /*// The first pair of top and bottom tets share the same edge [a, b].
-  // We begin with the first pair of middle faces. We may search in both
-  //   directions, See figs/dump-fillcavity-case1(a)(b).lua for a case.
-  for (k = 0; k < 2; k++) {
-    if (k == 0) {
-      toptet = * (triface *) fastlookup(topfaces, 0);
-      bottet = * (triface *) fastlookup(botfaces, 0);
-    } else { // switch the match order. 
-      bottet = * (triface *) fastlookup(topfaces, 0);
-      toptet = * (triface *) fastlookup(botfaces, 0);
-    }
-    symedgeself(toptet);
-    symedgeself(bottet);
-    while (1) {
-      enext0fnextself(toptet); // The next face in the same tet.
-      decode(toptet.tet[toptet.loc], neightet);
-      if ((point) neightet.tet[7] == dummypoint) {
-        if (marktested(neightet) && !infected(neightet)) break; 
-      }
-      symedgeself(toptet);
-    }
-    pc = apex(toptet);
-    while (1) {
-      enext0fnextself(bottet); // The next face in the same tet.
-      decode(bottet.tet[bottet.loc], neightet);
-      if (apex(bottet) == pc) break; // Face matched.
-      if ((point) neightet.tet[7] == dummypoint) {
-        if (marktested(neightet) && !infected(neightet)) break; // Not matched.
-      }
-      symedgeself(bottet);
-    }
-    if (apex(bottet) == pc) {
-      // Faces mathced.
-      // if (neightet.tet != NULL) {
-      //   // The bottom face is not open. Detach its neighbor.
-      //   neightet.tet[neightet.loc] = NULL;
-      //   infect(neightet);
-      //   crosstets->newindex((void **) &parytet);
-      //   *parytet = neightet;
-      // }
-      // Connect the two tets together.
-      bond(toptet, bottet);
-      // Both are interior tets.
-      infect(toptet);
-      infect(bottet);
-      // Add this face into list.
-      esymself(toptet); // Choose the 0th edge ring.
-      midfaces->newindex((void **) &parytet);
-      *parytet = toptet;
-      break;
-    }
-  }
-  assert(k < 2);  // SELF_CHECK
-  */
-
-  // Loop in midfaces, connect open faces.
+  // Match pairs of subfaces (middle faces), connect top and bottom tets.
   for (i = 0; i < midfaces->objects; i++) {
-    // Get a middle face [a, b, c]
+    // Get a matched middle face [a, b, c]
     midface = * (triface *) fastlookup(midfaces, i);
+    // It is inside the cavity.
+    assert(marktested(midface)); // SELF_CHECK 
     // Check the neighbors at edges [b, c] and [c, a].
     for (j = 0; j < 2; j++) {
       enextself(midface); // [b, c] or [c, a].
-      tsspivot(midface, checkseg);
-      if (checkseg.sh == NULL) {
-        pg = apex(midface);
-        toptet = midface;
-        bflag = false;
+      pg = apex(midface);
+      toptet = midface;
+      bflag = false;
+      while (1) {
+        // Go to the next face in the same tet.
+        enext0fnextself(toptet);
+        pc = apex(toptet);
+        if (pinfected(pc)) {
+          break; // Find a subface.
+        }
+        if (pc == dummypoint) {
+          break; // Find a subface.
+        }
+        assert(pc != pg); // SELF_CHECK
+        // Go to the same face in the adjacent tet.
+        symedgeself(toptet);
+        // Do we walk outside the cavity?
+        if (!marktested(toptet)) {
+          // Yes, the adjacent face is not a middle face.
+          bflag = true; break; 
+        }
+      }
+      if (!bflag) {
+        symedge(midface, bottet);
         while (1) {
-          enext0fnextself(toptet);
-          pc = apex(toptet);
-          if (pc == pg) { // Is the neighbor connected?
-            bflag = true; break; 
-          }
-          if (pinfected(pc)) {
-            if (marktested(toptet)) break; // Find a subface.
-          }
-          if (pc == dummypoint) {
-            if (marktested(toptet)) break; // Find a subface.
-          }
-          symedgeself(toptet);
-        }
-        if (!bflag) {
-          symedge(midface, bottet);
-          while (1) {
-            enext0fnextself(bottet);
-            pf = apex(bottet);
-            if (pf == pc) break; // Face matched.
-            assert(!pinfected(pf)); // SELF_CHECK
-            symedgeself(bottet);
-          }
-          // Connect two tets together.
           assert(marktested(bottet)); // SELF_CHECK
-          bond(toptet, bottet);
-          // Both are interior tets.
-          infect(toptet);
-          infect(bottet);
-          // Add this face into list.
-          esymself(toptet);
-          midfaces->newindex((void **) &parytet);
-          *parytet = toptet;
+          enext0fnextself(bottet);
+          pf = apex(bottet);
+          if (pf == pc) break; // Face matched.
+          assert(!pinfected(pf)); // SELF_CHECK
+          symedgeself(bottet);
         }
-      }
-    }
-  }
-
-  /*// Loop in midfaces, connect open faces.
-  for (i = 0; i < midfaces->objects; i++) {
-    // Get a middle face [a, b, c]
-    midface = * (triface *) fastlookup(midfaces, i);
-    // Check the neighbors at edges [b, c] and [c, a].
-    for (j = 0; j < 2; j++) {
-      enextself(midface); // [b, c] or [c, a].
-      tsspivot(midface, checkseg);
-      if (checkseg.sh == NULL) {
-        for (k = 0; k < 2; k++) {
-          if (k == 0) {
-            toptet = midface;
-          } else { // switch the match order.
-            symedge(midface, toptet);
-          }
-          pf = apex(toptet);
-          spintet = toptet;
-          bflag = false;
-          while (1) {
-            enext0fnextself(spintet);
-            decode(spintet.tet[spintet.loc], neightet);
-            if ((point) neightet.tet[7] == dummypoint) {
-              if (marktested(neightet) && !infected(neightet)) break; 
-            }
-            symedgeself(spintet); // Go to the face in next tet.
-            if (apex(spintet) == pf) {
-              // The neighbor face is connected.
-              bflag = true; break;
-            }
-          }
-          if (!bflag) {
-            // Not connected yet.
-            pc = apex(spintet);
-            symedge(toptet, bottet);
-            while (1) {
-              enext0fnextself(bottet);
-              decode(bottet.tet[bottet.loc], neightet);
-              if (apex(bottet) == pc) break;  // Face matched.
-              if ((point) neightet.tet[7] == dummypoint) {
-                if (marktested(neightet) && !infected(neightet)) break;
-              }
-              symedgeself(bottet);
-            }
-            if (apex(bottet) == pc) {
-              // Face mathced.
-              // if (neightet.tet != NULL) {
-              //   // The bottom face is not open. Detach its neighbor.
-              //   neightet.tet[neightet.loc] = NULL;
-              //   if (!infected(neightet)) {
-              //     infect(neightet);
-              //     crosstets->newindex((void **) &parytet);
-              //     *parytet = neightet;
-              //   }
-              // }
-              // Connect two tets together.
-              bond(spintet, bottet);
-              // Both are interior tets.
-              infect(spintet);
-              infect(bottet);
-              // Add this face into list.
-              esymself(spintet);
-              midfaces->newindex((void **) &parytet);
-              *parytet = spintet;
-              break; // done.
-            }
-          } else {
-            break; // done.
-          }
-        } // k
-        assert(k < 2);  // SELF_CHECK
+        // Connect two tets together.
+        bond(toptet, bottet);
+        // Both are interior tets.
+        infect(toptet);
+        infect(bottet);
+        // Add this face into list.
+        esymself(toptet);
+        midfaces->newindex((void **) &parytet);
+        *parytet = toptet;
       }
     } // j
   } // i
-  */
 
+  if (b->verbose > 1) {
+    printf("    Found %ld middle subfaces.\n", midfaces->objects);
+  }
   if (midfaces->objects > maxregionsize) {
     maxregionsize = midfaces->objects;
+  }
+
+  // Bond subsegments to new tets.
+  for (k = 0; k < 2; k++) {
+    cavfaces = (k == 0 ? topfaces : botfaces);
+    for (i = 0; i < cavfaces->objects; i++) {
+      parytet = (triface *) fastlookup(cavfaces, i);
+      // Bond a subsegment (if it exists).
+      for (j = 0; j < 3; j++) {
+        tsspivot(*parytet, checkseg);
+        if (checkseg.sh != NULL) {
+          symedge(*parytet, neightet);
+          assert(marktested(neightet)); // SELF_CHECK
+          while (1) {
+            tssbond1(neightet, checkseg);
+            fnextself(neightet);
+            if (!marktested(neightet)) break;
+          }
+        }
+        enextself(*parytet);
+      }
+    }
   }
 
   // Unmark all facet vertices.
