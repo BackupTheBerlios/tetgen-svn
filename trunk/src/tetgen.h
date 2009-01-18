@@ -1629,7 +1629,7 @@ enum intersection scoutcrosstet(arraypool*, triface* searchtet);
 void adjustsurfmesh(arraypool*, triface* crosstet);
 void formcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*);
-void fillcavity(arraypool*, arraypool*, arraypool*);
+void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
 void constrainedfacets();
 

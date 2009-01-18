@@ -138,6 +138,14 @@ void tetgenmesh::checkmesh()
             horrors++;
           }
         }
+        if (infected(tetloop)) {
+          printf("  !! (%d, %d, %d, %d) is infected.\n", pointmark(pa),
+            pointmark(pb), pointmark(pc), pointmark(pd));
+        }
+        if (marktested(tetloop)) {
+          printf("  !! (%d, %d, %d, %d) is marked.\n", pointmark(pa),
+            pointmark(pb), pointmark(pc), pointmark(pd));
+        }
       }
       if (tetloop.tet[tetloop.loc] == NULL) {
         printf("  !! !! No neighbor at face (%d, %d, %d).\n", pointmark(pa),
@@ -1161,14 +1169,26 @@ void tetgenmesh::print_tetarray(arraypool *tetarray, bool nohulltet)
 
   for (i = 0; i < tetarray->objects; i++) {
     parytet = (triface *) fastlookup(tetarray, i);
+    if (parytet->tet == NULL) {
+      printf("-- NOT A TET -- %d\n", i + 1); continue;
+    }
     if (nohulltet) {
       if ((point) parytet->tet[7] == dummypoint) continue;
     }
-    printf("p:draw_tet(%d, %d, %d, %d) -- %d", 
-      pointmark(org(*parytet)), pointmark(dest(*parytet)),
-      pointmark(apex(*parytet)), pointmark(oppo(*parytet)), i + 1);
-    if ((point) parytet->tet[7] == dummypoint) {
-      printf(" (hulltet)");
+    if (parytet->tet[4] == NULL) {
+      printf("-- A DEAD TET -- %d\n", i + 1); continue;
+    }
+    if ((point) parytet->tet[7] != dummypoint) {
+      printf("p:draw_tet(%d, %d, %d, %d) -- %d", 
+        pointmark(org(*parytet)), pointmark(dest(*parytet)),
+        pointmark(apex(*parytet)), pointmark(oppo(*parytet)), i + 1);
+    } else {
+      printf("-- p:draw_tet(%d, %d, %d, %d) -- %d (hulltet)", 
+        pointmark(org(*parytet)), pointmark(dest(*parytet)),
+        pointmark(apex(*parytet)), pointmark(oppo(*parytet)), i + 1);
+    }
+    if (marktested(*parytet)) {
+      printf(" (marked)");
     }
     if (infected(*parytet)) {
       printf(" (infect)");
