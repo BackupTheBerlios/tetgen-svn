@@ -1150,6 +1150,17 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
       printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
         pointmark(pa), pointmark(pb), pointmark(pd), pointmark(pe));
     }
+    // Unmark all facet vertices.
+    puninfect(pa);
+    puninfect(pb);
+    puninfect(pc);
+    // Unmark (uninfect) all vertices (subfaces) of the facet.
+    for (i = 0; i < misregion->objects; i++) {
+      worksh = * (face *) fastlookup(misregion, i);
+      sunmarktest(worksh);
+      pd = sapex(worksh);
+      puninfect(pd);
+    }
     if (getpointtype(pd) == VOLVERTEX) {
       // A vertex (pd) lies on the facet.
       enext2self(*searchtet); // org(*searchtet) == pd
@@ -1177,7 +1188,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
 
 void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
 {
-  face *pssub, worksh, flipfaces[2];
+  face *pssub, flipfaces[2];
   face checkseg;
   point pa, pb, pc, pd, pe;
   REAL ori1, len, n[3];
@@ -1251,18 +1262,6 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
 
   if (pe == dummypoint) {
     pe[0] = pe[1] = pe[2] = 0;
-  }
-
-  // Uninfect (unmark) all vertices (subfaces) of the facet.
-  for (i = 0; i < misregion->objects; i++) {
-    worksh = * (face *) fastlookup(misregion, i);
-    sunmarktest(worksh);
-    pa = sorg(worksh);
-    pb = sdest(worksh);
-    pc = sapex(worksh);
-    puninfect(pa);
-    puninfect(pb);
-    puninfect(pc);
   }
 }
 
@@ -1692,6 +1691,7 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   infect(bottet);
   // Add this face into search list.
   esymself(toptet); // Choose the 0th edge ring.
+  markface(toptet);
   midfaces->newindex((void **) &parytet);
   *parytet = toptet;
 
@@ -1717,34 +1717,42 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
         if (pc == dummypoint) {
           break; // Find a subface.
         }
-        assert(pc != pg); // SELF_CHECK
+        /* if (pc == pg) {
+          // The adjacent face is not a middle face.
+          bflag = true; break; 
+        }*/
         // Go to the same face in the adjacent tet.
         symedgeself(toptet);
-        // Do we walk outside the cavity?
+        // Do we walk outside the cavity? 
+        // (The following code does not always work, 2009-01-19).
         if (!marktested(toptet)) {
           // Yes, the adjacent face is not a middle face.
           bflag = true; break; 
         }
       }
       if (!bflag) {
-        symedge(midface, bottet);
-        while (1) {
+        // assert(marktested(toptet)); // SELF_CHECK
+        if (!facemarked(toptet)) {
+          symedge(midface, bottet);
+          while (1) {
+            enext0fnextself(bottet);
+            pf = apex(bottet);
+            if (pf == pc) break; // Face matched.
+            assert(!pinfected(pf)); // SELF_CHECK
+            symedgeself(bottet);
+          }
           assert(marktested(bottet)); // SELF_CHECK
-          enext0fnextself(bottet);
-          pf = apex(bottet);
-          if (pf == pc) break; // Face matched.
-          assert(!pinfected(pf)); // SELF_CHECK
-          symedgeself(bottet);
+          // Connect two tets together.
+          bond(toptet, bottet);
+          // Both are interior tets.
+          infect(toptet);
+          infect(bottet);
+          // Add this face into list.
+          esymself(toptet);
+          markface(toptet);
+          midfaces->newindex((void **) &parytet);
+          *parytet = toptet;
         }
-        // Connect two tets together.
-        bond(toptet, bottet);
-        // Both are interior tets.
-        infect(toptet);
-        infect(bottet);
-        // Add this face into list.
-        esymself(toptet);
-        midfaces->newindex((void **) &parytet);
-        *parytet = toptet;
       }
     } // j
   } // i
@@ -1752,8 +1760,17 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   if (b->verbose > 1) {
     printf("    Found %ld middle subfaces.\n", midfaces->objects);
   }
+
   if (midfaces->objects > maxregionsize) {
     maxregionsize = midfaces->objects;
+  }
+
+  // Unmark middle faces.
+  for (i = 0; i < midfaces->objects; i++) {
+    // Get a matched middle face [a, b, c]
+    midface = * (triface *) fastlookup(midfaces, i);
+    assert(facemarked(midface)); // SELF_CHECK
+    unmarkface(midface);
   }
 
   // Bond subsegments to new tets.

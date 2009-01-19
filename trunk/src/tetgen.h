@@ -1766,6 +1766,7 @@ void psubface(int i, int j, int k);
 void psubseg(int i, int j);
 int pmark(point p);
 void pvert(point p);
+void pverti(int i);
 REAL test_orient3d(int i, int j, int k, int l);
 REAL test_insphere(int i, int j, int k, int l, int m);
 int test_tritri(int a, int b, int c, int p,  int q, int r);

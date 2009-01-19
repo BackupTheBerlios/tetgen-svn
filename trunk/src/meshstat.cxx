@@ -1004,6 +1004,38 @@ void tetgenmesh::pvert(point pt)
   }
 }
 
+void tetgenmesh::pverti(int idx)
+{
+  triface adjtet;
+  point pt;
+
+  // Search the vertex.
+  pointpool->traversalinit();
+  pt = pointtraverse();
+  while (pt != NULL) {
+    if (idx == ((int *) (pt))[pointmarkindex]) break;
+    pt = pointtraverse();
+  }
+
+  if (pt == NULL) {
+    printf(" Not exist.\n");
+    return;
+  }
+
+  printf("  vertex %d: x%lx\n", idx, (unsigned long) pt);
+  idx = ((int *) (pt))[pointmarkindex + 1];
+  printf("  type: %d (%s infected).\n", idx >> 1, idx & 1 ? " " : "not");
+
+  decode(point2tet(pt), adjtet);
+  if (adjtet.tet != NULL) {
+    printf("  adjtet: x%lx (%d, %d, %d, %d).\n", (unsigned long) adjtet.tet,
+      pointmark(adjtet.tet[4]), pointmark(adjtet.tet[5]),
+      pointmark(adjtet.tet[6]), pointmark(adjtet.tet[7]));
+  } else {
+    printf("  No adjacent tet.\n");
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Geometrical tests.
 
