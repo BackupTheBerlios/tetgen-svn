@@ -1183,7 +1183,7 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
   REAL ori1, len, n[3];
   int i;
 
-  // Get the first missing subface abc.
+  // Get the first missing subface [a, b, c].
   pssub = (face *) fastlookup(misregion, 0);
   pa = sorg(*pssub);
   pb = sdest(*pssub);
@@ -1208,40 +1208,50 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
     pe[1] = pa[1] + len * n[1];
     pe[2] = pa[2] + len * n[2];
   }
-  ori1 = orient3d(pb, pc, pe, pd);
+
+  while (1) {
+
+    ori1 = orient3d(pb, pc, pe, pd);
+    assert(ori1 != 0); // SELF_CHECK
+
+    if (ori1 < 0) { // Flip edge [b, c]
+      senext(*pssub, flipfaces[0]);
+    } else { // Flip edge [c, a]
+      senext2(*pssub, flipfaces[0]);
+    }
+
+    sspivot(flipfaces[0], checkseg); // SELF_CHECK
+    assert(checkseg.sh == NULL); // SELF_CHECK
+    spivot(flipfaces[0], flipfaces[1]);
+    assert(sinfected(flipfaces[1])); // SELF_CHECK
+
+    // Temporarily uninfect them.
+    suninfect(flipfaces[0]);
+    suninfect(flipfaces[1]);
+
+    flip22(flipfaces, 0);
+
+    // Infect them back (to be recovered).
+    sinfect(flipfaces[0]);
+    sinfect(flipfaces[1]);
+
+    // Find the edge [a, b].
+    if (ori1 < 0) { // Flip edge [b, c]
+      senext(flipfaces[1], *pssub);
+    } else { // Flip edge [c, a]
+      senext2(flipfaces[0], *pssub);
+    }
+    assert(sorg(*pssub) == pa); // SELF_CHECK
+    assert(sdest(*pssub) == pb); // SELF_CHECK
+
+    pc = sapex(*pssub);
+    if (pc == pd) break;
+
+  }
+
   if (pe == dummypoint) {
     pe[0] = pe[1] = pe[2] = 0;
   }
-  assert(ori1 != 0); // SELF_CHECK
-  if (ori1 < 0) { // Flip edge [b, c]
-    senext(*pssub, flipfaces[0]);
-  } else { // Flip edge [c, a]
-    senext2(*pssub, flipfaces[0]);
-  }
-
-  sspivot(flipfaces[0], checkseg); // SELF_CHECK
-  assert(checkseg.sh == NULL); // SELF_CHECK
-  spivot(flipfaces[0], flipfaces[1]);
-  assert(sinfected(flipfaces[1])); // SELF_CHECK
-  // Temporarily uninfect them.
-  suninfect(flipfaces[0]);
-  suninfect(flipfaces[1]);
-
-  flip22(flipfaces, 0);
-
-  // Infect them back (to be recovered).
-  sinfect(flipfaces[0]);
-  sinfect(flipfaces[1]);
-
-  /*// Find the edge [a, b].
-  if (ori1 < 0) { // Flip edge [b, c]
-    senext(flipfaces[1], *pssub);
-  } else { // Flip edge [c, a]
-    senext2(flipfaces[0], *pssub);
-  }
-  assert(sorg(*pssub) == pa); // SELF_CHECK
-  assert(sdest(*pssub) == pb); // SELF_CHECK
-  */
 
   // Uninfect (unmark) all vertices (subfaces) of the facet.
   for (i = 0; i < misregion->objects; i++) {
