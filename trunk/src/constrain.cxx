@@ -1599,7 +1599,7 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   arraypool* midfaces, arraypool* misregion)
 {
   arraypool *cavfaces;
-  triface *parytet, toptet, bottet, neightet, spintet, midface;
+  triface *parytet, toptet, bottet, neightet, midface;
   face worksh, checksh, tmpsh;
   face checkseg;
   point pa, pb, pc, pf, pg;
@@ -1860,11 +1860,11 @@ void tetgenmesh::constrainedfacets()
   arraypool *topfaces, *botfaces, *midfaces;
   arraypool *misregion;
   triface *parytet, searchtet;
-  face *pssub, ssub;
+  face *pssub, *pssub1, ssub;
   enum intersection dir;
   long bakflipcount, cavitycount;
   int bakhullsize;
-  int i;
+  int s;
 
   if (b->verbose) {
     printf("  Constraining facets.\n");
@@ -1897,12 +1897,19 @@ void tetgenmesh::constrainedfacets()
     dir = scoutsubface(&ssub, &searchtet);
     if (dir == SHAREFACE) continue;
 
-    if (dir == EDGETRIINT) assert(0); // Not handled yet.
-
     // Push the face back into stack.
     sinfect(ssub);
-    subfacstack->newindex((void **) pssub);
-    *pssub = ssub;
+    if (dir != EDGETRIINT) {
+      subfacstack->newindex((void **) pssub);
+      *pssub = ssub;
+    } else {
+      s = randomnation(subfacstack->objects - 1);
+      pssub = (face *) fastlookup(subfacstack, s);
+      subfacstack->newindex((void **) &pssub1);
+      *pssub1 = *pssub;
+      *pssub = ssub;
+      continue;
+    }
 
     // Search for a crossing tet.
     misregion->newindex((void **) &pssub);

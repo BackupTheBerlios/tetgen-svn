@@ -853,6 +853,24 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
             printf("Internal error in insertvertex(): Unknown flip case.\n");
             terminatetetgen(1);
           }
+          if (checksubsegs) {
+            // Check if the flip edge is subsegment.
+            tsspivot(fliptets[0], sseg);
+            if ((sseg.sh != NULL) && !sinfected(sseg)) {
+              // This subsegment will be flipped. Queue it.
+              if (b->verbose > 2) {
+                  printf("      Queue encroached segment (%d, %d).\n",
+                    pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+              }
+              sinfect(sseg);  // Only save it once.
+              subsegstack->newindex((void **) &psseg);
+              *psseg = sseg;
+              // Detach the tet-seg bonds.
+              tssdissolve(fliptets[0]);
+              tssdissolve(fliptets[1]);
+              tssdissolve(fliptets[2]);
+            }
+          }
           // Do a 3-to-2 flip to remove the degenerate tet.
           flip32(fliptets, 1, 0);
           // Rememebr the new tet.
