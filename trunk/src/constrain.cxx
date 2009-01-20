@@ -1180,22 +1180,22 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// adjustsurfmesh()    Adjust surface mesh to match the volume mesh.         //
-//                                                                           //
-// An edge flip (flip22) is performed to adjust the surface mesh.            //
+// recoversubedge()    Recover an edge (by flips) in surface mesh.           //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
+void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
 {
-  face *pssub, flipfaces[2];
+  face flipfaces[2];
   face checkseg;
   point pa, pb, pc, pd, pe;
-  REAL ori1, len, n[3];
-  int i;
+  REAL ori, len, n[3];
 
-  // Get the first missing subface [a, b, c].
-  pssub = (face *) fastlookup(misregion, 0);
+  tetrahedron ptr;
+  shellface sptr;
+  int tver;
+
+  // Get the missing subface [a, b, c].
   pa = sorg(*pssub);
   pb = sdest(*pssub);
   pc = sapex(*pssub);
@@ -1220,16 +1220,26 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
     pe[2] = pa[2] + len * n[2];
   }
 
+  // Adjust face [a, b, c], so that edge [b, c] crosses edge [a, d].
+  ori = orient3d(pb, pc, pe, pd);
+  assert(ori != 0); // SELF_CHECK
+
+  if (ori > 0) {
+    // Swap pa, and pb.
+    sesymself(*pssub);
+    symedgeself(*crosstet);
+    pa = sorg(*pssub);
+    pb = sdest(*pssub);
+    if (pe == dummypoint) {
+      pe[0] = pe[1] = pe[2] = 0;
+    }
+    pe = oppo(*crosstet);
+  }
+
   while (1) {
 
-    ori1 = orient3d(pb, pc, pe, pd);
-    assert(ori1 != 0); // SELF_CHECK
-
-    if (ori1 < 0) { // Flip edge [b, c]
-      senext(*pssub, flipfaces[0]);
-    } else { // Flip edge [c, a]
-      senext2(*pssub, flipfaces[0]);
-    }
+    // Flip edge [b, c], edge [a, d] is missing.
+    senext(*pssub, flipfaces[0]);
 
     sspivot(flipfaces[0], checkseg); // SELF_CHECK
     assert(checkseg.sh == NULL); // SELF_CHECK
@@ -1247,17 +1257,43 @@ void tetgenmesh::adjustsurfmesh(arraypool* misregion, triface* crosstet)
     sinfect(flipfaces[1]);
 
     // Find the edge [a, b].
-    if (ori1 < 0) { // Flip edge [b, c]
-      senext(flipfaces[1], *pssub);
-    } else { // Flip edge [c, a]
-      senext2(flipfaces[0], *pssub);
-    }
+    senext(flipfaces[1], *pssub);
     assert(sorg(*pssub) == pa); // SELF_CHECK
     assert(sdest(*pssub) == pb); // SELF_CHECK
 
     pc = sapex(*pssub);
     if (pc == pd) break;
 
+    if (pe == dummypoint) {
+      // Calculate a point above the faces.
+      facenormal(pa, pb, pd, n, 1);
+      len = sqrt(DOT(n, n));
+      n[0] /= len;
+      n[1] /= len;
+      n[2] /= len;
+      len = DIST(pa, pb);
+      len += DIST(pb, pd);
+      len += DIST(pd, pa);
+      len /= 3.0;
+      pe[0] = pa[0] + len * n[0];
+      pe[1] = pa[1] + len * n[1];
+      pe[2] = pa[2] + len * n[2];
+    }
+
+    while (1) {
+      ori = orient3d(pb, pc, pe, pd);
+      assert(ori != 0); // SELF_CHECK
+      if (ori > 0) {
+        senext2self(*pssub);
+        spivotself(*pssub);
+        assert(sinfected(*pssub)); // SELF_CHECK
+        if (sorg(*pssub) != pa) sesymself(*pssub);
+        pb = sdest(*pssub);
+        pc = sapex(*pssub);
+        continue;
+      }
+      break;
+    }
   }
 
   if (pe == dummypoint) {
@@ -1971,7 +2007,9 @@ void tetgenmesh::constrainedfacets()
       checksubsegs = 1;
     } else if (dir == ACROSSFACE) {
       // Recover subface(s) by edge flips.
-      adjustsurfmesh(misregion, &searchtet);
+      // adjustsurfmesh(misregion, &searchtet);
+      pssub = (face *) fastlookup(misregion, 0);
+      recoversubedge(pssub, &searchtet);
     } else {
       assert(0); // Not handled yet.
     }
