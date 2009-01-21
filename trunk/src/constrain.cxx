@@ -972,6 +972,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
       // Get a tet whose origin is pa.
       decode(point2tet(pa), *searchtet);
       assert(searchtet->tet != NULL); // SELF_CHECK
+      assert(searchtet->tet[4] != NULL); // SELF_CHECK
       if ((point) searchtet->tet[4] == pa) {
         searchtet->loc = 0; searchtet->ver = 0;
       } else if ((point) searchtet->tet[5] == pa) {

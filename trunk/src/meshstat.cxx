@@ -561,6 +561,10 @@ void tetgenmesh::ptet(triface* t)
     return;
   }
   pts = (point *) t->tet;
+  if (pts[4] == NULL) {
+    printf("  !! A DEAD TET\n");
+    return;
+  }
   if (pts[7] != dummypoint) {
     ori = orient3d(pts[4], pts[5], pts[6], pts[7]);
     printf("  ori = %g.\n", ori);
@@ -1027,13 +1031,17 @@ void tetgenmesh::pverti(int idx)
   printf("  type: %d (%s infected).\n", idx >> 1, idx & 1 ? " " : "not");
 
   decode(point2tet(pt), adjtet);
-  if (adjtet.tet != NULL) {
-    printf("  adjtet: x%lx (%d, %d, %d, %d).\n", (unsigned long) adjtet.tet,
-      pointmark(adjtet.tet[4]), pointmark(adjtet.tet[5]),
-      pointmark(adjtet.tet[6]), pointmark(adjtet.tet[7]));
-  } else {
+  if (adjtet.tet == NULL) {
     printf("  No adjacent tet.\n");
+    return;
   }
+  if (adjtet.tet[4] == NULL) {
+    printf("  !! A DEAD adjacent tet.\n");
+    return;
+  }
+  printf("  adjtet: x%lx (%d, %d, %d, %d).\n", (unsigned long) adjtet.tet,
+    pointmark(adjtet.tet[4]), pointmark(adjtet.tet[5]),
+    pointmark(adjtet.tet[6]), pointmark(adjtet.tet[7]));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
