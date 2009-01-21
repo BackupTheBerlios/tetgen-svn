@@ -1069,7 +1069,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
   triface spintet;
   face *pssub, worksh, neighsh;
   face checkseg;
-  point pa, pb, pc, pd, pe;
+  point pa, pb, pc, pd, pe, pf;
   REAL ori;
   int i, j;
 
@@ -1118,6 +1118,50 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
     pb = dest(*searchtet);
   }
 
+  /*// Look apexes around [a, b], collect "coplanar" vertices.
+  pd = apex(*searchtet);
+  spintet = *searchtet;
+  while (1) {
+    if (pinfected(pd)) {
+      // Find a "coplanar" points.
+      facetpoints->newindex((void **) &ppt);
+      *ppt = pd;
+    } else {
+      // Remember a non-coplanar point.
+      pe = pd;
+    }
+    fnextself(spintet);
+    pd = apex(spintet);
+    if (pd == apex(*searchtet)) break;
+  }
+
+  if (facetpoints->objects >= 2) {
+    // There are multiple "coplanar" vertices. This is caused by the
+    //   non-coplanarity of the facet. See an example in fig/dump-
+    //   scoutcrosstet-case1.lua.
+    // We discrimate them using Delaunay criterion. Note that pe is
+    //   non-coplanar [pa, pb, *ppt].
+    for (i = 0; i < facetpoints->objects; i++) {
+      ppt = (point *) fastlookup(facetpoints, i);
+      // Check tet [pa, pb, ppt, pe] is Delaunay.
+      for (j = 0; j < facetpoints->objects; j++) {
+        if (j == i) continue;
+        ppt2 = (point *) fastlookup(facetpoints, j);
+        ori = orient3d(pa, pb, *ppt, pe);
+        assert(ori != 0); // SELF_CHECK
+        sign = insphere_sos(pa, pb, *ppt, pe, *ppt2);
+        sign = (ori > 0 ? sign : -sign);
+        if (sign < 0) break; // Non-Delaunay.
+      }
+      if (j == facetpoints->objects) {
+        // Choose this point.
+        pd = *ppt; break;
+      }
+    }
+    assert(i < facetpoints->objects); // SELF_CHECK
+  }
+  */
+
   // Get a face containing ab and its apex lies below abc.
   pd = apex(*searchtet);
   spintet = *searchtet;
@@ -1141,6 +1185,24 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
     }
     if (ori <= 0) break;  // stop at pd->pe.    
     fnextself(spintet);
+  }
+
+  if (ori == 0) {
+    pd = apex(spintet);
+    if (pd == dummypoint) {
+      // Are there multiple "coplanar" vertices?
+      // See examples in fig/dump-scoutcrosstet-case1(2).lua.
+      while (1) {
+        fnext(spintet, *searchtet);
+        pf = oppo(*searchtet);
+        if (pinfected(pf)) {
+          spintet = *searchtet; // Skip 'spintet'.
+        } else {
+          assert(pf != dummypoint); // SELF_CHECK
+          break;
+        }
+      }
+    }
   }
 
   if (ori == 0) {
@@ -1203,7 +1265,7 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
 
   // The crosstet is abde.
   pd = apex(*crosstet);
-  pe = oppo(*crosstet);
+  pe = dummypoint; // oppo(*crosstet);
 
   if (pe == dummypoint) {
     // Calculate a point above the faces.
@@ -1234,7 +1296,7 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
     if (pe == dummypoint) {
       pe[0] = pe[1] = pe[2] = 0;
     }
-    pe = oppo(*crosstet);
+    pe = dummypoint; // oppo(*crosstet);
   }
 
   while (1) {
@@ -1244,8 +1306,14 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
 
     sspivot(flipfaces[0], checkseg); // SELF_CHECK
     assert(checkseg.sh == NULL); // SELF_CHECK
+
     spivot(flipfaces[0], flipfaces[1]);
-    assert(sinfected(flipfaces[1])); // SELF_CHECK
+    if (!sinfected(flipfaces[1])) {
+      // A recovered subface, re-queue it.
+      sinfect(flipfaces[1]);
+      subfacstack->newindex((void **) &pssub);
+      *pssub = flipfaces[1];
+    }
 
     // Temporarily uninfect them.
     suninfect(flipfaces[0]);
@@ -2027,7 +2095,7 @@ void tetgenmesh::constrainedfacets()
       continue;
     }
 
-    // Search for a crossing tet.
+    // Search for a crossing tet (Re-use toppoints).
     misregion->newindex((void **) &pssub);
     *pssub = ssub;
     dir = scoutcrosstet(misregion, &searchtet);

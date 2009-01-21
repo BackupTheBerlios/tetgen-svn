@@ -206,14 +206,19 @@ void tetgenmesh::checkmesh()
 //                                                                           //
 // checkshells()    Test the surface mesh for consistencies.                 //
 //                                                                           //
+// If 'sub2tet' > 0, it also checks the subface-to-tet connections.          //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::checkshells()
+void tetgenmesh::checkshells(int sub2tet)
 {
+  triface neightet, symtet;
   face shloop, spinsh, nextsh;
   face checkseg;
   point pa, pb;
   int horrors, i;
+
+  tetrahedron ptr;
 
   if (!b->quiet) {
     printf("  Checking consistency of the mesh boundary...\n");
@@ -259,6 +264,41 @@ void tetgenmesh::checkshells()
       }
       senextself(shloop);
     }
+    if (sub2tet > 0) {
+      // Check the tet-subface connections.
+      stpivot(shloop, neightet);
+      if (neightet.tet != NULL) {
+        tspivot(neightet, spinsh);
+        if (spinsh.sh != shloop.sh) {
+          printf("  !! !! Wrong connection betwee tet and subface.\n");
+          printf("    Tet: x%lx (%d, %d, %d, %d).\n", 
+            (unsigned long) neightet.tet, pmark(org(neightet)), 
+            pmark(dest(neightet)), pmark(apex(neightet)), 
+            pmark(oppo(neightet)));
+          printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+            pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
+          horrors++;
+        } else {
+          symself(neightet);
+          tspivot(neightet, spinsh);
+          if (spinsh.sh != shloop.sh) {
+            printf("  !! !! Wrong connection betwee tet and subface.\n");
+            printf("    Tet: x%lx (%d, %d, %d, %d).\n", 
+              (unsigned long) neightet.tet, pmark(org(neightet)), 
+              pmark(dest(neightet)), pmark(apex(neightet)), 
+              pmark(oppo(neightet)));
+            printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+              pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
+            horrors++;
+          }
+        }
+      } else {
+        printf("  !! A dangling subface.\n");
+        printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+            pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
+        horrors++;
+      }
+    }
     shloop.sh = shellfacetraverse(subfacepool);
   }
 
@@ -279,16 +319,18 @@ void tetgenmesh::checkshells()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::checkdelaunay()
+void tetgenmesh::checkdelaunay(int constrained)
 {
   triface tetloop;
   triface symtet;
+  face checksh;
   point pa, pb, pc, pd, pe;
   REAL sign;
   int horrors;
 
   if (!b->quiet) {
-    printf("  Checking Delaunay property of the mesh...\n");
+    printf("  Checking %s property of the mesh...\n",  constrained > 0 ? 
+      "constrained Delaunay" : "Delaunay");
   }
   
   horrors = 0;
@@ -310,10 +352,16 @@ void tetgenmesh::checkdelaunay()
         pe = oppo(symtet);
         sign = insphere_sos(pa, pb, pc, pd, pe);
         if (sign < 0.0) {
-          printf("  !! Non-locally Delaunay (%d, %d, %d) - %d, %d\n",
-            pointmark(pa), pointmark(pb), pointmark(pc), pointmark(pd),
-            pointmark(pe));
-          horrors++;
+          if (constrained > 0) {
+            tspivot(tetloop, checksh);
+          }
+          if ((constrained == 0) || 
+             ((constrained > 0) && (checksh.sh == NULL))) {
+            printf("  !! Non-locally Delaunay (%d, %d, %d) - %d, %d\n",
+              pointmark(pa), pointmark(pb), pointmark(pc), pointmark(pd),
+              pointmark(pe));
+            horrors++;
+          }
         }
       }
     }
@@ -322,7 +370,8 @@ void tetgenmesh::checkdelaunay()
 
   if (horrors == 0) {
     if (!b->quiet) {
-      printf("  The mesh is Delaunay.\n");
+      printf("  The mesh is %s.\n", constrained > 0 ? "constrained Delaunay" 
+        : "Delaunay");
     }
   } else {
     printf("  !! !! !! !! Found %d non-Delaunay faces.\n", horrors);
@@ -331,7 +380,7 @@ void tetgenmesh::checkdelaunay()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// checksegments()    Check the segment connections.                         //
+// checksegments()    Check the connections between tetrahedra and segments. //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -342,6 +391,10 @@ void tetgenmesh::checksegments()
   face sseg, checkseg;
   point pa, pb;
   int horrors, i;
+
+  if (!b->quiet) {
+    printf("  Checking tet-seg connections...\n");
+  }
 
   horrors = 0;
   tetrahedronpool->traversalinit();

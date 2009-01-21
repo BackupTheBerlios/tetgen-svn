@@ -173,14 +173,6 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
         printf("Intersection "); 
       }
       printf("seconds:  %g\n", (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
-      if ((b->diagnose != 1) && (b->verbose > 0)) {
-        printf("  Surface mesh seconds:  %g\n",
-               (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
-        /*printf("  Segment recovery seconds:  %g\n",
-               (tv[16] - tv[15]) / (REAL) CLOCKS_PER_SEC);
-        printf("  facet recovery seconds:  %g\n",
-               (tv[4] - tv[16]) / (REAL) CLOCKS_PER_SEC);*/
-      }
     }
   }
 
@@ -251,12 +243,15 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
   if (!b->quiet) {
     printf("\nOutput seconds:  %g\n",
            (tv[4] - tv[3]) / (REAL) CLOCKS_PER_SEC);
-    printf("Total running seconds:  %g\n",
+    printf("Total running seconds:  %g\n\n",
            (tv[4] - tv[0]) / (REAL) CLOCKS_PER_SEC);
   }
 
   if (b->docheck) {
-    m.checkdelaunay();
+    if (b->plc) {
+      m.checkshells(1);
+    }
+    m.checkdelaunay(b->plc);
   }
 
   if (!b->quiet) {
