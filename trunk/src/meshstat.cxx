@@ -946,7 +946,7 @@ void tetgenmesh::pface(int i, int j, int k)
 bool tetgenmesh::pedge(int i, int j)
 {
   triface t, t1;
-  face sseg;
+  face ssub, sseg;
   int ii;
 
   t.ver = t1.ver = 0;
@@ -966,12 +966,18 @@ bool tetgenmesh::pedge(int i, int j)
         printf("  tet x%lx (%d, %d, %d, %d)", (unsigned long) t1.tet,
           pointmark(org(t1)), pointmark(dest(t1)), pointmark(apex(t1)), 
           pointmark(oppo(t1)));
-        if (checksubsegs || checksubfaces) {
+        if (checksubsegs) {
           tsspivot(t1, sseg);
           if (sseg.sh != NULL) {
             printf(" (seg)");
           }
         }
+        if (checksubfaces) {
+          tspivot(t1, ssub);
+          if (ssub.sh != NULL) {
+            printf(" (sub)");
+          }
+        } 
         if (edgemarked(t1)) {
           printf(" (marked)");
         }

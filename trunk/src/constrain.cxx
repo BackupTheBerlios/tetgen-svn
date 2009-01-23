@@ -1094,15 +1094,16 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
       sspivot(worksh, checkseg);
       if (checkseg.sh == NULL) {
         spivot(worksh, neighsh);
-        assert(neighsh.sh != NULL); // SELF_CHECK
-        if (!smarktested(neighsh)) {
-          pd = sapex(neighsh);
-          if (!pinfected(pd)) {
-            pinfect(pd);
+        if (neighsh.sh != NULL) {
+          if (!smarktested(neighsh)) {
+            pd = sapex(neighsh);
+            if (!pinfected(pd)) {
+              pinfect(pd);
+            }
+            smarktest(neighsh);
+            misregion->newindex((void **) &pssub);
+            *pssub = neighsh;
           }
-          smarktest(neighsh);
-          misregion->newindex((void **) &pssub);
-          *pssub = neighsh;
         }
       }
     }
@@ -1118,50 +1119,6 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
     pb = dest(*searchtet);
   }
 
-  /*// Look apexes around [a, b], collect "coplanar" vertices.
-  pd = apex(*searchtet);
-  spintet = *searchtet;
-  while (1) {
-    if (pinfected(pd)) {
-      // Find a "coplanar" points.
-      facetpoints->newindex((void **) &ppt);
-      *ppt = pd;
-    } else {
-      // Remember a non-coplanar point.
-      pe = pd;
-    }
-    fnextself(spintet);
-    pd = apex(spintet);
-    if (pd == apex(*searchtet)) break;
-  }
-
-  if (facetpoints->objects >= 2) {
-    // There are multiple "coplanar" vertices. This is caused by the
-    //   non-coplanarity of the facet. See an example in fig/dump-
-    //   scoutcrosstet-case1.lua.
-    // We discrimate them using Delaunay criterion. Note that pe is
-    //   non-coplanar [pa, pb, *ppt].
-    for (i = 0; i < facetpoints->objects; i++) {
-      ppt = (point *) fastlookup(facetpoints, i);
-      // Check tet [pa, pb, ppt, pe] is Delaunay.
-      for (j = 0; j < facetpoints->objects; j++) {
-        if (j == i) continue;
-        ppt2 = (point *) fastlookup(facetpoints, j);
-        ori = orient3d(pa, pb, *ppt, pe);
-        assert(ori != 0); // SELF_CHECK
-        sign = insphere_sos(pa, pb, *ppt, pe, *ppt2);
-        sign = (ori > 0 ? sign : -sign);
-        if (sign < 0) break; // Non-Delaunay.
-      }
-      if (j == facetpoints->objects) {
-        // Choose this point.
-        pd = *ppt; break;
-      }
-    }
-    assert(i < facetpoints->objects); // SELF_CHECK
-  }
-  */
-
   // Get a face containing ab and its apex lies below abc.
   pd = apex(*searchtet);
   spintet = *searchtet;
@@ -1174,17 +1131,24 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
     if (ori > 0) break;
     fnextself(spintet);
     pd = apex(spintet);
-    assert(pd != apex(*searchtet)); // SELF_CHECK
+    if (pd == apex(*searchtet)) break;
   }
-  // Search a tet whose apex->oppo crosses the facet containig abc.
-  while (1) {
-    pe = oppo(spintet);
-    ori = orient3d(pa, pb, pc, pe);
-    if ((ori != 0) && pinfected(pe)) {
-      ori = 0; // Force pe be coplanar with abc.
+  if ((ori > 0) || (pd == dummypoint)) {
+    // Search a tet whose apex->oppo crosses the facet containig abc.
+    while (1) {
+      pe = oppo(spintet);
+      ori = orient3d(pa, pb, pc, pe);
+      if ((ori != 0) && pinfected(pe)) {
+        ori = 0; // Force pe be coplanar with abc.
+      }
+      if (ori <= 0) break;  // stop at pd->pe.    
+      fnextself(spintet);
     }
-    if (ori <= 0) break;  // stop at pd->pe.    
-    fnextself(spintet);
+  } else {
+    // All apexes are "coplanar" vertices. See an example in
+    //   figs/dump-scoutcrosstet-case3.lua
+    spintet = *searchtet;
+    ori = 0;
   }
 
   if (ori == 0) {
@@ -1249,6 +1213,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
 
 void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
 {
+  triface neightet;
   face flipfaces[2];
   face checkseg;
   point pa, pb, pc, pd, pe;
@@ -1313,6 +1278,11 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
       sinfect(flipfaces[1]);
       subfacstack->newindex((void **) &pssub);
       *pssub = flipfaces[1];
+      // Detach it from adjacent tets.
+      stpivot(flipfaces[1], neightet);
+      tsdissolve(neightet);
+      symself(neightet);
+      tsdissolve(neightet);
     }
 
     // Temporarily uninfect them.
@@ -1725,23 +1695,26 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
     // Insert tmpsh in DT.
     searchtet.tet = NULL; 
     dir = scoutsubface(&tmpsh, &searchtet);
-    if (dir != SHAREFACE) {
-      assert(0); // Face unmatched. Not process yet.
-    }
-    // Identify the inter and outer tets at tempsh.
-    stpivot(tmpsh, neightet);
-    // neightet and tmpsh refer to the same edge [pt[0], pt[1]].
-    //   Morover, neightet is in 0th edge ring (see decode()).
-    if (org(neightet) != pt[1]) {
-      symedgeself(neightet);
-      assert(org(neightet) == pt[1]); // SELF_CHECK
-      // Make sure that tmpsh is connected with an interior tet. 
-      tsbond(neightet, tmpsh);
-    }
-    assert(dest(neightet) == pt[0]); // SELF_CHECK
-    // Mark neightet as interior.
-    if (!infected(neightet)) {
-      infect(neightet);
+    if (dir == SHAREFACE) {
+      // Identify the inter and outer tets at tempsh.
+      stpivot(tmpsh, neightet);
+      // neightet and tmpsh refer to the same edge [pt[0], pt[1]].
+      //   Morover, neightet is in 0th edge ring (see decode()).
+      if (org(neightet) != pt[1]) {
+        symedgeself(neightet);
+        assert(org(neightet) == pt[1]); // SELF_CHECK
+        // Make sure that tmpsh is connected with an interior tet. 
+        tsbond(neightet, tmpsh);
+      }
+      assert(dest(neightet) == pt[0]); // SELF_CHECK
+      // Mark neightet as interior.
+      if (!infected(neightet)) {
+        infect(neightet);
+      }
+    } else {
+      // assert(0); // Face unmatched. Not process yet.
+      printf("  Face (%d, %d, %d) - %d is missing\n", pointmark(pt[0]),
+        pointmark(pt[1]), pointmark(pt[2]), i);
     }
   }
   // Comment: Now no vertex is marked.
@@ -2042,11 +2015,11 @@ void tetgenmesh::constrainedfacets()
   arraypool *toppoints, *botpoints;
   arraypool *misregion;
   triface *parytet, searchtet;
-  face *pssub, *pssub1, ssub;
+  face *pssub, ssub;
   enum intersection dir;
   long bakflipcount, cavitycount;
   int bakhullsize;
-  int s;
+  int s, i;
 
   if (b->verbose) {
     printf("  Constraining facets.\n");
@@ -2068,7 +2041,7 @@ void tetgenmesh::constrainedfacets()
 
   // Loop until 'subfacstack' is empty.
   while (subfacstack->objects > 0l) {
-    // The list is used as a stack.
+    // Get the last subface of this array.
     subfacstack->objects--;
     pssub = (face *) fastlookup(subfacstack, subfacstack->objects);
     ssub = *pssub;
@@ -2081,27 +2054,22 @@ void tetgenmesh::constrainedfacets()
     dir = scoutsubface(&ssub, &searchtet);
     if (dir == SHAREFACE) continue;
 
-    // Push the face back into stack.
+    // Not exist. Push the subface back into stack.
+    s = randomnation(subfacstack->objects + 1);
+    subfacstack->newindex((void **) &pssub);
+    *pssub = * (face *) fastlookup(subfacstack, s);
     sinfect(ssub);
-    if (dir != EDGETRIINT) {
-      subfacstack->newindex((void **) pssub);
-      *pssub = ssub;
-    } else {
-      s = randomnation(subfacstack->objects - 1);
-      pssub = (face *) fastlookup(subfacstack, s);
-      subfacstack->newindex((void **) &pssub1);
-      *pssub1 = *pssub;
-      *pssub = ssub;
-      continue;
-    }
+    * (face *) fastlookup(subfacstack, s) = ssub;
 
-    // Search for a crossing tet (Re-use toppoints).
+    if (dir == EDGETRIINT) continue;
+
+    // Search for a crossing tet.
     misregion->newindex((void **) &pssub);
     *pssub = ssub;
     dir = scoutcrosstet(misregion, &searchtet);
 
     if (dir == ACROSSTET) {
-      // The subface is missing. Recover it by local retetrahedralization.
+      // Recover subfaces by local retetrahedralization.
       cavitycount++;
       bakhullsize = hullsize;
       checksubsegs = 0;
@@ -2129,13 +2097,25 @@ void tetgenmesh::constrainedfacets()
       hullsize = bakhullsize;
       checksubsegs = 1;
     } else if (dir == ACROSSFACE) {
-      // Recover subface(s) by edge flips.
-      // adjustsurfmesh(misregion, &searchtet);
+      // Recover subfaces by flipping edges in surface mesh.
       pssub = (face *) fastlookup(misregion, 0);
       recoversubedge(pssub, &searchtet);
-    } else {
+    } else { // dir == TOUCHFACE
       assert(0); // Not handled yet.
     }
+
+    // Insert subfaces of the missing region.
+    for (i = 0; i < misregion->objects; i++) {
+      ssub = * (face *) fastlookup(misregion, i);
+      if (sinfected(ssub)) {
+        searchtet.tet = NULL;
+        dir = scoutsubface(&ssub, &searchtet);
+        if (dir == SHAREFACE) {
+          suninfect(ssub); // The subface is recovered.
+        }
+      }
+    }
+    // At this point, the mesh should be constrained Delaunay.
     misregion->restart();
   }
 
@@ -2216,13 +2196,17 @@ void tetgenmesh::formskeleton()
   // Recover segments.
   delaunizesegments();
 
-  // Put all subfaces into list (in sequential order).
+  // Put all subfaces into list (in random order).
   subfacepool->traversalinit();
   for (i = 0; i < subfacepool->items; i++) {
+    s = randomnation(i + 1);
+    // Move the s-th sub to the i-th.
+    subfacstack->newindex((void **) &pssub);
+    *pssub = * (face *) fastlookup(subfacstack, s);
+    // Put i-th sub to be the s-th.
     ssub.sh = shellfacetraverse(subfacepool);
     sinfect(ssub);  // Only save it once.
-    subfacstack->newindex((void **) &pssub);
-    *pssub = ssub;
+    * (face *) fastlookup(subfacstack, s) = ssub;
   }
 
   // Subfaces will be introduced.
