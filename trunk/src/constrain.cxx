@@ -1063,60 +1063,28 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion, 
-  triface* searchtet)
+enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub, 
+  triface* searchtet, arraypool* facpoints)
 {
   triface spintet;
-  face *pssub, worksh, neighsh;
-  face checkseg;
-  point pa, pb, pc, pd, pe, pf;
-  REAL ori;
-  int i, j;
+  point pa, pb, pc, pd, pe;
+  REAL ori, ori1, len, n[3];
+  int i;
 
-  // Get the first missing subface abc.
-  pssub = (face *) fastlookup(misregion, 0);
+  // Search an edge crossing the facet containing abc.
+  if (searchtet->ver & 01) {
+    esymself(*searchtet); // Adjust to 0th edge ring.
+    sesymself(*pssub);
+  }
+
   pa = sorg(*pssub);
   pb = sdest(*pssub);
   pc = sapex(*pssub);
 
-  // Infect the vertices of this face.
-  pinfect(pa);
-  pinfect(pb);
-  pinfect(pc);
-  // Mark this face as tested.
-  smarktest(*pssub);
-
   // Infect all vertices of the facet.
-  for (i = 0; i < misregion->objects; i++) {
-    worksh = * (face *) fastlookup(misregion, i);
-    for (j = 0; j < 2; j++) {
-      senextself(worksh);
-      sspivot(worksh, checkseg);
-      if (checkseg.sh == NULL) {
-        spivot(worksh, neighsh);
-        if (neighsh.sh != NULL) {
-          if (!smarktested(neighsh)) {
-            pd = sapex(neighsh);
-            if (!pinfected(pd)) {
-              pinfect(pd);
-            }
-            smarktest(neighsh);
-            misregion->newindex((void **) &pssub);
-            *pssub = neighsh;
-          }
-        }
-      }
-    }
-  }
-
-  // Search an edge crossing the facet containing abc.
-  if (searchtet->ver & 01) {
-    // Adjust to 0th edge ring.
-    esymself(*searchtet);
-    pssub = (face *) fastlookup(misregion, 0);
-    sesymself(*pssub);
-    pa = org(*searchtet);
-    pb = dest(*searchtet);
+  for (i = 0; i < facpoints->objects; i++) {
+    pd = * (point *) fastlookup(facpoints, i);
+    pinfect(pd);
   }
 
   // Get a face containing ab and its apex lies below abc.
@@ -1126,12 +1094,17 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
     if (pd == dummypoint) break;
     ori = orient3d(pa, pb, pc, pd);
     if ((ori != 0) && pinfected(pd)) {
-      ori = 0; // F is not flat. Force d be coplanar with abc.
+      ori = 0; // Force d be co-facet with abc.
     }
     if (ori > 0) break;
     fnextself(spintet);
     pd = apex(spintet);
-    if (pd == apex(*searchtet)) break;
+    if (pd == apex(*searchtet)) {
+      // Not found a lower vertex of abc. It means that all apexes are either 
+      //   "co-facet" with abc, see an example in fig/dump-scoutcrosstet-case3.lua,
+      //   or below abc.
+      break;
+    }
   }
   if ((ori > 0) || (pd == dummypoint)) {
     // Search a tet whose apex->oppo crosses the facet containig abc.
@@ -1139,14 +1112,14 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
       pe = oppo(spintet);
       ori = orient3d(pa, pb, pc, pe);
       if ((ori != 0) && pinfected(pe)) {
-        ori = 0; // Force pe be coplanar with abc.
+        ori = 0; // Force pe be co-facet with abc.
       }
       if (ori <= 0) break;  // stop at pd->pe.    
       fnextself(spintet);
     }
+  } else if (ori == 0) {
+    assert(0);
   } else {
-    // All apexes are "coplanar" vertices. See an example in
-    //   figs/dump-scoutcrosstet-case3.lua
     spintet = *searchtet;
     ori = 0;
   }
@@ -1154,42 +1127,68 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(arraypool* misregion,
   if (ori == 0) {
     pd = apex(spintet);
     if (pd == dummypoint) {
-      // Are there multiple "coplanar" vertices?
-      // See examples in fig/dump-scoutcrosstet-case1(2).lua.
+      // Are there multiple "co-facet" vertices? See examples in fig/dump-
+      //   scoutcrosstet-case1(2).lua.
+      // If so, search for a face whose apex is co-facet with abc, and its
+      //   opposite vertex is not. 
       while (1) {
         fnext(spintet, *searchtet);
-        pf = oppo(*searchtet);
-        if (pinfected(pf)) {
+        pe = oppo(*searchtet);
+        if (pinfected(pe)) {
           spintet = *searchtet; // Skip 'spintet'.
         } else {
-          assert(pf != dummypoint); // SELF_CHECK
           break;
         }
+      }
+      if (pe == dummypoint) {
+        // We returned the original face, which means all apexes (except a
+        //   dummypoint) are co-facet with pc. Let the two hull faces be
+        //   [a, b, p1] and [a, b, p2]. Choose p1 or p2 such that the face
+        //   [a, b, p_i] intersects [a, b, c].
+        // See examples in fig/scoutcrosstet-case4.lua
+        pd = apex(*searchtet);
+        // Calculate a point above the faces.
+        facenormal(pa, pb, pc, n, 1);
+        len = sqrt(DOT(n, n));
+        n[0] /= len;
+        n[1] /= len;
+        n[2] /= len;
+        len = DIST(pa, pb);
+        len += DIST(pb, pd);
+        len += DIST(pd, pa);
+        len /= 3.0;
+        pe[0] = pa[0] + len * n[0];
+        pe[1] = pa[1] + len * n[1];
+        pe[2] = pa[2] + len * n[2];
+        // Do orient2d test pd w.r.t. [a, b].
+        ori1 = orient3d(pa, pb, pe, pd);
+        if (ori1 < 0) {
+          // Choose another face.
+          fnext(*searchtet, spintet);
+          pd = oppo(spintet); // SELF_CHECK
+          ori1 = orient3d(pa, pb, pe, pd); // // SELF_CHECK
+          assert(ori1 > 0); // SELF_CHECK
+        }
+        pe[0] = pe[1] = pe[2] = 0;
       }
     }
   }
 
   if (ori == 0) {
     fnext(spintet, *searchtet);
-    pd = apex(*searchtet);
-    pe = oppo(*searchtet);
     if (b->verbose > 1) {
       printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
-        pointmark(pa), pointmark(pb), pointmark(pd), pointmark(pe));
+        pointmark(pa), pointmark(pb), pointmark(apex(*searchtet)), 
+        pointmark(oppo(*searchtet)));
     }
     // Unmark all facet vertices.
-    puninfect(pa);
-    puninfect(pb);
-    puninfect(pc);
-    // Unmark (uninfect) all vertices (subfaces) of the facet.
-    for (i = 0; i < misregion->objects; i++) {
-      worksh = * (face *) fastlookup(misregion, i);
-      sunmarktest(worksh);
-      pd = sapex(worksh);
+    for (i = 0; i < facpoints->objects; i++) {
+      pd = * (point *) fastlookup(facpoints, i);
       puninfect(pd);
     }
-    if (getpointtype(pd) == VOLVERTEX) {
-      // A vertex (pd) lies on the facet.
+    // Comment: Now no vertex is infected.
+    if (getpointtype(apex(*searchtet)) == VOLVERTEX) {
+      // A vertex lies on the facet.
       enext2self(*searchtet); // org(*searchtet) == pd
       return TOUCHFACE;
     }
@@ -1359,13 +1358,13 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
+void tetgenmesh::formcavity(face *pssub, arraypool* crosstets, 
   arraypool* topfaces, arraypool* botfaces, arraypool* toppoints,
-  arraypool* botpoints)
+  arraypool* botpoints, arraypool* facpoints)
 {
   arraypool *crossedges;
   triface *parytet, crosstet, spintet, neightet;
-  face *pssub, worksh;
+  face checksh;
   face checkseg;
   point pa, pb, pc, pf, pg;
   point *ppt;
@@ -1374,13 +1373,14 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
 
   int *iptr;
 
-  // Get the first missing subface abc.
-  pssub = (face *) fastlookup(misregion, 0);
+  // Get the missing subface abc.
   pa = sorg(*pssub);
   pb = sdest(*pssub);
   pc = sapex(*pssub);
 
-  // Get a crossing tet abde. 
+  // Comment: Now all facet vertices are infected.
+
+  // Get a crossing tet abde.
   parytet = (triface *) fastlookup(crosstets, 0); // face abd.
   // The edge de crosses the facet. d lies below abc.
   enext2fnext(*parytet, crosstet);
@@ -1416,8 +1416,8 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
         // Go to the neighbor tet.
         fnextself(spintet);
         // Check the validity of the PLC.
-        tspivot(spintet, worksh);
-        if (worksh.sh != NULL) {
+        tspivot(spintet, checksh);
+        if (checksh.sh != NULL) {
           printf("Error:  Invalid PLC.\n");
           terminatetetgen(1);
         }
@@ -1455,15 +1455,9 @@ void tetgenmesh::formcavity(arraypool* misregion, arraypool* crosstets,
   }
 
   // Unmark all facet vertices.
-  puninfect(pa);
-  puninfect(pb);
-  puninfect(pc);
-  // Unmark (uninfect) all vertices (subfaces) of the facet.
-  for (i = 0; i < misregion->objects; i++) {
-    worksh = * (face *) fastlookup(misregion, i);
-    sunmarktest(worksh);
-    pf = sapex(worksh);
-    puninfect(pf);
+  for (i = 0; i < facpoints->objects; i++) {
+    ppt = (point *) fastlookup(facpoints, i);
+    puninfect(*ppt);
   }
 
   // Comments: Now no vertex is marked. Next we will mark vertices which 
@@ -1712,9 +1706,9 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
         infect(neightet);
       }
     } else {
-      // assert(0); // Face unmatched. Not process yet.
       printf("  Face (%d, %d, %d) - %d is missing\n", pointmark(pt[0]),
         pointmark(pt[1]), pointmark(pt[2]), i);
+      assert(0); // Face unmatched. Not process yet.
     }
   }
   // Comment: Now no vertex is marked.
@@ -1731,11 +1725,11 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
-  arraypool* midfaces, arraypool* misregion)
+  arraypool* midfaces, arraypool* facpoints)
 {
   arraypool *cavfaces;
   triface *parytet, toptet, bottet, neightet, midface;
-  face worksh, checksh, tmpsh;
+  face checksh, tmpsh;
   face checkseg;
   point pa, pb, pc, pf, pg;
   bool bflag;
@@ -1776,17 +1770,9 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     }
   }
 
-  // Mark all facet vertices for detecting middle subfaces.
-  worksh = * (face *) fastlookup(misregion, 0);
-  pa = sorg(worksh);
-  pb = sdest(worksh);
-  pc = sapex(worksh);
-  pinfect(pa);
-  pinfect(pb);
-  pinfect(pc);
-  for (i = 0; i < misregion->objects; i++) {
-    worksh = * (face *) fastlookup(misregion, i);
-    pf = sapex(worksh);
+  // Mark all facet vertices for finding middle subfaces.
+  for (i = 0; i < facpoints->objects; i++) {
+    pf = * (point *) fastlookup(facpoints, i);
     pinfect(pf);
   }
 
@@ -1922,16 +1908,8 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   }
 
   // Unmark all facet vertices.
-  worksh = * (face *) fastlookup(misregion, 0);
-  pa = sorg(worksh);
-  pb = sdest(worksh);
-  pc = sapex(worksh);
-  puninfect(pa);
-  puninfect(pb);
-  puninfect(pc);
-  for (i = 0; i < misregion->objects; i++) {
-    worksh = * (face *) fastlookup(misregion, i);
-    pf = sapex(worksh);
+  for (i = 0; i < facpoints->objects; i++) {
+    pf = * (point *) fastlookup(facpoints, i);
     puninfect(pf);
   }
   // Comment: Now no vertex is marked.
@@ -2013,13 +1991,16 @@ void tetgenmesh::constrainedfacets()
   arraypool *crosstets, *topnewtets, *botnewtets;
   arraypool *topfaces, *botfaces, *midfaces;
   arraypool *toppoints, *botpoints;
-  arraypool *misregion;
+  arraypool *facpoints;
   triface *parytet, searchtet;
-  face *pssub, ssub;
+  face *pssub, ssub, neighsh;
+  face checkseg;
+  point *ppt, pt;
   enum intersection dir;
   long bakflipcount, cavitycount;
+  int facetcount;
   int bakhullsize;
-  int s, i;
+  int s, i, j;
 
   if (b->verbose) {
     printf("  Constraining facets.\n");
@@ -2034,12 +2015,136 @@ void tetgenmesh::constrainedfacets()
   midfaces = new arraypool(sizeof(triface), 10);
   toppoints = new arraypool(sizeof(point), 8);
   botpoints = new arraypool(sizeof(point), 8);
-  misregion = new arraypool(sizeof(face), 8);
+  facpoints = new arraypool(sizeof(point), 8);
 
   bakflipcount = flip22count;
   cavitycount = 0l;
+  facetcount = 0;
 
-  // Loop until 'subfacstack' is empty.
+  subfacepool->traversalinit();
+  ssub.sh = shellfacetraverse(subfacepool);
+  while (ssub.sh != NULL) {
+    if (sinfected(ssub)) {
+      // Find an unrecovered facet.
+      smarktest(ssub);
+      subfacstack->newindex((void **) &pssub);
+      *pssub = ssub;
+      // Get all subfaces and vertices of this facet.
+      for (i = 0; i < subfacstack->objects; i++) {
+        ssub = * (face *) fastlookup(subfacstack, i);
+        for (j = 0; j < 3; j++) {
+          sspivot(ssub, checkseg);
+          if (checkseg.sh == NULL) {
+            spivot(ssub, neighsh);
+            assert(neighsh.sh != NULL); // SELF_CHECK
+            assert(sinfected(neighsh)); // SELF_CHECK
+            if (!smarktested(neighsh)) {
+              smarktest(neighsh);
+              subfacstack->newindex((void **) &pssub);
+              *pssub = neighsh;
+            }
+          }
+          pt = sorg(ssub);
+          if (!pinfected(pt)) {
+            pinfect(pt);
+            facpoints->newindex((void **) &ppt);
+            *ppt = pt;
+          }
+          senextself(ssub);
+        } // j
+      } // i
+      // Have found all facet subfaces (vertices). Uninfect them.
+      for (i = 0; i < subfacstack->objects; i++) {
+        pssub = (face *) fastlookup(subfacstack, i);
+        sunmarktest(*pssub);
+      }
+      for (i = 0; i < facpoints->objects; i++) {
+        ppt = (point *) fastlookup(facpoints, i);
+        puninfect(*ppt);
+      }
+
+      if (b->verbose > 1) {
+        printf("  Recover facet #%d: %ld subfaces, %ld vertices.\n", 
+          facetcount + 1, subfacstack->objects, facpoints->objects);
+      }
+      facetcount++;
+
+      // Loop until 'subfacstack' is empty.
+      while (subfacstack->objects > 0l) {
+        // Get the last subface of this array.
+        subfacstack->objects--;
+        pssub = (face *) fastlookup(subfacstack, subfacstack->objects);
+        ssub = *pssub;
+
+        if (!sinfected(ssub)) continue; // Not a missing subface.
+
+        // Insert the subface.
+        suninfect(ssub);
+        searchtet.tet = NULL;
+        dir = scoutsubface(&ssub, &searchtet);
+        if (dir == SHAREFACE) continue; // The subface is inserted.
+
+        // Not exist. Push the subface back into stack.
+        s = randomnation(subfacstack->objects + 1);
+        subfacstack->newindex((void **) &pssub);
+        *pssub = * (face *) fastlookup(subfacstack, s);
+        sinfect(ssub);
+        * (face *) fastlookup(subfacstack, s) = ssub;
+
+        if (dir == EDGETRIINT) continue; // All three edges are missing.
+
+        // Search for a crossing tet.
+        dir = scoutcrosstet(&ssub, &searchtet, facpoints);
+
+        if (dir == ACROSSTET) {
+          // Recover subfaces by local retetrahedralization.
+          cavitycount++;
+          bakhullsize = hullsize;
+          checksubsegs = 0;
+          crosstets->newindex((void **) &parytet);
+          *parytet = searchtet;
+          // Form a cavity of crossing tets.
+          formcavity(&ssub, crosstets, topfaces, botfaces, toppoints,
+                     botpoints, facpoints);
+          // Tetrahedralize the top part.
+          delaunizecavity(toppoints, topfaces, topnewtets);
+          // Tetrahedralize the bottom part.
+          delaunizecavity(botpoints, botfaces, botnewtets);
+          // Fill the cavity with new tets.
+          fillcavity(topfaces, botfaces, midfaces, facpoints);
+          // Delete old tets and outer new tets.
+          carvecavity(crosstets, topnewtets, botnewtets);
+          // Clear working lists.
+          crosstets->restart();
+          topnewtets->restart();
+          botnewtets->restart();
+          topfaces->restart();
+          botfaces->restart();
+          midfaces->restart();
+          toppoints->restart();
+          botpoints->restart();
+          hullsize = bakhullsize;
+          checksubsegs = 1;
+        } else if (dir == ACROSSFACE) {
+          // Recover subfaces by flipping edges in surface mesh.
+          recoversubedge(&ssub, &searchtet);
+        } else { // dir == TOUCHFACE
+          assert(0);
+        }
+      }
+      // Clear the list of facet vertices.
+      facpoints->restart();
+      // At this point, the mesh should be constrained Delaunay.
+      if (b->verbose > 1) {
+        if (checkdelaunay(1) > 0) { // SELF_CHECK
+          assert(0);  // SELF_CHECK
+        }
+      }
+    }
+    ssub.sh = shellfacetraverse(subfacepool);
+  }
+
+  /*// Loop until 'subfacstack' is empty.
   while (subfacstack->objects > 0l) {
     // Get the last subface of this array.
     subfacstack->objects--;
@@ -2118,9 +2223,10 @@ void tetgenmesh::constrainedfacets()
     // At this point, the mesh should be constrained Delaunay.
     misregion->restart();
   }
+  */
 
   if (b->verbose) {
-    printf("  %ld flips in surface mesh.\n", flip22count - bakflipcount);
+    printf("  %ld subedge flips.\n", flip22count - bakflipcount);
     printf("  %ld cavities remeshed.\n", cavitycount);
   }
 
@@ -2133,7 +2239,7 @@ void tetgenmesh::constrainedfacets()
   delete midfaces;
   delete toppoints;
   delete botpoints;
-  delete misregion;
+  delete facpoints;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2146,7 +2252,7 @@ void tetgenmesh::constrainedfacets()
 
 void tetgenmesh::formskeleton()
 {
-  face *pssub, ssub;
+  face ssub;
   face *psseg, sseg;
   REAL bakeps;
   int s, i;
@@ -2196,17 +2302,12 @@ void tetgenmesh::formskeleton()
   // Recover segments.
   delaunizesegments();
 
-  // Put all subfaces into list (in random order).
+  // Infect all subfaces.
   subfacepool->traversalinit();
-  for (i = 0; i < subfacepool->items; i++) {
-    s = randomnation(i + 1);
-    // Move the s-th sub to the i-th.
-    subfacstack->newindex((void **) &pssub);
-    *pssub = * (face *) fastlookup(subfacstack, s);
-    // Put i-th sub to be the s-th.
-    ssub.sh = shellfacetraverse(subfacepool);
+  ssub.sh = shellfacetraverse(subfacepool);
+  while (ssub.sh != NULL) {
     sinfect(ssub);  // Only save it once.
-    * (face *) fastlookup(subfacstack, s) = ssub;
+    ssub.sh = shellfacetraverse(subfacepool);
   }
 
   // Subfaces will be introduced.

@@ -1625,9 +1625,9 @@ void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
-enum intersection scoutcrosstet(arraypool*, triface* searchtet);
+enum intersection scoutcrosstet(face* ssub, triface* searchtet, arraypool*);
 void recoversubedge(face* ssub, triface* subedge);
-void formcavity(arraypool*, arraypool*, arraypool*, arraypool*,
+void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*, arraypool*);
 void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
@@ -1666,7 +1666,7 @@ void outvoronoi(tetgenio* out);
 
 void checkmesh();
 void checkshells(int);
-void checkdelaunay(int);
+int checkdelaunay(int);
 void checkconforming();
 void checksegments();
 void algorithmstatistics();

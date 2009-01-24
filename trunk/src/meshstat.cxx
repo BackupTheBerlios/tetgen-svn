@@ -319,7 +319,7 @@ void tetgenmesh::checkshells(int sub2tet)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::checkdelaunay(int constrained)
+int tetgenmesh::checkdelaunay(int constrained)
 {
   triface tetloop;
   triface symtet;
@@ -376,6 +376,8 @@ void tetgenmesh::checkdelaunay(int constrained)
   } else {
     printf("  !! !! !! !! Found %d non-Delaunay faces.\n", horrors);
   }
+
+  return horrors;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -764,6 +766,9 @@ void tetgenmesh::psh(face *s)
   }
   if (sinfected(*s)) {
     printf(" (infected)");
+  }
+  if (smarktested(*s)) {
+    printf(" (marked)");
   }
   // if (shell2badface(*sface)) {
   //   printf(" (queued)");
