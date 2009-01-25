@@ -63,7 +63,7 @@ void tetgenmesh::unifysegments()
   int segmarker;
   int idx, k, m;
 
-  if (b->verbose) {
+  if (b->verbose > 1) {
     printf("  Unifying segments.\n");
   }
 
@@ -266,7 +266,7 @@ void tetgenmesh::mergefacets()
   int fidx1, fidx2;
   int i, j;
 
-  if (b->verbose) {
+  if (b->verbose > 1) {
     printf("  Merging adjacent coplanar facets.\n");
   }
 

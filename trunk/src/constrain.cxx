@@ -1040,9 +1040,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
 //                                                                           //
 // scoutcrosstet()    Scout a tetrahedron across a facet.                    //
 //                                                                           //
-// A subface (abc) of the facet (F) is given in 'misregion[0]', abc is not a //
-// Delaunay face and is intersected by some Delaunay tets. 'searchtet' holds //
-// the edge ab, it is the tet starting the search.                           //
+// A subface (abc) of the facet (F) is given in 'pssub', 'searchtet' holds   //
+// the edge ab, it is the tet starting the search.  'facpoints' contains all //
+// points which are co-facet with a, b, and c.                               //
 //                                                                           //
 // The subface (abc) was produced by a 2D CDT algorithm under the Assumption //
 // that F is flat. In real data, however, F may not be strictly flat.  Hence //
@@ -1055,11 +1055,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
 //   - ACROSSTET, if it is case (i), 'searchtet' is abde, d and e lies below //
 //     and above abc, respectively, neither d nor e is dummypoint; or        //
 //   - ACROSSFACE, if it is case (ii), 'searchtet' is abde, where the face   //
-//     abd intersects abc, e lies above abc, e may be dummypoint.            //
-//                                                                           //
-// On return, 'misregion' contains all subfaces of F, and all subfaces of F  //
-// are marked as tested. All vertuces of F are infected, they will be unmark //
-// or uninfect in later called functions.                                    //
+//     abd intersects abc, i.e., d is co-facet with abc, e may be co-facet   //
+//     with abc or dummypoint.                                               //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1069,7 +1066,14 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
   triface spintet;
   point pa, pb, pc, pd, pe;
   REAL ori, ori1, len, n[3];
+  bool cofacetflag;
   int i;
+
+  // Infect all vertices of the facet.
+  for (i = 0; i < facpoints->objects; i++) {
+    pd = * (point *) fastlookup(facpoints, i);
+    pinfect(pd);
+  }
 
   // Search an edge crossing the facet containing abc.
   if (searchtet->ver & 01) {
@@ -1081,101 +1085,99 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
   pb = sdest(*pssub);
   pc = sapex(*pssub);
 
-  // Infect all vertices of the facet.
-  for (i = 0; i < facpoints->objects; i++) {
-    pd = * (point *) fastlookup(facpoints, i);
-    pinfect(pd);
-  }
-
-  // Get a face containing ab and its apex lies below abc.
+  cofacetflag = false;
   pd = apex(*searchtet);
   spintet = *searchtet;
   while (1) {
-    if (pd == dummypoint) break;
-    ori = orient3d(pa, pb, pc, pd);
-    if ((ori != 0) && pinfected(pd)) {
-      ori = 0; // Force d be co-facet with abc.
+    if (pd != dummypoint) {
+      ori = orient3d(pa, pb, pc, pd);
+      if ((ori != 0) && pinfected(pd)) {
+        ori = 0; // Force d be co-facet with abc.
+      }
+      if (ori > 0) {
+        break; // Found a lower point.
+      }
     }
-    if (ori > 0) break;
-    fnextself(spintet);
+    fnextself(spintet); // Go to the next face.
     pd = apex(spintet);
     if (pd == apex(*searchtet)) {
-      // Not found a lower vertex of abc. It means that all apexes are either 
-      //   "co-facet" with abc, see an example in fig/dump-scoutcrosstet-case3.lua,
-      //   or below abc.
-      break;
+      cofacetflag = true; break; // Not found.
     }
   }
-  if ((ori > 0) || (pd == dummypoint)) {
+  if (!cofacetflag) {
     // Search a tet whose apex->oppo crosses the facet containig abc.
     while (1) {
       pe = oppo(spintet);
-      ori = orient3d(pa, pb, pc, pe);
-      if ((ori != 0) && pinfected(pe)) {
-        ori = 0; // Force pe be co-facet with abc.
-      }
-      if (ori <= 0) break;  // stop at pd->pe.    
+      if (pe != dummypoint) {
+        ori = orient3d(pa, pb, pc, pe);
+        if ((ori != 0) && pinfected(pe)) {
+          ori = 0; // Force pe be co-facet with abc.
+        }
+        if (ori < 0) {
+          break;  // stop at pd->pe.
+        }
+        if (ori == 0) {
+          cofacetflag = true; break; // Not found.
+        }
+      }    
       fnextself(spintet);
     }
-  } else if (ori == 0) {
-    assert(0);
-  } else {
+    *searchtet = spintet;
+  }
+
+  if (cofacetflag) {
+    // Calculate a point above the faces.
+    facenormal(pa, pb, pc, n, 1);
+    len = sqrt(DOT(n, n));
+    n[0] /= len;
+    n[1] /= len;
+    n[2] /= len;
+    len = DIST(pa, pb);
+    len += DIST(pb, pd);
+    len += DIST(pd, pa);
+    len /= 3.0;
+    dummypoint[0] = pa[0] + len * n[0];
+    dummypoint[1] = pa[1] + len * n[1];
+    dummypoint[2] = pa[2] + len * n[2];
+    // Search a co-facet point d, s.t. [a, b, d] intersects [a, b, c].
     spintet = *searchtet;
-    ori = 0;
-  }
-
-  if (ori == 0) {
-    pd = apex(spintet);
-    if (pd == dummypoint) {
-      // Are there multiple "co-facet" vertices? See examples in fig/dump-
-      //   scoutcrosstet-case1(2).lua.
-      // If so, search for a face whose apex is co-facet with abc, and its
-      //   opposite vertex is not. 
-      while (1) {
-        fnext(spintet, *searchtet);
-        pe = oppo(*searchtet);
-        if (pinfected(pe)) {
-          spintet = *searchtet; // Skip 'spintet'.
-        } else {
-          break;
+    while (1) {
+      pd = apex(spintet);
+      if (pd != dummypoint) {
+        ori = orient3d(pa, pb, pc, pd);
+        if ((ori == 0) || pinfected(pd)) {
+          ori1 = orient3d(pa, pb, dummypoint, pd);
+          if (ori1 > 0) break;
         }
       }
-      if (pe == dummypoint) {
-        // We returned the original face, which means all apexes (except a
-        //   dummypoint) are co-facet with pc. Let the two hull faces be
-        //   [a, b, p1] and [a, b, p2]. Choose p1 or p2 such that the face
-        //   [a, b, p_i] intersects [a, b, c].
-        // See examples in fig/scoutcrosstet-case4.lua
-        pd = apex(*searchtet);
-        // Calculate a point above the faces.
-        facenormal(pa, pb, pc, n, 1);
-        len = sqrt(DOT(n, n));
-        n[0] /= len;
-        n[1] /= len;
-        n[2] /= len;
-        len = DIST(pa, pb);
-        len += DIST(pb, pd);
-        len += DIST(pd, pa);
-        len /= 3.0;
-        pe[0] = pa[0] + len * n[0];
-        pe[1] = pa[1] + len * n[1];
-        pe[2] = pa[2] + len * n[2];
-        // Do orient2d test pd w.r.t. [a, b].
-        ori1 = orient3d(pa, pb, pe, pd);
-        if (ori1 < 0) {
-          // Choose another face.
-          fnext(*searchtet, spintet);
-          pd = oppo(spintet); // SELF_CHECK
-          ori1 = orient3d(pa, pb, pe, pd); // // SELF_CHECK
-          assert(ori1 > 0); // SELF_CHECK
-        }
-        pe[0] = pe[1] = pe[2] = 0;
-      }
+      fnextself(spintet); // Go to the next face.
     }
+    /*// Find a tet [a, b, d, e] such that d is co-facet with [a, b, c] and
+    //   e is not, and e is not dummypoint too.  An example is found in
+    //   fig/scoutcrosstet-case1(2).lua. NOTE, such tet may not exist.
+    while (1) {
+      pe = oppo(spintet);
+      if (pe == dummypoint) {
+        // 'spintet' is a hull face. Go to its adjacet hull face.
+        fnextself(spintet);
+        assert(apex(spintet) == dummypoint); // SELF_CHECK
+        fnextself(spintet);
+        assert(pinfected(apex(spintet))); // SELF_CHECK
+        pe = oppo(spintet);
+      }
+      if (!pinfected(pe)) {
+        // Found the tet [a, b, d, e].
+        break;
+      }
+      // Go to the next face.
+      fnextself(spintet);
+      if (apex(spintet) == pd) break; // Not found.
+    }*/
+    *searchtet = spintet;
+    dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
 
-  if (ori == 0) {
-    fnext(spintet, *searchtet);
+  if (cofacetflag) {
     if (b->verbose > 1) {
       printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
         pointmark(pa), pointmark(pb), pointmark(apex(*searchtet)), 
@@ -1195,7 +1197,6 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
     return ACROSSFACE;
   } else {
     // Return a crossing tet.
-    *searchtet = spintet;
     if (b->verbose > 1) {
       printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
         pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
@@ -1293,6 +1294,11 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet)
     // Infect them back (to be recovered).
     sinfect(flipfaces[0]);
     sinfect(flipfaces[1]);
+    // Add them into list (make ensure that they must be recovered).
+    subfacstack->newindex((void **) &pssub);
+    *pssub = flipfaces[0];
+    subfacstack->newindex((void **) &pssub);
+    *pssub = flipfaces[1];
 
     // Find the edge [a, b].
     senext(flipfaces[1], *pssub);
