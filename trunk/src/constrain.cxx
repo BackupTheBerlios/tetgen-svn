@@ -1722,6 +1722,89 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// recovertetface()    Recover a tet face (at bottom).                       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::recovertetface(triface* toptet, triface* bottet)
+{
+  triface fliptets[3], spintet;
+  face checksh;
+  point pa, pb, pc, pf, pg;
+  REAL ori, ori1;
+
+  tetrahedron ptr;
+  int *iptr, tver;
+
+  // toptet is at face [b, a, c].
+  pc = apex(*toptet);
+  // bottet is at face [a, b, f].
+  pf = apex(*bottet);
+  assert(pf != pc); // SELF_CHECK
+
+  // Search face [a, b, c] in bottom.
+  spintet = *bottet;
+  while (1) {
+    symedgeself(spintet);
+    if ((point) spintet.tet[7] == dummypoint) break;
+    enext0fnextself(spintet);
+    pf = apex(spintet);
+    if (pf == pc) {
+      // Face matched.
+      *bottet = spintet;
+      return;
+    }
+  }
+
+  // Not found. Recover face [a, b, c] in bottom.
+  pa = org(*bottet);
+  pb = dest(*bottet);
+  pf = apex(*bottet);
+  pg = oppo(*bottet);
+
+  assert(orient3d(pa, pb, pf, pg) > 0); // SELF_CHECK
+  ori = orient3d(pb, pf, pg, pc);
+  assert(ori != 0); // SELF_CHECK
+  if (ori < 0) {
+    enext2(*bottet, fliptets[0]); // Edge [f, a].
+  } else {
+    enext(*bottet, fliptets[0]); // Edge [b, f].
+  }
+  esymself(fliptets[0]);
+  enext0fnextself(fliptets[0]);
+  esymself(fliptets[0]);
+  symedge(fliptets[0], fliptets[1]);
+  if (oppo(fliptets[1]) == pc) {
+    // Check if a 2-to-3 flip is possible.
+    ori1 = orient3d(org(fliptets[0]),dest(fliptets[0]),oppo(fliptets[0]),pc);
+    if (ori1 > 0) {
+      tspivot(fliptets[0], checksh);
+      assert(checksh.sh == NULL); // SELF_CHECK
+      uninfect(fliptets[0]); // abcd
+      uninfect(fliptets[1]); // bace
+      flip23(fliptets, 0, 0);
+      // fliptets[0] is edab.
+      infect(fliptets[1]); // edbc
+      infect(fliptets[2]); // edca
+      // Find the face [a, b, c].
+      if (ori < 0) {
+        enext(fliptets[1], *bottet);
+        esymself(*bottet);
+      } else {
+        assert(0); // Not handled yet.
+      }
+      assert(org(*bottet) == pa); // SELF_CHECK
+      assert(dest(*bottet) == pb); // SELF_CHECK
+    } else {
+      assert(0); // Unknown cases.
+    }
+  } else {
+    assert(0); // Unknown cases.
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // fillcavity()    Fill new tets into the cavity.                            //
 //                                                                           //
 // The new tets are stored in two disjoint sets(which share the same facet). //
@@ -1784,9 +1867,7 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
 
   // The first pair of top and bottom tets share the same edge [a, b].
   toptet = * (triface *) fastlookup(topfaces, 0);
-  bottet = * (triface *) fastlookup(botfaces, 0);
   symedgeself(toptet);
-  symedgeself(bottet);
   // Search a subface from the top mesh.
   while (1) {
     enext0fnextself(toptet); // The next face in the same tet.
@@ -1795,12 +1876,18 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     symedgeself(toptet); // Go to the same face in the adjacent tet.
   }
   // Search the subface [a,b,c] in the bottom mesh.
+  bottet = * (triface *) fastlookup(botfaces, 0);
+  symedgeself(bottet);
   while (1) {
     enext0fnextself(bottet); // The next face in the same tet.
     pf = apex(bottet);
     if (pf == pc) break; // Face matched.
-    assert(!pinfected(pf)); // SELF_CHECK
+    if (pinfected(pf)) break; // Not matched.
     symedgeself(bottet);
+  }
+  if (pf != pc) {
+    // Face [a, b, c] is missing in the bottom tets.
+    recovertetface(&toptet, &bottet);
   }
   // Connect the two tets together.
   bond(toptet, bottet);
@@ -2141,11 +2228,11 @@ void tetgenmesh::constrainedfacets()
       // Clear the list of facet vertices.
       facpoints->restart();
       // At this point, the mesh should be constrained Delaunay.
-      if (b->verbose > 1) {
+      /*if (b->verbose > 1) {
         if (checkdelaunay(1) > 0) { // SELF_CHECK
           assert(0);  // SELF_CHECK
         }
-      }
+      }*/
     }
     ssub.sh = shellfacetraverse(subfacepool);
   }

@@ -847,6 +847,7 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
 {
   triface topcastets[3], botcastets[3];
   triface newface, casface;
+  face checksh, checkseg;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // range = {-1, 0, 1, 2}.
   int i;
@@ -904,6 +905,26 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
   // Re-use fliptets[0] and fliptets[1].
   fliptets[0].loc = fliptets[0].ver = 0;
   fliptets[1].loc = fliptets[1].ver = 0;
+  elemmarker(fliptets[0].tet) = 0;
+  elemmarker(fliptets[1].tet) = 0;
+  if (checksubsegs) {
+    // Dealloc the space to subsegments.
+    if (fliptets[0].tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) fliptets[0].tet[8]);
+    }
+    if (fliptets[1].tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) fliptets[1].tet[8]);
+    }
+  }
+  if (checksubfaces) {
+    // Dealloc the space to subfaces.
+    if (fliptets[0].tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) fliptets[0].tet[9]);
+    }
+    if (fliptets[1].tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) fliptets[1].tet[9]);
+    }
+  }
 
   if (hullflag > 0) {
     // Check if d is dummytet.
@@ -965,6 +986,65 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
     enext2fnext(fliptets[i], newface);
     enext2self(newface);
     bond(newface, botcastets[i]);
+  }
+
+  // Bond 9 subsegments if there are.
+  if (checksubsegs) {
+    // The middle three: ab, bc, ca.
+    for (i = 0; i < 3; i++) {
+      tsspivot(topcastets[i], checkseg);
+      if (checkseg.sh != NULL) {
+        enextfnext(fliptets[i], newface);
+        enextself(newface);
+        tssbond1(newface, checkseg);
+      }
+    }
+    // The top three: da, db, dc.
+    for (i = 0; i < 3; i++) {
+      enext2(topcastets[i], casface);
+      tsspivot(casface, checkseg);
+      if (checkseg.sh != NULL) {
+        enext(fliptets[i], newface);
+        tssbond1(newface, checkseg);
+      }
+    }
+    // The bot three: ae, be, ce.
+    for (i = 0; i < 3; i++) {
+      enext(botcastets[i], casface);
+      tsspivot(casface, checkseg);
+      if (checkseg.sh != NULL) {
+        enext2(fliptets[i], newface);
+        tssbond1(newface, checkseg);
+      }
+    }
+  }
+  // Bond 6 subfaces if there are.
+  if (checksubfaces) {
+    for (i = 0; i < 3; i++) {
+      tspivot(topcastets[i], checksh);
+      if (checksh.sh != NULL) {
+        enextfnext(fliptets[i], newface);
+        enextself(newface);
+        tsbond(newface, checksh);
+      }
+    }
+    for (i = 0; i < 3; i++) {
+      tspivot(botcastets[i], checksh);
+      if (checksh.sh != NULL) {
+        enext2fnext(fliptets[i], newface);
+        enext2self(newface);
+        tsbond(newface, checksh);
+      }
+    }
+  }
+
+  if (checksubsegs || checksubfaces) {
+    // Update the point-to-tet map.
+    point2tet(pa) = encode(fliptets[0]);
+    point2tet(pb) = encode(fliptets[0]);
+    point2tet(pc) = encode(fliptets[1]);
+    point2tet(pd) = encode(fliptets[0]);
+    point2tet(pe) = encode(fliptets[0]);
   }
 
   if (hullflag > 0) {
