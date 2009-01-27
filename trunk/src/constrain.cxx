@@ -1731,6 +1731,7 @@ void tetgenmesh::recovertetface(triface* toptet, triface* bottet)
   triface fliptets[3], spintet;
   face checksh;
   point pa, pb, pc, pf, pg;
+  point pa1, pb1, pc1, pd1;
   REAL ori, ori1;
 
   tetrahedron ptr;
@@ -1757,6 +1758,7 @@ void tetgenmesh::recovertetface(triface* toptet, triface* bottet)
   }
 
   // Not found. Recover face [a, b, c] in bottom.
+  // See an exampe in fig/dump-cavity-case5.lua.
   pa = org(*bottet);
   pb = dest(*bottet);
   pf = apex(*bottet);
@@ -1772,30 +1774,53 @@ void tetgenmesh::recovertetface(triface* toptet, triface* bottet)
   }
   esymself(fliptets[0]);
   enext0fnextself(fliptets[0]);
-  esymself(fliptets[0]);
-  symedge(fliptets[0], fliptets[1]);
+  esymself(fliptets[0]);  // Tet a'b'c'd'.
+  symedge(fliptets[0], fliptets[1]); // Tet b'a'c'e'
   if (oppo(fliptets[1]) == pc) {
     // Check if a 2-to-3 flip is possible.
-    ori1 = orient3d(org(fliptets[0]),dest(fliptets[0]),oppo(fliptets[0]),pc);
+    pa1 = org(fliptets[0]);
+    pb1 = dest(fliptets[0]);
+    pc1 = apex(fliptets[0]);
+    pd1 = oppo(fliptets[0]);
+    ori1 = orient3d(pa1, pb1, pd1, pc);
+    if (ori1 > 0) {
+      ori1 = orient3d(pb1, pc1, pd1, pc);
+      if (ori1 > 0) {
+        ori1 = orient3d(pc1, pa1, pd1, pc);
+      }
+    }
     if (ori1 > 0) {
       tspivot(fliptets[0], checksh);
       assert(checksh.sh == NULL); // SELF_CHECK
-      uninfect(fliptets[0]); // abcd
-      uninfect(fliptets[1]); // bace
+      uninfect(fliptets[0]); 
+      uninfect(fliptets[1]); 
       flip23(fliptets, 0, 0);
-      // fliptets[0] is edab.
-      infect(fliptets[1]); // edbc
-      infect(fliptets[2]); // edca
-      // Find the face [a, b, c].
+      // fliptets[0] is e'd'a'b'.
+      infect(fliptets[1]); // e'd'b'c'
+      infect(fliptets[2]); // e'd'c'a'
+      // Mark the three tets (they are in cavity).
+      marktest(fliptets[0]);
+      marktest(fliptets[1]);
+      marktest(fliptets[2]);
+      // Since fliptets[0] will be deleted later.
+      // Update the point-to-tet map.
+      point2tet(pa1) = encode(fliptets[2]);
+      point2tet(pb1) = encode(fliptets[1]);
+      point2tet(pc1) = encode(fliptets[2]);
+      point2tet(pd1) = encode(fliptets[2]);
+      point2tet(pc) = encode(fliptets[2]);
+      // Find the face [a, b, c]. Note, althought fliptets[0] contains
+      //   the face [a, b, c], but it will be an outside tet later.
       if (ori < 0) {
-        enext(fliptets[1], *bottet);
-        esymself(*bottet);
+        enext(fliptets[1], *bottet); // Tet e'd'b'c'
+        esymself(*bottet); // Face b'd'e' = [a, b, c].
       } else {
-        assert(0); // Not handled yet.
+        enext0fnext(fliptets[2], *bottet); // Face e'd'a'c'
+        enextself(*bottet); // Face d'a'e' = [a, b, c].
       }
       assert(org(*bottet) == pa); // SELF_CHECK
       assert(dest(*bottet) == pb); // SELF_CHECK
-    } else {
+    } else { // ori1 <= 0
       assert(0); // Unknown cases.
     }
   } else {
@@ -1886,7 +1911,7 @@ void tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     symedgeself(bottet);
   }
   if (pf != pc) {
-    // Face [a, b, c] is missing in the bottom tets.
+    // Recover face [a, b, c] in the bottom tets.
     recovertetface(&toptet, &bottet);
   }
   // Connect the two tets together.
@@ -2090,7 +2115,8 @@ void tetgenmesh::constrainedfacets()
   face checkseg;
   point *ppt, pt;
   enum intersection dir;
-  long bakflipcount, cavitycount;
+  long bakflip22count, bakflip23count;
+  long cavitycount;
   int facetcount;
   int bakhullsize;
   int s, i, j;
@@ -2110,7 +2136,8 @@ void tetgenmesh::constrainedfacets()
   botpoints = new arraypool(sizeof(point), 8);
   facpoints = new arraypool(sizeof(point), 8);
 
-  bakflipcount = flip22count;
+  bakflip22count = flip22count;
+  bakflip23count = flip23count;
   cavitycount = 0l;
   facetcount = 0;
 
@@ -2319,7 +2346,8 @@ void tetgenmesh::constrainedfacets()
   */
 
   if (b->verbose) {
-    printf("  %ld subedge flips.\n", flip22count - bakflipcount);
+    printf("  %ld subedge flips, %ld tetedge flips.\n", 
+      flip22count - bakflip22count, flip23count - bakflip23count);
     printf("  %ld cavities remeshed.\n", cavitycount);
   }
 

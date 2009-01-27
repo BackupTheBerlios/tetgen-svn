@@ -912,18 +912,22 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
     if (fliptets[0].tet[8] != NULL) {
       tet2segpool->dealloc((shellface *) fliptets[0].tet[8]);
     }
+    fliptets[0].tet[8] = NULL;
     if (fliptets[1].tet[8] != NULL) {
       tet2segpool->dealloc((shellface *) fliptets[1].tet[8]);
     }
+    fliptets[1].tet[8] = NULL;
   }
   if (checksubfaces) {
     // Dealloc the space to subfaces.
     if (fliptets[0].tet[9] != NULL) {
       tet2subpool->dealloc((shellface *) fliptets[0].tet[9]);
     }
+    fliptets[0].tet[9] = NULL;
     if (fliptets[1].tet[9] != NULL) {
       tet2subpool->dealloc((shellface *) fliptets[1].tet[9]);
     }
+    fliptets[1].tet[9] = NULL;
   }
 
   if (hullflag > 0) {
