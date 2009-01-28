@@ -64,9 +64,9 @@ void tetgenmesh::flip13(point newpt, face* splitface, int flipflag)
   setshvertices(newfaces[1], pb, pc, newpt); // bcp.
   setshvertices(newfaces[2], pc, pa, newpt); // cap.
 
-  shmark = shellmark(newfaces[0]);
-  shellmark(newfaces[1]) = shmark;
-  shellmark(newfaces[2]) = shmark;
+  shmark = getshellmark(newfaces[0]);
+  setshellmark(newfaces[1], shmark);
+  setshellmark(newfaces[2], shmark);
   if (checkconstraints) {
     area = areabound(newfaces[0]);
     areabound(newfaces[1]) = area;
@@ -199,7 +199,7 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedges, int flipflag)
     setsapex(abdedges[i], newpt);  // ap[i]b->ap[i]p.
     makeshellface(subfacepool, &(bbdedges[i]));
     setshvertices(bbdedges[i], pb, pt[i], newpt); // bp[i]p.
-    shellmark(bbdedges[i]) = shellmark(abdedges[i]);
+    setshellmark(bbdedges[i], getshellmark(abdedges[i]));
     if (checkconstraints) {
       areabound(bbdedges[i]) = areabound(abdedges[i]);
     }
@@ -249,7 +249,7 @@ void tetgenmesh::flipn2nf(point newpt, face* splitedges, int flipflag)
     makeshellface(subsegpool, &bseg);
     setshvertices(bseg, newpt, sdest(aseg), NULL);
     setsdest(aseg, newpt);
-    shellmark(bseg) = shellmark(aseg);
+    setshellmark(bseg, getshellmark(aseg));
     if (checkconstraints) {
       areabound(bseg) = areabound(aseg);
     }

@@ -1219,33 +1219,45 @@ void bond(triface& t1, triface& t2) {
 
 // shellmark() -- set or read the shell mark.
 
-#define shellmark(s) ((int *) ((s).sh))[shmarkindex]
+// #define shellmark(s) ((int *) ((s).sh))[shmarkindex]
+
+// The last two bits of the int ((int *) ((s).sh))[shmarkindex] are used
+//   by sinfect() and smarktest().
+
+int getshellmark(face& s) {
+  return (((int *) ((s).sh))[shmarkindex]) >> 2;
+}
+
+void setshellmark(face& s, int mark) {
+  ((int *) ((s).sh))[shmarkindex] = (mark << 2) + 
+    (((int *) ((s).sh))[shmarkindex]) & 3;
+}
 
 // areabound() -- set of read the maximal area bound.
 
 #define areabound(s) ((REAL *) ((s).sh))[areaboundindex]
 
 // sinfect(), sinfected(), suninfect() -- primitives to flag or unflag a
-//   subface. The last third bit of the first subsegment is flaged.
+//   subface. The last bit of ((int *) ((s).sh))[shmarkindex] is flaged.
 
 #define sinfect(s) \
-  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] | (unsigned long) 4l)
+  ((int *) ((s).sh))[shmarkindex] = (((int *) ((s).sh))[shmarkindex] | 1)
 
 #define suninfect(s) \
-  (s).sh[6] = (shellface) ((unsigned long) (s).sh[6] & ~(unsigned long) 4l)
+  ((int *) ((s).sh))[shmarkindex] = (((int *) ((s).sh))[shmarkindex] & ~1)
 
-#define sinfected(s) (((unsigned long) (s).sh[6] & (unsigned long) 4l) != 0)
+#define sinfected(s) ((((int *) ((s).sh))[shmarkindex] & 1) != 0)
 
 // smarktest(), smarktested(), sunmarktest() -- primitives to flag or unflag
-//   a subface. The last third bit of the second subsegment is flaged.
+//   a subface. The last 2nd bit of ((int *) ((s).sh))[shmarkindex] is flaged.
 
 #define smarktest(s) \
-  (s).sh[7] = (shellface) ((unsigned long) (s).sh[7] | (unsigned long) 4l)
+  ((int *) ((s).sh))[shmarkindex] = (((int *) ((s).sh))[shmarkindex] | 2)
 
 #define sunmarktest(s) \
-  (s).sh[7] = (shellface) ((unsigned long) (s).sh[7] & ~(unsigned long) 4l)
+  ((int *) ((s).sh))[shmarkindex] = (((int *) ((s).sh))[shmarkindex] & ~2)
 
-#define smarktested(s) (((unsigned long) (s).sh[7] & (unsigned long) 4l) != 0)
+#define smarktested(s) ((((int *) ((s).sh))[shmarkindex] & 2) != 0)
 
 // farsorg(), farsdest() -- s is a subsegment, return the origin or
 //   destination of the segment containing s.
@@ -1631,8 +1643,9 @@ void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*,
                 arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*, arraypool*);
 void recovertetface(triface* toptet, triface* bottet);
-void fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
+bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
+void restorecavity(arraypool*, arraypool*, arraypool*);
 void constrainedfacets();
 
 void markacutevertices();

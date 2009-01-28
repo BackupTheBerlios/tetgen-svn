@@ -31,7 +31,7 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
     ppc = (point *) fastlookup(ptlist, 2);
     makeshellface(subfacepool, &newsh);
     setshvertices(newsh, *ppa, *ppb, *ppc);
-    shellmark(newsh) = shmark;
+    setshellmark(newsh, shmark);
     // Create three new segments.
     for (i = 0; i < 3; i++) {
       makeshellface(subsegpool, &newseg);
@@ -238,7 +238,7 @@ void tetgenmesh::unifysegments()
     }
 
     // Set the unique segment marker into the unified segment.
-    shellmark(subsegloop) = segmarker;
+    setshellmark(subsegloop, segmarker);
     segmarker++;
     flippool->restart();
 
@@ -298,8 +298,8 @@ void tetgenmesh::mergefacets()
       spivot(neighsh, neineighsh);
       if (parentsh.sh == neineighsh.sh) {
         // Exactly two subfaces at this segment.
-        fidx1 = shellmark(parentsh) - 1;
-        fidx2 = shellmark(neighsh) - 1;
+        fidx1 = getshellmark(parentsh) - 1;
+        fidx2 = getshellmark(neighsh) - 1;
         // Possible to merge them if they are not in the same facet.
         if (fidx1 != fidx2) {
           // Test if they are coplanar wrt the tolerance.

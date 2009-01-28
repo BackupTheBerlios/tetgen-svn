@@ -552,7 +552,7 @@ void tetgenmesh::outfaces(tetgenio* out)
             if (checkmark.sh == NULL) {
               marker = 0;  // It is an inner face.
             } else {
-              faceid = shellmark(checkmark) - 1;
+              faceid = getshellmark(checkmark) - 1;
               marker = in->facetmarkerlist[faceid];
             }
           } else {
@@ -793,7 +793,7 @@ void tetgenmesh::outsubfaces(tetgenio* out)
       tapex = sapex(faceloop);
     }
     if (bmark) {
-      faceid = shellmark(faceloop) - 1;
+      faceid = getshellmark(faceloop) - 1;
       marker = in->facetmarkerlist[faceid];
     }
     if (b->neighout > 1) {
