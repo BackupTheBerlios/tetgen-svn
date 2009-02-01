@@ -722,6 +722,8 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
       // Choose ei as center.
       if (d1 < 0.5 * L) {
         split = d1 / L;
+        // Adjust split if it is close to middle. (2009-02-01)
+        if ((split > 0.4) || (split < 0.6)) split = 0.5;
       } else {
         split = 0.5;
       }
@@ -732,6 +734,8 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
       // Choose ej as center.
       if (d2 < 0.5 * L) {
         split = d2 / L;
+        // Adjust split if it is close to middle. (2009-02-01)
+        if ((split > 0.4) || (split < 0.6)) split = 0.5;
       } else {
         split = 0.5;
       }
@@ -849,7 +853,7 @@ void tetgenmesh::markacutevertices()
 void tetgenmesh::delaunizesegments()
 {
   triface searchtet;
-  face *psseg, sseg, splitsh;
+  face *psseg, sseg, nsseg, splitshs[2];
   point refpt, newpt;
   enum intersection dir;
   int s;
@@ -876,21 +880,50 @@ void tetgenmesh::delaunizesegments()
 
     if (dir != SHAREVERT) {
       // The segment is missing, split it.
+      spivot(sseg, splitshs[0]);
       if (dir != ACROSSVERT) {
         // Create the new point.
         makepoint(&newpt);
         getsegmentsplitpoint(&sseg, refpt, newpt);
         setpointtype(newpt, STEINERVERTEX);
         // Split the segment by newpt.
-        sinsertvertex(newpt, &splitsh, &sseg, true, false);
+        if (b->bowyerwatson == 0) {
+          flipn2nf(newpt, splitshs, 1);
+          sspivot(splitshs[0], sseg);
+          sspivot(splitshs[1], nsseg);
+          lawsonflip();
+        } else {
+          sinsertvertex(newpt, &(splitshs[0]), &sseg, true, false);
+        }
         // Insert newpt into the DT.
         insertvertex(newpt, &searchtet, true);
       } else {
-        // Split the segment by refpt.
-        sinsertvertex(refpt, &splitsh, &sseg, true, false);
         if (getpointtype(refpt) != ACUTEVERTEX) {
           setpointtype(refpt, RIDGEVERTEX);
         }
+        // Split the segment by refpt.
+        if (b->bowyerwatson == 0) {
+          flipn2nf(refpt, splitshs, 1);
+          sspivot(splitshs[0], sseg);
+          sspivot(splitshs[1], nsseg);
+          lawsonflip();
+        } else {
+          sinsertvertex(refpt, &(splitshs[0]), &sseg, true, false);
+        }
+      }
+      if (b->bowyerwatson == 0) {
+        s = randomnation(subsegstack->objects);
+        subsegstack->newindex((void **) &psseg);
+        *psseg = * (face *) fastlookup(subsegstack, s);
+        sinfect(sseg); 
+        psseg = (face *) fastlookup(subsegstack, s);
+        *psseg = sseg;
+        s = randomnation(subsegstack->objects);
+        subsegstack->newindex((void **) &psseg);
+        *psseg = * (face *) fastlookup(subsegstack, s);
+        sinfect(nsseg);
+        psseg = (face *) fastlookup(subsegstack, s);
+        *psseg = nsseg;
       }
     }
   }
