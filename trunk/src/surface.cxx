@@ -287,13 +287,13 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
     }
     if (checksubsegs) {
       // Add two subsegs into stack (for recovery).
-      s = randomnation(subsegstack->objects);
+      s = randomnation(subsegstack->objects + 1);
       subsegstack->newindex((void **) &parysh);
       *parysh = * (face *) fastlookup(subsegstack, s);
       sinfect(aseg); 
       parysh = (face *) fastlookup(subsegstack, s);
       *parysh = aseg;
-      s = randomnation(subsegstack->objects);
+      s = randomnation(subsegstack->objects + 1);
       subsegstack->newindex((void **) &parysh);
       *parysh = * (face *) fastlookup(subsegstack, s);
       sinfect(bseg);
