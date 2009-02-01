@@ -892,6 +892,9 @@ void tetgenmesh::delaunizesegments()
           setpointtype(refpt, RIDGEVERTEX);
         }
       }
+      if (checkshells(0) > 0) {
+        assert(0);
+      }
     }
   }
 

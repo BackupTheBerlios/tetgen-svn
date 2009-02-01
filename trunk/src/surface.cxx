@@ -263,22 +263,35 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
       spivot(neighsh, casout);
       ssbond(casout, bseg);
     }
-    // Create the two face rings at [a, p] and [p, b].
-    for (i = 0; i < n; i++) {
-      spivot(abfaces[i], newsh); // The faked new subface.
+    if (n > 1) {
+      // Create the two face rings at [a, p] and [p, b].
+      for (i = 0; i < n; i++) {
+        spivot(abfaces[i], newsh); // The faked new subface.
+        if (sorg(newsh) != pa) sesymself(newsh);
+        spivot(abfaces[(i + 1) % n], neighsh); // The next faked new subface.
+        if (sorg(neighsh) != pa) sesymself(neighsh);
+        senext2(newsh, casout); // The edge [p, a] in newsh.
+        senext2(neighsh, casin); // The edge [p, a] in neighsh.
+        spivotself(casout);
+        spivotself(casin);
+        sbond1(casout, casin); // Let the i's face point to (i+1)'s face.
+        senext(newsh, casout); // The edge [b, p] in newsh.
+        senext(neighsh, casin); // The edge [b, p] in neighsh.
+        spivotself(casout);
+        spivotself(casin);
+        sbond1(casout, casin);
+      }
+    } else { 
+      // Only one subface contains this segment.
+      // assert(n == 1);
+      spivot(abfaces[0], newsh);  // The faked new subface.
       if (sorg(newsh) != pa) sesymself(newsh);
-      spivot(abfaces[(i + 1) % n], neighsh); // The next faked new subface.
-      if (sorg(neighsh) != pa) sesymself(neighsh);
       senext2(newsh, casout); // The edge [p, a] in newsh.
-      senext2(neighsh, casin); // The edge [p, a] in neighsh.
       spivotself(casout);
-      spivotself(casin);
-      sbond1(casout, casin); // Let the i's face point to (i+1)'s face.
+      sdissolve(casout); // Disconnect to faked subface.
       senext(newsh, casout); // The edge [b, p] in newsh.
-      senext(neighsh, casin); // The edge [b, p] in neighsh.
       spivotself(casout);
-      spivotself(casin);
-      sbond1(casout, casin);
+      sdissolve(casout); // Disconnect to faked subface.
     }
     // Delete the faked new subfaces.
     for (i = 0; i < n; i++) {

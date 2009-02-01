@@ -210,7 +210,7 @@ void tetgenmesh::checkmesh()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::checkshells(int sub2tet)
+int tetgenmesh::checkshells(int sub2tet)
 {
   triface neightet, symtet;
   face shloop, spinsh, nextsh;
@@ -309,8 +309,9 @@ void tetgenmesh::checkshells(int sub2tet)
   } else {
     printf("  !! !! !! !! %d boundary connection viewed with horror.\n",
            horrors);
-    return;
   }
+
+  return horrors;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
