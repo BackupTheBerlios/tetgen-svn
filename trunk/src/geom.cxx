@@ -4048,6 +4048,47 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 
 REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
 {
+  point pe;
+  REAL area2[2], n1[3], n2[3];
+  REAL sign, L, len;
+
+  // Calculate the areas of the two triangles [a, b, c] and [b, a, d].
+  facenormal(pa, pb, pc, n1, 1);
+  area2[0] = DOT(n1, n1);
+  facenormal(pb, pa, pd, n2, 1);
+  area2[1] = DOT(n2, n2);
+  L = sqrt(DIST(pa, pb));
+
+  pe = dummypoint;
+  if (area2[0] > area2[1]) {
+    // Choose [a, b, c] as the base triangle.
+    len = sqrt(area2[0]);
+    n1[0] /= len;
+    n1[1] /= len;
+    n1[2] /= len;
+    pe[0] = pa[0] + L * n1[0];
+    pe[1] = pa[1] + L * n1[1];
+    pe[2] = pa[2] + L * n1[2];
+    sign = insphere(pa, pb, pc, pe, pd);
+  } else {
+    // Choose [b, a, d] as the base triangle.
+    len = sqrt(area2[1]);
+    n2[0] /= len;
+    n2[1] /= len;
+    n2[2] /= len;
+    pe[0] = pa[0] + L * n2[0];
+    pe[1] = pa[1] + L * n2[1];
+    pe[2] = pa[2] + L * n2[2];
+    sign = insphere(pb, pa, pd, pe, pc);
+  }
+  pe[0] = pe[1] = pe[2] = 0;
+
+  return sign;
+}
+
+/*
+REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
+{
   point pk, pl, pm, pn;
   REAL area2[4], n[3], c[3];
   REAL amax, sign, r, l, q;
@@ -4108,7 +4149,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
   } else {
     return 0;  // Round to zero.
   }
-}
+}*/
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
