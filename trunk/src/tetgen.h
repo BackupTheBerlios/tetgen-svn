@@ -1230,7 +1230,7 @@ int getshellmark(face& s) {
 
 void setshellmark(face& s, int mark) {
   ((int *) ((s).sh))[shmarkindex] = (mark << 2) + 
-    (((int *) ((s).sh))[shmarkindex]) & 3;
+    ((((int *) ((s).sh))[shmarkindex]) & 3);
 }
 
 // areabound() -- set of read the maximal area bound.
@@ -1446,8 +1446,9 @@ point dummypoint;
 // Statck and queue (use flippool) for flips.
 badface *futureflip;
 
-// Two dynmaic arrays used by Bowyer-Watson algorithm.
+// Arrays used by Bowyer-Watson algorithm.
 arraypool *cavetetlist, *cavebdrylist;
+arraypool *caveshlist, *caveshbdlist;
 
 // A stack used by the segment recovery algorithm.
 arraypool *subsegstack, *subfacstack;
@@ -1620,6 +1621,7 @@ void incrementaldelaunay();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+void sinsertvertex(point, face*, face*, bool, bool);
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
 void unifysegments();
 void mergefacets();
@@ -1705,6 +1707,7 @@ void initialize()
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = (arraypool *) NULL;
+  caveshlist = caveshbdlist = (arraypool *) NULL;
   subsegstack = subfacstack = (arraypool *) NULL;
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
@@ -1752,6 +1755,8 @@ void deinitialize()
     delete tet2subpool;
     delete subsegstack;
     delete subfacstack;
+    delete caveshlist;
+    delete caveshbdlist;
   }
   futureflip = (badface *) NULL;
 }

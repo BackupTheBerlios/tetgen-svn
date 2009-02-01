@@ -5,6 +5,322 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// sinsertvertex()    Insert a vertex into a triangulation of a facet.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg, 
+  bool bwflag, bool hullflag)
+{
+  face *abfaces, *parysh, *pssub;
+  face neighsh, newsh, casout, casin;
+  face aseg, bseg, aoutseg, boutseg;
+  face checkseg;
+  triface neightet;
+  point pa, pb, pc;
+  enum location loc;
+  REAL sign, area;
+  int n, s, i, j;
+
+  tetrahedron ptr;
+  shellface sptr;
+
+  if (splitseg == NULL) {
+    assert(searchsh != NULL); // SELF_CHECK
+    // loc = slocate(insertpt, searchsh);
+  } else {
+    spivot(*splitseg, *searchsh);
+    loc = ONEDGE;
+  }
+
+  if (loc == OUTSIDE) {
+    if (hullflag) {
+      // return inserthullvertex();
+    }
+    assert(0); 
+  }
+  // The insert point should not lie on an unknown segment.
+  if ((loc == ONEDGE) && (splitseg->sh == NULL)) {
+    sspivot(*searchsh, checkseg);
+    assert(checkseg.sh == NULL); // SELF_CHECK
+  }
+  if (loc == ONVERTEX) {
+    assert(0);
+  }
+
+  if (b->verbose > 1) {
+    pa = sorg(*searchsh);
+    pb = sdest(*searchsh);
+    pc = sapex(*searchsh);
+    printf("    Insert point %d %s (%d, %d, %d)\n", pointmark(insertpt),
+      loc == ONEDGE ? "on edge" : "in face", pointmark(pa), pointmark(pb), 
+      pointmark(pc));
+  }
+
+  // Does 'insertpt' lie on a segment?
+  if (splitseg != NULL) {
+    splitseg->shver = 0;
+    pa = sorg(*splitseg);
+    // Count the number of faces at segment [a, b].
+    n = 0;
+    neighsh = *searchsh;
+    do {
+      spivotself(neighsh);
+      n++;
+    } while ((neighsh.sh != NULL) && (neighsh.sh != searchsh->sh));
+    // n is at least 1.
+    abfaces = new face[n];
+    // Collect faces at seg [a, b].
+    abfaces[0] = *searchsh;
+    if (sorg(abfaces[0]) != pa) sesymself(abfaces[0]);
+    for (i = 1; i < n; i++) {
+      spivot(abfaces[i - 1], abfaces[i]);
+      if (sorg(abfaces[i]) != pa) sesymself(abfaces[i]);
+    }
+  }
+
+  // Initialize the cavity.
+  smarktest(*searchsh);
+  caveshlist->newindex((void **) &parysh);
+  *parysh = *searchsh;
+  if (loc == ONEDGE) {
+    if (splitseg != NULL) {
+      for (i = 1; i < n; i++) {
+        smarktest(abfaces[i]);
+        caveshlist->newindex((void **) &parysh);
+        *parysh = abfaces[i];
+      }
+    } else {
+      spivot(*searchsh, neighsh);
+      if (neighsh.sh != NULL) {
+        smarktest(neighsh);
+        caveshlist->newindex((void **) &parysh);
+        *parysh = neighsh;
+      }
+    }
+  }
+
+  // Form the Bowyer-Watson cavity.
+  for (i = 0; i < caveshlist->objects; i++) {
+    parysh = (face *) fastlookup(caveshlist, i);
+    for (j = 0; j < 3; j++) {
+      sspivot(*parysh, checkseg);
+      if (checkseg.sh == NULL) {
+        spivot(*parysh, neighsh);
+        assert(neighsh.sh != NULL); // SELF_CHECK
+        if (!smarktested(neighsh)) {
+          if (bwflag) {
+            pa = sorg(neighsh);
+            pb = sdest(neighsh);
+            pc = sapex(neighsh);
+            sign = incircle3d(pa, pb, pc, insertpt);
+            if (sign < 0) {
+              smarktest(neighsh);
+              caveshlist->newindex((void **) &pssub);
+              *pssub = neighsh;
+            }
+          } else {
+            sign = 1; // A boundary edge.
+          }
+        } else {
+          sign = -1; // Not a boundary edge.
+        }
+      } else {
+        sign = 1; // A segment!
+      }
+      if (sign >= 0) {
+        // Add a boundary edge.
+        caveshbdlist->newindex((void **) &pssub);
+        *pssub = *parysh;
+      }
+      senextself(*parysh);
+    }
+  }
+
+  // Creating new subfaces.
+  for (i = 0; i < caveshbdlist->objects; i++) {
+    parysh = (face *) fastlookup(caveshbdlist, i);
+    sspivot(*parysh, checkseg);
+    if ((parysh->shver & 01) != 0) sesymself(*parysh);
+    pa = sorg(*parysh);
+    pb = sdest(*parysh);
+    // Create a new subface.
+    makeshellface(subfacepool, &newsh); 
+    setshvertices(newsh, pa, pb, insertpt);
+    setshellmark(newsh, getshellmark(*parysh));
+    if (checkconstraints) {
+      area = areabound(*parysh);
+      areabound(newsh) = area;
+    }
+    // Connect newsh to outer subfaces.
+    spivot(*parysh, casout);
+    if (casout.sh != NULL) {
+      casin = casout;
+      if (checkseg.sh != NULL) {
+        spivot(casin, neighsh);
+        while (neighsh.sh != parysh->sh) {
+          casin = neighsh;
+          spivot(casin, neighsh);
+        }
+      }
+      sbond1(newsh, casout);
+      sbond1(casin, newsh);
+    }
+    if (checkseg.sh != NULL) {
+      ssbond(newsh, checkseg);
+    }
+    // Connect oldsh <== newsh (for connecting adjacent new subfaces).
+    sbond1(*parysh, newsh);
+  }
+
+  // Connect adjacent new subfaces together.
+  for (i = 0; i < caveshbdlist->objects; i++) {
+    // Get an old subface at edge [a, b].
+    parysh = (face *) fastlookup(caveshbdlist, i);
+    sspivot(*parysh, checkseg);
+    spivot(*parysh, newsh); // The new subface [a, b, p].
+    senextself(newsh); // At edge [b, p].
+    spivot(newsh, neighsh);
+    if (neighsh.sh == NULL) {
+      // Find the adjacent new subface at edge [b, p].
+      pb = sdest(*parysh);
+      neighsh = *parysh;
+      while (1) {
+        senextself(neighsh);
+        spivotself(neighsh);
+        if (!smarktested(neighsh)) break;
+        if (sdest(neighsh) != pb) sesymself(neighsh);
+      }
+      // Now 'neighsh' is a new subface at edge [b, #].
+      if (sorg(neighsh) != pb) sesymself(neighsh);
+      assert(sorg(neighsh) == pb); // SELF_CHECK
+      assert(sapex(neighsh) == insertpt); // SELF_CHECK
+      senext2self(neighsh); // Go to the open edge [p, b].
+      spivot(neighsh, casout); // SELF_CHECK
+      assert(casout.sh == NULL); // SELF_CHECK
+      sbond2(newsh, neighsh);
+    }
+    spivot(*parysh, newsh); // The new subface [a, b, p].
+    senext2self(newsh); // At edge [p, a].
+    spivot(newsh, neighsh);
+    if (neighsh.sh == NULL) {
+      // Find the adjacent new subface at edge [p, a].
+      pa = sorg(*parysh);
+      neighsh = *parysh;
+      while (1) {
+        senext2self(neighsh);
+        spivotself(neighsh);
+        if (!smarktested(neighsh)) break;
+        if (sorg(neighsh) != pa) sesymself(neighsh);
+      }
+      // Now 'neighsh' is a new subface at edge [#, a].
+      if (sdest(neighsh) != pa) sesymself(neighsh);
+      assert(sdest(neighsh) == pa); // SELF_CHECK
+      assert(sapex(neighsh) == insertpt); // SELF_CHECK
+      senextself(neighsh); // Go to the open edge [a, p].
+      spivot(neighsh, casout); // SELF_CHECK
+      assert(casout.sh == NULL); // SELF_CHECK
+      sbond2(newsh, neighsh);
+    }
+  }
+
+  if (splitseg != NULL) {
+    // Split the segment [a, b].
+    aseg = *splitseg;
+    pa = sorg(aseg);
+    pb = sdest(aseg);
+    if (b->verbose > 1) {
+      printf("    Split seg (%d, %d) by %d.\n", pointmark(pa), pointmark(pb), 
+        pointmark(insertpt));
+    }
+    // Insert the new point p.
+    makeshellface(subsegpool, &bseg);
+    setshvertices(bseg, insertpt, pb, NULL);
+    setsdest(aseg, insertpt);
+    setshellmark(bseg, getshellmark(aseg));
+    if (checkconstraints) {
+      areabound(bseg) = areabound(aseg);
+    }
+    // Connect [p, b]<->[b, #].
+    senext(aseg, aoutseg);
+    spivotself(aoutseg);
+    if (aoutseg.sh != NULL) {
+      senext(bseg, boutseg);
+      sbond2(boutseg, aoutseg);
+    }
+    // Connect [a, p] <-> [p, b].
+    senext(aseg, aoutseg);
+    senext2(bseg, boutseg);
+    sbond2(aoutseg, boutseg);
+    // Connect subsegs [a, p] and [p, b] to the true new subfaces.
+    for (i = 0; i < n; i++) {
+      spivot(abfaces[i], newsh); // The faked new subface.
+      if (sorg(newsh) != pa) sesymself(newsh);
+      senext2(newsh, neighsh); // The edge [p, a] in newsh
+      spivot(neighsh, casout);
+      ssbond(casout, aseg);
+      senext(newsh, neighsh); // The edge [b, p] in newsh
+      spivot(neighsh, casout);
+      ssbond(casout, bseg);
+    }
+    // Create the two face rings at [a, p] and [p, b].
+    for (i = 0; i < n; i++) {
+      spivot(abfaces[i], newsh); // The faked new subface.
+      if (sorg(newsh) != pa) sesymself(newsh);
+      spivot(abfaces[(i + 1) % n], neighsh); // The next faked new subface.
+      if (sorg(neighsh) != pa) sesymself(neighsh);
+      senext2(newsh, casout); // The edge [p, a] in newsh.
+      senext2(neighsh, casin); // The edge [p, a] in neighsh.
+      spivotself(casout);
+      spivotself(casin);
+      sbond1(casout, casin); // Let the i's face point to (i+1)'s face.
+      senext(newsh, casout); // The edge [b, p] in newsh.
+      senext(neighsh, casin); // The edge [b, p] in neighsh.
+      spivotself(casout);
+      spivotself(casin);
+      sbond1(casout, casin);
+    }
+    // Delete the faked new subfaces.
+    for (i = 0; i < n; i++) {
+      spivot(abfaces[i], newsh); // The faked new subface.
+      shellfacedealloc(subfacepool, newsh.sh);
+    }
+    if (checksubsegs) {
+      // Add two subsegs into stack (for recovery).
+      s = randomnation(subsegstack->objects);
+      subsegstack->newindex((void **) &parysh);
+      *parysh = * (face *) fastlookup(subsegstack, s);
+      sinfect(aseg); 
+      parysh = (face *) fastlookup(subsegstack, s);
+      *parysh = aseg;
+      s = randomnation(subsegstack->objects);
+      subsegstack->newindex((void **) &parysh);
+      *parysh = * (face *) fastlookup(subsegstack, s);
+      sinfect(bseg);
+      parysh = (face *) fastlookup(subsegstack, s);
+      *parysh = bseg;
+    }
+    delete [] abfaces;
+  }
+
+  // Delete the old subfaces.
+  for (i = 0; i < caveshlist->objects; i++) {
+    parysh = (face *) fastlookup(caveshlist, i);
+    if (checksubfaces) {
+      // Disconnect in the neighbor tets.
+      stpivot(*parysh, neightet);
+      if (neightet.tet != NULL) {
+        tsdissolve(neightet);
+        symself(neightet);
+        tsdissolve(neightet);
+      }
+    }
+    shellfacedealloc(subfacepool, parysh->sh);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // triangulate()    Create a CDT for the facet.                              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

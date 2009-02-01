@@ -849,7 +849,7 @@ void tetgenmesh::markacutevertices()
 void tetgenmesh::delaunizesegments()
 {
   triface searchtet;
-  face *psseg, sseg, nsseg, splitshs[2];
+  face *psseg, sseg, splitsh;
   point refpt, newpt;
   enum intersection dir;
   int s;
@@ -876,51 +876,21 @@ void tetgenmesh::delaunizesegments()
 
     if (dir != SHAREVERT) {
       // The segment is missing, split it.
-      spivot(sseg, splitshs[0]);
       if (dir != ACROSSVERT) {
         // Create the new point.
         makepoint(&newpt);
         getsegmentsplitpoint(&sseg, refpt, newpt);
-        // Split the segment by newpt.
-        flipn2nf(newpt, splitshs, 1);
         setpointtype(newpt, STEINERVERTEX);
-        sspivot(splitshs[0], sseg);
-        sspivot(splitshs[1], nsseg);
-        // Some subfaces may be non-Delaunay.
-        lawsonflip();
+        // Split the segment by newpt.
+        sinsertvertex(newpt, &splitsh, &sseg, true, false);
         // Insert newpt into the DT.
         insertvertex(newpt, &searchtet, true);
       } else {
         // Split the segment by refpt.
-        flipn2nf(refpt, splitshs, 1);
+        sinsertvertex(refpt, &splitsh, &sseg, true, false);
         if (getpointtype(refpt) != ACUTEVERTEX) {
           setpointtype(refpt, RIDGEVERTEX);
         }
-        sspivot(splitshs[0], sseg);
-        sspivot(splitshs[1], nsseg);
-        lawsonflip();
-      }
-      // Add two subsegments into the stack.
-      if (b->order == 4) {  // '-o4' option (for debug)
-        sinfect(sseg);
-        subsegstack->newindex((void **) &psseg);
-        *psseg = sseg;
-        sinfect(nsseg);
-        subsegstack->newindex((void **) &psseg);
-        *psseg = nsseg;
-      } else {
-        s = randomnation(subsegstack->objects);
-        subsegstack->newindex((void **) &psseg);
-        *psseg = * (face *) fastlookup(subsegstack, s);
-        sinfect(sseg); 
-        psseg = (face *) fastlookup(subsegstack, s);
-        *psseg = sseg;
-        s = randomnation(subsegstack->objects);
-        subsegstack->newindex((void **) &psseg);
-        *psseg = * (face *) fastlookup(subsegstack, s);
-        sinfect(nsseg);
-        psseg = (face *) fastlookup(subsegstack, s);
-        *psseg = nsseg;
       }
     }
   }

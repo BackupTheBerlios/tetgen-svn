@@ -577,6 +577,10 @@ void tetgenmesh::initializepools()
     // Initialize arraypools for segment & facet recovery.
     subsegstack = new arraypool(sizeof(face), 10);
     subfacstack = new arraypool(sizeof(face), 10);
+
+    // Initialize arraypools for surface Bowyer-Watson algorithm.
+    caveshlist = new arraypool(sizeof(face), 8);
+    caveshbdlist = new arraypool(sizeof(face), 8);
   }
 
   // Initialize the pool for flips.
