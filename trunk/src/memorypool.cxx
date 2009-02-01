@@ -798,6 +798,7 @@ void tetgenmesh::makeshellface(memorypool* pool, face* newsh)
   // if (checkpbcs) {
     // setshellpbcgroup(*newsh, -1);
   // }
+  ((int *) (newsh->sh))[shmarkindex] = 0;
   // Initialize the version to be Zero.
   newsh->shver = 0;
 }

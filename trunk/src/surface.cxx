@@ -317,6 +317,10 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
     }
     shellfacedealloc(subfacepool, parysh->sh);
   }
+
+  // Clean the working lists.
+  caveshlist->restart();
+  caveshbdlist->restart();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
