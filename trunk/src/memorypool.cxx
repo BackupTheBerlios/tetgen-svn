@@ -587,8 +587,9 @@ void tetgenmesh::initializepools()
   flippool = new memorypool(sizeof(badface), 1024, POINTER, 0);
 
   // Initialize the arraypools for Bowyer-Watson algorithm.
-  cavetetlist = new arraypool(sizeof(triface), 8);
-  cavebdrylist = new arraypool(sizeof(triface), 8);
+  cavetetlist = new arraypool(sizeof(triface), 10);
+  cavebdrylist = new arraypool(sizeof(triface), 10);
+  caveoldtetlist = new arraypool(sizeof(triface), 10);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

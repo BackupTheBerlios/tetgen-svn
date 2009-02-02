@@ -1447,7 +1447,7 @@ point dummypoint;
 badface *futureflip;
 
 // Arrays used by Bowyer-Watson algorithm.
-arraypool *cavetetlist, *cavebdrylist;
+arraypool *cavetetlist, *cavebdrylist, *caveoldtetlist;
 arraypool *caveshlist, *caveshbdlist;
 
 // A stack used by the segment recovery algorithm.
@@ -1706,7 +1706,7 @@ void initialize()
   flippool = (memorypool *) NULL;
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
-  cavetetlist = cavebdrylist = (arraypool *) NULL;
+  cavetetlist = cavebdrylist = caveoldtetlist = (arraypool *) NULL;
   caveshlist = caveshbdlist = (arraypool *) NULL;
   subsegstack = subfacstack = (arraypool *) NULL;
   point2tetindex = pointmarkindex = 0;
@@ -1746,6 +1746,7 @@ void deinitialize()
     delete tetrahedronpool;
     delete cavetetlist;
     delete cavebdrylist;
+    delete caveoldtetlist;
     delete flippool;
   }
   if (subfacepool != (memorypool *) NULL) {
