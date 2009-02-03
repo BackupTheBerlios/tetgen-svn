@@ -1025,13 +1025,19 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
     if (pd == pc) {
       // Found! Insert the subface.
       tspivot(spintet, checksh); // SELF_CHECK
-      assert(checksh.sh == NULL); // SELF_CHECK
-      tsbond(spintet, *pssub);
-      symedgeself(spintet);
-      tspivot(spintet, checksh); // SELF_CHECK
-      assert(checksh.sh == NULL); // SELF_CHECK
-      tsbond(spintet, *pssub);
-      return SHAREFACE;
+      if (checksh.sh == NULL) {
+        tsbond(spintet, *pssub);
+        symedgeself(spintet);
+        tspivot(spintet, checksh); // SELF_CHECK
+        assert(checksh.sh == NULL); // SELF_CHECK
+        tsbond(spintet, *pssub);
+        return SHAREFACE;
+      } else {
+        // A subface is laready inserted.
+        assert(checksh.sh != pssub->sh); // SELF_CHECK
+        *searchtet = spintet;
+        return COLLISIONFACE;
+      }
     }
     if (pd == apex(*searchtet)) break;
   }
@@ -1370,8 +1376,8 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
   arraypool* botpoints, arraypool* facpoints)
 {
   arraypool *crossedges;
-  triface *parytet, crosstet, spintet, neightet;
-  face checksh;
+  triface *parytet, crosstet, spintet, neightet, faketet;
+  face neighsh, checksh;
   face checkseg;
   point pa, pb, pc, pf, pg;
   point *ppt;
@@ -1514,7 +1520,11 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
   //   Remember that each cross tet was saved in the standard form: deab,
   //   where de is a corrsing edge, orient3d(d,e,a,b) < 0, in particular,
   //   topfaces[0] is abe, and botfaces[0] is bad.
-  // NOTE: Hull tets may be collected. Process them as normal one.
+  // NOTE 1: Hull tets may be collected. Process them as normal one.
+  // NOTE 2: Some previously recovered subfaces may be completely
+  //   contained in a cavity (see fig/dump-cavity-case6.lua). In such case,
+  //   we create two faked tets to hold this subface, one at each side.
+  //   The faked tets will be removed in fillcavity().
   for (i = 0; i < crosstets->objects; i++) {
     crosstet = * (triface *) fastlookup(crosstets, i);
     enextfnext(crosstet, spintet);
@@ -1524,6 +1534,21 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
       // A top face.
       topfaces->newindex((void **) &parytet);
       *parytet = neightet;
+    } else {
+      // Check if this side is a subface.
+      tspivot(spintet, neighsh);
+      if (neighsh.sh != NULL) {
+        // Found a subface (inside the cavity)!
+        maketetrahedron(&faketet);  // Create a faked tet.
+        setorg(faketet, org(spintet));
+        setdest(faketet, dest(spintet));
+        setapex(faketet, apex(spintet));
+        setoppo(faketet, NULL);
+        tsbond(faketet, neighsh); // Let it hold the subface.
+        // Add a top face (at faked tet).
+        topfaces->newindex((void **) &parytet);
+        *parytet = faketet;
+      }
     }
     enext2fnext(crosstet, spintet);
     enext2self(spintet);
@@ -1532,6 +1557,20 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
       // A bottom face.
       botfaces->newindex((void **) &parytet);
       *parytet = neightet;
+    } else {
+      tspivot(spintet, neighsh);
+      if (neighsh.sh != NULL) {
+        // Found a subface (inside the cavity)!
+        maketetrahedron(&faketet);  // Create a faked tet.
+        setorg(faketet, org(spintet));
+        setdest(faketet, dest(spintet));
+        setapex(faketet, apex(spintet));
+        setoppo(faketet, NULL);
+        tsbond(faketet, neighsh); // Let it hold the subface.
+        // Add a bottim face (at faked tet).
+        botfaces->newindex((void **) &parytet);
+        *parytet = faketet;
+      }
     }
     // Add middle vertices if there are (skip dummypoint).
     pf = org(neightet);
@@ -1712,6 +1751,18 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       if (!infected(neightet)) {
         infect(neightet);
       }
+    } else if (dir == COLLISIONFACE) {
+      // A subface is already inserted.
+      assert(oppo(*parytet) == NULL); // It must be a faked tet.
+      // Searchtet's face collides it. Adjust to 0th edge ring.
+      if ((searchtet.ver & 01) != 0) esymself(searchtet);
+      // Let the subface remember its adjacent tet at its inside.
+      if (org(searchtet) != pt[1]) {
+        symedgeself(searchtet);
+        assert(org(searchtet) == pt[1]); // SELF_CHECK
+      }
+      assert(dest(searchtet) == pt[0]); // SELF_CHECK
+      tmpsh.sh[9] = (shellface) encode(searchtet);
     } else {
       printf("  Face (%d, %d, %d) - %d is missing\n", pointmark(pt[0]),
         pointmark(pt[1]), pointmark(pt[2]), i);
@@ -1857,8 +1908,10 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       stpivot(tmpsh, neightet);
       assert(org(neightet) == pb); // SELF_CHECK
       assert(dest(neightet) == pa); // SELF_CHECK
-      // Bond the two tets.
-      bond(*parytet, neightet); // Also cleared the pointer to tmpsh.
+      if (oppo(*parytet) != NULL) {
+        // Bond the two tets.
+        bond(*parytet, neightet); // Also cleared the pointer to tmpsh.
+      }
       // Bond a subface (if it exists).
       tspivot(*parytet, checksh);
       if (checksh.sh != NULL) {
@@ -1872,6 +1925,10 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       point2tet(pc) = encode(neightet);
       // Delete the temp subface.
       shellfacedealloc(subfacepool, tmpsh.sh);
+      if (oppo(*parytet) == NULL) {
+        // Delete a faked tet.
+        tetrahedrondealloc(parytet->tet);
+      }
     }
   }
 

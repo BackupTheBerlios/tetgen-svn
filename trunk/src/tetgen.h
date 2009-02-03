@@ -559,7 +559,7 @@ enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
 
 enum intersection {DISJOINT, INTERSECT, SHAREVERT, SHAREEDGE, SHAREFACE,
   TOUCHEDGE, TOUCHFACE, ACROSSVERT, ACROSSEDGE, ACROSSFACE, ACROSSTET,
-  TRIEDGEINT, EDGETRIINT};
+  TRIEDGEINT, EDGETRIINT, COLLISIONFACE};
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
