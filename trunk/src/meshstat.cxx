@@ -1007,11 +1007,17 @@ bool tetgenmesh::pedge(int i, int j)
 
 void tetgenmesh::psubface(int i, int j, int k)
 {
-  face s;
+  triface t, t1;
+  face s, s1;
   point *pts;
-  REAL n[3];
+  REAL n[3], sign;
   int *marklist;
   int ii;
+
+  void **bakpathblock = subfacepool->pathblock;
+  void *bakpathitem = subfacepool->pathitem;
+  int bakpathitemsleft = subfacepool->pathitemsleft;
+  int bakalignbytes = subfacepool->alignbytes;
 
   marklist = new int[pointpool->items + 1];
   for (ii = 0; ii < pointpool->items + 1; ii++) marklist[ii] = 0;
@@ -1033,16 +1039,117 @@ void tetgenmesh::psubface(int i, int j, int k)
         facenormal(pts[3], pts[4], pts[5], n, 1);
         printf("    area=%g, lengths: %g, %g, %g\n", 0.5 * sqrt(DOT(n, n)),
           DIST(pts[3], pts[4]), DIST(pts[4], pts[5]), DIST(pts[5], pts[3]));
+        // Print coplanar adjacent subfaces.
+        s.shver = 0;
+        for (ii = 0; ii < 3; ii++) {
+          sspivot(s, s1);
+          if (s1.sh != NULL) {
+            printf("  seg x%lx (%d, %d)\n", (unsigned long) s1.sh, 
+              pointmark(sorg(s1)), pointmark(sdest(s1)));
+          } else {
+            spivot(s, s1);
+            printf("  sub x%lx (%d, %d, %d)\n", (unsigned long) s1.sh, 
+              pointmark(sorg(s1)), pointmark(sdest(s1)), pointmark(sapex(s1)));
+          }
+          senextself(s);
+        }
+        stpivot(s, t);
+        if (t.tet != NULL) {
+          // Print two adjacent tets.
+          symedge(t, t1);
+          // Now t and t1 share the face.
+          printf("  tet x%lx (%d, %d, %d, %d) %d\n", (unsigned long) t.tet,
+            pointmark(org(t)), pointmark(dest(t)), pointmark(apex(t)), 
+            pointmark(oppo(t)), t.loc);
+          printf("  tet x%lx (%d, %d, %d, %d) %d\n", (unsigned long) t1.tet,
+            pointmark(org(t1)), pointmark(dest(t1)), pointmark(apex(t1)),
+            pointmark(oppo(t1)), t1.loc);
+          if (((point) t1.tet[7] != dummypoint) && 
+              ((point) t.tet[7] != dummypoint)) {
+            pts = (point *) t.tet;
+            sign = insphere(pts[4], pts[5], pts[6], pts[7], oppo(t1));
+            printf("  %s (sign = %.g).\n", sign > 0 ? "Delaunay" :
+              (sign < 0 ? "Non-Delaunay" : "Cosphere"), sign);
+            if (sign == 0) {
+            sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], oppo(t1));
+            printf("  %s (symbolic).\n", sign > 0 ? "Delaunay":"Non-Delaunay");
+            }
+          }
+        }
         break;
       }
     }
     s.sh = shellfacetraverse(subfacepool);
   }
-  
+
   if (s.sh == NULL) {
     printf("  !! Not exist.\n");
   }
   delete [] marklist;
+
+  subfacepool->pathblock = bakpathblock;
+  subfacepool->pathitem = bakpathitem;
+  subfacepool->pathitemsleft = bakpathitemsleft;
+  subfacepool->alignbytes = bakalignbytes;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Print the information of the subsegment (i, j).
+
+void tetgenmesh::psubseg(int i, int j)
+{
+  face s; //, s1;
+  point forg, fdest;
+  bool bflag;
+
+  bflag = false;
+  s.shver = 0;
+  subsegpool->traversalinit();
+  s.sh = shellfacetraverse(subsegpool);
+  while (s.sh != NULL) {
+    if (pointmark(sorg(s)) == i) {
+      if (pointmark(sorg(s)) == j) {
+        bflag = true; break;
+      }
+    } else if (pointmark(sorg(s)) == j) {
+      if (pointmark(sorg(s)) == i) {
+        sesymself(s);
+        bflag = true; break;
+      }
+    }
+    if (bflag) {
+      // Print the original segment containing [i, j]
+      forg = farsorg(s);
+      fdest = farsdest(s);
+      printf("  seg x%lx (%d, %d) < (%d, %d)\n", (unsigned long) s.sh, i, j,
+        pointmark(forg), pointmark(fdest));
+      /*// Print the adjacent subsegments at i and j.
+      senext2(s, s1);
+      spivotself(s1);
+      if (s1.sh != NULL) {
+        if (sdest(s1) != i) sesymself(s1);
+        printf("  [%d] seg x%lx (%d, %d)\n", i, (unsigned long) s1.sh,
+          pointmark(sorg(s1)), pointmark(sdest(s1))); 
+      } else {
+        printf("  [%d] NULL", i);
+      }
+      senext(s, s1);
+      spivotself(s1);
+      if (s1.sh != NULL) {
+        if (sorg(s1) != j) sesymself(s1);
+        printf("  [%d] seg x%lx (%d, %d)\n", j, (unsigned long) s1.sh,
+          pointmark(sorg(s1)), pointmark(sdest(s1))); 
+      } else {
+        printf("  [%d] NULL", j);
+      }*/
+      break;
+    }
+    s.sh = shellfacetraverse(subsegpool);
+  }
+
+  if (!bflag) {
+    printf("  !! Not exist.\n");
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
