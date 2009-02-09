@@ -4044,6 +4044,9 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 //                                                                           //
 // isincircle()    Test if d lies inside the circumcircle of abc.            //
 //                                                                           //
+// Return a positive value (> 0) if pd lies outside, a negative value (< 0)  //
+// if pd lies inside the circle, a zero if pd lies on the circle.            //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)

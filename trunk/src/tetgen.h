@@ -1329,13 +1329,17 @@ void tsbond(triface& t, face& s) {
   (s).sh[9] = (shellface) encode(t);
 }
 
-// tsdissolve() -- dissolve a tet-ssubface bond at the tet side.
+// tsdissolve() -- dissolve a tet-subface bond at the tet side.
 
 void tsdissolve(triface& t) {
   if ((t).tet[9] != NULL) {
     ((shellface *) (t).tet[9])[(t).loc] = NULL;
   }
 }
+
+// stdissolve() -- dissolbe a tet-subface bond at the subface side.
+
+#define stdissolve(s) (s).sh[9] = NULL;
 
 // tsspivot() -- given a tet's edge t, return a subsegment s at this edge.
 //   t and s is bonded through tssbond1(). if s.sh == NULL, the edge is
@@ -1644,7 +1648,6 @@ void recoversubedge(face* ssub, triface* subedge);
 void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
 void delaunizecavity(arraypool*, arraypool*, arraypool*);
-void recovertetface(triface* toptet, triface* bottet);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
 void restorecavity(arraypool*, arraypool*, arraypool*);
@@ -1797,6 +1800,7 @@ void print_tetarray(arraypool* tetarray, bool nohulltet);
 void print_facearray(arraypool* facearray);
 void print_subfacearray(arraypool* subfacearray);
 void dump_cavity(arraypool *topfaces, arraypool *botfaces);
+void dump_facetof(face* pssub);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;

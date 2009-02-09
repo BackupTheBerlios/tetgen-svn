@@ -225,6 +225,11 @@ int tetgenmesh::checkshells(int sub2tet)
   }
   horrors = 0;
 
+  void **bakpathblock = subfacepool->pathblock;
+  void *bakpathitem = subfacepool->pathitem;
+  int bakpathitemsleft = subfacepool->pathitemsleft;
+  int bakalignbytes = subfacepool->alignbytes;
+
   subfacepool->traversalinit();
   shloop.sh = shellfacetraverse(subfacepool);
   while (shloop.sh != NULL) {
@@ -295,7 +300,7 @@ int tetgenmesh::checkshells(int sub2tet)
       } else {
         printf("  !! A dangling subface.\n");
         printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
-            pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
+          pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
         horrors++;
       }
     }
@@ -310,6 +315,11 @@ int tetgenmesh::checkshells(int sub2tet)
     printf("  !! !! !! !! %d boundary connection viewed with horror.\n",
            horrors);
   }
+
+  subfacepool->pathblock = bakpathblock;
+  subfacepool->pathitem = bakpathitem;
+  subfacepool->pathitemsleft = bakpathitemsleft;
+  subfacepool->alignbytes = bakalignbytes;
 
   return horrors;
 }
@@ -1048,8 +1058,13 @@ void tetgenmesh::psubface(int i, int j, int k)
               pointmark(sorg(s1)), pointmark(sdest(s1)));
           } else {
             spivot(s, s1);
-            printf("  sub x%lx (%d, %d, %d)\n", (unsigned long) s1.sh, 
-              pointmark(sorg(s1)), pointmark(sdest(s1)), pointmark(sapex(s1)));
+            if (s1.sh != NULL) {
+              printf("  sub x%lx (%d, %d, %d)\n", (unsigned long) s1.sh, 
+          pointmark(sorg(s1)), pointmark(sdest(s1)), pointmark(sapex(s1)));
+            } else {
+              printf("  No seg and sub at (%d, %d)!\n", pointmark(sorg(s)), 
+                pointmark(sdest(s)));
+            }
           }
           senextself(s);
         }
@@ -1108,13 +1123,13 @@ void tetgenmesh::psubseg(int i, int j)
   s.sh = shellfacetraverse(subsegpool);
   while (s.sh != NULL) {
     if (pointmark(sorg(s)) == i) {
-      if (pointmark(sorg(s)) == j) {
-        bflag = true; break;
+      if (pointmark(sdest(s)) == j) {
+        bflag = true;
       }
     } else if (pointmark(sorg(s)) == j) {
-      if (pointmark(sorg(s)) == i) {
+      if (pointmark(sdest(s)) == i) {
         sesymself(s);
-        bflag = true; break;
+        bflag = true;
       }
     }
     if (bflag) {
@@ -1464,6 +1479,64 @@ void tetgenmesh::dump_cavity(arraypool *topfaces, arraypool *botfaces = NULL)
   }
 
   fclose(fout);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// dump a facet containing a given subface s.
+
+void tetgenmesh::dump_facetof(face *pssub)
+{
+  FILE *fout;
+  arraypool *tmpfaces;
+  face *parysh, *parysh2, s;
+  face checkseg;
+  int ii, jj;
+
+  tmpfaces = new arraypool(sizeof(face), 8);
+
+  smarktest(*pssub);
+  tmpfaces->newindex((void **) &parysh);
+  *parysh = *pssub;
+
+  for (ii = 0; ii < tmpfaces->objects; ii++) {
+    parysh = (face *) fastlookup(tmpfaces, ii);
+    for (jj = 0; jj < 3; jj++) {
+      sspivot(*parysh, checkseg);
+      if (checkseg.sh == NULL) {
+        spivot(*parysh, s);
+        if (s.sh != NULL) {
+          if (!smarktested(s)) {
+            smarktest(s);
+            tmpfaces->newindex((void **) &parysh2);
+            *parysh2 = s;
+          }
+        } else {
+          printf("  ! A non-bounded edge (%d, %d)\n", pointmark(sorg(*parysh)),
+            pointmark(sdest(*parysh)));
+        }
+      }
+      senextself(*parysh);
+    }
+  }
+
+  for (ii = 0; ii < tmpfaces->objects; ii++) {
+    parysh = (face *) fastlookup(tmpfaces, ii);
+    sunmarktest(*parysh);
+  }
+
+  printf("  dump %ld subfaces to facet.lua\n", tmpfaces->objects);
+  fout = fopen("facet.lua", "w");
+
+  for (ii = 0; ii < tmpfaces->objects; ii++) {
+    parysh = (face *) fastlookup(tmpfaces, ii);
+    fprintf(fout, "p:draw_subface(%d, %d, %d) -- %d\n", 
+      pointmark(sorg(*parysh)), pointmark(sdest(*parysh)),
+      pointmark(sapex(*parysh)), ii + 1);
+  }
+
+  fclose(fout);
+
+  delete tmpfaces;
 }
 
 #endif // #ifndef meshstatCXX
