@@ -510,16 +510,16 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 // tetrahedron, it can be NULL. Note that p may lies outside T. In such case,//
 // the convex hull of T will be updated to include p as a vertex.            //
 //                                                                           //
-// If 'bowyerwatson' is TRUE, the Bowyer-Watson algorithm is used to recover //
-// the Delaunayness of T. Otherwise, do nothing with regard to the Delaunay- //
-// ness of T (T may be non-Delaunay after this function).                    //
+// If 'bwflag' is TRUE, the Bowyer-Watson algorithm is used to recover the   //
+// Delaunayness of T. Otherwise, do nothing with regard to the Delaunayness  //
+// T (T may be non-Delaunay after this function).                            //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
-  bool bowyerwatson)
+void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag)
 {
   triface *cavetet, *parytet, spintet, neightet, newtet, neineitet;
+  face checksh;
   face *psseg, sseg;
   point *pts, pa;
   enum location loc;
@@ -667,7 +667,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
         pts = (point *) cavetet->tet;
         if (pts[7] != dummypoint) {
           // A volume tet. Operate on it if it has not been tested yet.
-          if (bowyerwatson) {
+          if (bwflag) {
             // Use Bowyer-Watson algorithm, do Delaunay check.
             sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], insertpt);
             enqflag = (sign < 0.0);
@@ -680,7 +680,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           // Check if this face is coplanar with p. This case may create
           //   a degenerate tet (zero volume). 
           // Note: for convex domain, it only happen at hull face.
-          if (bowyerwatson && (ori == 0.0)) {
+          if (bwflag && (ori == 0.0)) {
             newflip = (badface *) flippool->alloc();
             newflip->tt = *cavetet; // Queue the adjacent tet (not in cavity).
             newflip->tt.loc = 0; // Must be at the base face.
@@ -702,7 +702,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
           cavetetlist->newindex((void **) &parytet);
           *parytet = neightet;
         }
-        if (checksubsegs) {
+        /*if (checksubsegs) {
           // Some segments (may) lie inside the cavity.
           for (j = 0; j < 6; j++) {
             cavetet->loc = edge2locver[j][0];
@@ -718,7 +718,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
               *psseg = sseg;
             }
           }
-        }
+        }*/
         if ((point) cavetet->tet[7] == dummypoint) hullsize--;
         // tetrahedrondealloc(cavetet->tet);
         infect(*cavetet);
@@ -746,6 +746,63 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   totalbowatcavsize += cavebdrylist->objects;
   if (maxbowatcavsize < cavebdrylist->objects) {
     maxbowatcavsize = cavebdrylist->objects;
+  }
+
+  if (checksubsegs) {
+    // Check if some (sub)segments are inside the cavity.
+    for (i = 0; i < caveoldtetlist->objects; i++) {
+      cavetet = (triface *) fastlookup(caveoldtetlist, i);
+      for (j = 0; j < 6; j++) {
+        cavetet->loc = edge2locver[j][0];
+        cavetet->ver = edge2locver[j][1];
+        tsspivot(*cavetet, sseg);
+        if ((sseg.sh != NULL) && !sinfected(sseg)) {
+          // Check if this segment is inside the cavity.
+          spintet = *cavetet;
+          pa = apex(spintet);
+          enqflag = true;
+          while (1) {
+            fnextself(spintet);
+            if (!infected(spintet)) {
+              enqflag = false; break; // It is not inside.
+            }
+            if (apex(spintet) == pa) break;
+          }
+          if (enqflag) {
+            if (b->verbose > 2) {
+              printf("      Queue interior segment (%d, %d).\n",
+                pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+            }
+            sinfect(sseg);  // Only save it once.
+            subsegstack->newindex((void **) &psseg);
+            *psseg = sseg;
+          }
+        }
+      }
+    }
+  }
+
+  if (checksubfaces) {
+    // Check if some subfaces are inside the cavity.
+    for (i = 0; i < caveoldtetlist->objects; i++) {
+      cavetet = (triface *) fastlookup(caveoldtetlist, i);
+      neightet.tet = cavetet->tet;
+      for (neightet.loc = 0; neightet.loc < 4; neightet.loc++) {
+        tspivot(neightet, checksh);
+        if (checksh.sh != NULL) {
+          sym(neightet, neineitet);
+          if (infected(neineitet)) {
+            if (b->verbose > 2) {
+              printf("      Queue interior subface (%d, %d, %d).\n",
+                pointmark(sorg(checksh)), pointmark(sdest(checksh)),
+                pointmark(sapex(checksh)));
+            }
+            stdissolve(checksh);
+            tsdissolve(neineitet); // Disconnect a tet-sub bond.
+          }
+        }
+      }
+    }
   }
 
   // Create new tetrahedra in the Bowyer-Watson cavity and Connect them.
@@ -785,18 +842,25 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
       for (j = 0; j < 3; j++) {
         tsspivot(neightet, sseg);
         if (sseg.sh != NULL) {
-          if (sinfected(sseg)) {
+          assert(!sinfected(sseg));
+          /*if (sinfected(sseg)) {
             // The segment is not missing.
             if (b->verbose > 2) {
               printf("      Dequeue encroached segment (%d, %d).\n",
                 pointmark(sorg(sseg)), pointmark(sdest(sseg)));
             }
             suninfect(sseg);
-          }
+          }*/
           tssbond1(newtet, sseg);
         }
         enextself(neightet);
         enext2self(newtet);
+      }
+    }
+    if (checksubfaces) {
+      tspivot(neightet, checksh);
+      if (checksh.sh!= NULL) {
+        tsbond(newtet, checksh); // Also disconnect the old bond.
       }
     }
   }
@@ -874,7 +938,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
   // loc_end = clock();
   // tinserttime += ((REAL) (loc_end - loc_start)) / CLOCKS_PER_SEC;
 
-  if (bowyerwatson && (futureflip != NULL)) {
+  if (bwflag && (futureflip != NULL)) {
     // There may exist degenerate tets. Check and remove them.
     while (futureflip != NULL) {
       // Dequeued an adjacent tet to the cavity.
@@ -886,6 +950,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
 
       // The possible degenerate tet, check it.
       symself(fliptets[0]); 
+      // Skip it if its oppo is not 'p'. 
+      if (oppo(fliptets[0]) != insertpt) continue;
+      // This must be a new tet.
+      assert(oppo(fliptets[0]) == insertpt); // SELF_CHECK
+
       pts = (point *) fliptets[0].tet;
       ori = orient3d(pts[4], pts[5], pts[6], pts[7]); orient3dcount++;
       
@@ -919,7 +988,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet,
             if ((sseg.sh != NULL) && !sinfected(sseg)) {
               // This subsegment will be flipped. Queue it.
               if (b->verbose > 2) {
-                  printf("      Queue encroached segment (%d, %d).\n",
+                  printf("      Queue a flipped segment (%d, %d).\n",
                     pointmark(sorg(sseg)), pointmark(sdest(sseg)));
               }
               sinfect(sseg);  // Only save it once.

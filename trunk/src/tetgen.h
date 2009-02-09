@@ -1615,7 +1615,7 @@ enum location locate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-void insertvertex(point insertpt, triface* searchtet, bool bowyerwatson);
+void insertvertex(point insertpt, triface* searchtet, bool bwflag);
 void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
 void incrementaldelaunay();
 

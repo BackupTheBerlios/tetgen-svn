@@ -912,13 +912,13 @@ void tetgenmesh::delaunizesegments()
         }
       }
       if (b->bowyerwatson == 0) {
-        s = randomnation(subsegstack->objects);
+        s = randomnation(subsegstack->objects + 1);
         subsegstack->newindex((void **) &psseg);
         *psseg = * (face *) fastlookup(subsegstack, s);
         sinfect(sseg); 
         psseg = (face *) fastlookup(subsegstack, s);
         *psseg = sseg;
-        s = randomnation(subsegstack->objects);
+        s = randomnation(subsegstack->objects + 1);
         subsegstack->newindex((void **) &psseg);
         *psseg = * (face *) fastlookup(subsegstack, s);
         sinfect(nsseg);
