@@ -896,7 +896,7 @@ void tetgenmesh::delaunizesegments()
           sinsertvertex(newpt, &(splitshs[0]), &sseg, true, false);
         }
         // Insert newpt into the DT.
-        insertvertex(newpt, &searchtet, true);
+        insertvertex(newpt, &searchtet, true, false);
       } else {
         if (getpointtype(refpt) != ACUTEVERTEX) {
           setpointtype(refpt, RIDGEVERTEX);
@@ -1666,7 +1666,7 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
     assert(pt[0] != dummypoint); // SELF_CHECK
     if (!pinfected(pt[0])) {
       searchtet = recenttet;
-      insertvertex(pt[0], &searchtet, true);
+      insertvertex(pt[0], &searchtet, true, false);
     } else {
       puninfect(pt[0]); // It is already inserted.
     }
@@ -1772,6 +1772,7 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   face checksh, tmpsh;
   face checkseg;
   point pa, pb, pc, pf, pg;
+  point newpt, *ppt;
   REAL ori, len, n[3];
   bool mflag, bflag;
   int i, j, k;
@@ -2001,24 +2002,39 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       enext2self(toptet); 
       enext2self(bottet); 
     }
-    // if (b->verbose > 1) {
-      printf("    Found non-Delaunay edges (%d, %d) and (%d, %d).\n", 
-        pointmark(org(toptet)), pointmark(dest(toptet)),
-        pointmark(org(bottet)), pointmark(dest(bottet)));
-    // }
     // Split one of the edges, choose the one has longer length.
     n[0] = DIST(org(toptet), dest(toptet));
     n[1] = DIST(org(bottet), dest(bottet));
-    midfaces->restart();
-    midfaces->newindex((void **) &parytet);
     if (n[0] > n[1]) {
-      *parytet = toptet;
+      pf = org(toptet);
+      pg = dest(toptet);
     } else {
-      *parytet = bottet;
+      pf = org(bottet);
+      pg = dest(bottet);
     }
+    // Create the midpoint of the non-Delaunay edge.
+    makepoint(&newpt);
+    for (i = 0; i < 3; i++) {
+      newpt[i] = 0.5 * (pf[i] + pg[i]);
+    }
+    setpointtype(newpt, STEINERVERTEX);
+    // if (b->verbose > 1) {
+      printf("  p:draw_subseg(%d, %d)\n", pointmark(pf), pointmark(newpt));
+      printf("  p:draw_subseg(%d, %d)\n", pointmark(pg), pointmark(newpt));
+    // }
+    // Save the newpoint in list (re-use facpoints).
+    facpoints->newindex((void **) &ppt);
+    *ppt = newpt;
+    // Set a tet for searching the new point.
+    parytet = (triface *) fastlookup(topfaces, 0);
+    recenttet = *parytet;
+    // if (b->verbose > 1) {
+      ppt = (point *) recenttet.tet;
+      printf("  p:draw_tet(%d, %d, %d, %d)\n", pointmark(ppt[4]),
+        pointmark(ppt[5]), pointmark(ppt[6]), pointmark(ppt[7]));
+    // }
     dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
-
   // Unmark all facet vertices.
   for (i = 0; i < facpoints->objects; i++) {
     pf = * (point *) fastlookup(facpoints, i);
