@@ -1075,7 +1075,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
 {
   triface spintet;
   point pa, pb, pc, pd, pe;
-  REAL ori, ori1, len, n[3];
+  REAL ori, r, len, n[3];
   bool cofacetflag;
   int i;
 
@@ -1149,40 +1149,29 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
     dummypoint[0] = pa[0] + len * n[0];
     dummypoint[1] = pa[1] + len * n[1];
     dummypoint[2] = pa[2] + len * n[2];
-    // Search a co-facet point d, s.t. [a, b, d] intersects [a, b, c].
+    // Search a co-facet point d, s.t. (i) [a, b, d] intersects [a, b, c],
+    //   AND (ii) a, b, c, d are co-circular (approximately).
+    // NOTE: (ii) is needed since there may be several points satisfy (i).
+    circumsphere(pa, pb, pc, NULL, n, &r);
+    pe = apex(*searchtet);
     spintet = *searchtet;
     while (1) {
       pd = apex(spintet);
       if (pd != dummypoint) {
-        ori = orient3d(pa, pb, pc, pd);
-        if ((ori == 0) || pinfected(pd)) {
-          ori1 = orient3d(pa, pb, dummypoint, pd);
-          if (ori1 > 0) break;
+        if (pinfected(pd)) {
+          ori = orient3d(pa, pb, dummypoint, pd);
+          if (ori > 0) {
+            // [a, b, d] intersects with [a, b, c].
+            len = DIST(n, pd);
+            if ((fabs(len - r) / r) < 1e-6) {
+              break; // d is (approx.) co-circular with a, b, c.
+            }
+          }
         }
       }
       fnextself(spintet); // Go to the next face.
+      assert(apex(spintet) != pe); // SELF_CHECK
     }
-    /*// Find a tet [a, b, d, e] such that d is co-facet with [a, b, c] and
-    //   e is not, and e is not dummypoint too.  An example is found in
-    //   fig/scoutcrosstet-case1(2).lua. NOTE, such tet may not exist.
-    while (1) {
-      pe = oppo(spintet);
-      if (pe == dummypoint) {
-        // 'spintet' is a hull face. Go to its adjacet hull face.
-        fnextself(spintet);
-        assert(apex(spintet) == dummypoint); // SELF_CHECK
-        fnextself(spintet);
-        assert(pinfected(apex(spintet))); // SELF_CHECK
-        pe = oppo(spintet);
-      }
-      if (!pinfected(pe)) {
-        // Found the tet [a, b, d, e].
-        break;
-      }
-      // Go to the next face.
-      fnextself(spintet);
-      if (apex(spintet) == pd) break; // Not found.
-    }*/
     *searchtet = spintet;
     dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
