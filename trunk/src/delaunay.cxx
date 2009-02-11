@@ -514,6 +514,9 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 // Delaunayness of T. Otherwise, do nothing with regard to the Delaunayness  //
 // T (T may be non-Delaunay after this function).                            //
 //                                                                           //
+// If 'visflag' is TRUE, force to check the visibility of the boundary faces //
+// of cavity. This is needed when T is not Delaunay.                         //
+//                                                                           //
 // If 'noencflag' is TRUE, only insert the new point p if it does not cause  //
 // any existing (sub)segment be non-Delaunay. This option only is checked    //
 // when the global variable 'checksubsegs' is set.                           //
@@ -521,12 +524,12 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
-  bool noencflag)
+  bool visflag, bool noencflag)
 {
   triface *cavetet, *parytet, spintet, neightet, newtet, neineitet;
   face *pssub, checksh;
   face *psseg, sseg;
-  point *pts, pa;
+  point *pts, pa, pb, pc;
   enum location loc;
   REAL sign, ori;
   long tetcount;
@@ -684,7 +687,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           enqflag = (ori < 0.0);
           // Check if this face is coplanar with p. This case may create
           //   a degenerate tet (zero volume). 
-          // Note: for convex domain, it only happen at hull face.
+          // Note: for convex domain, it can only happen at a hull face.
           if (bwflag && (ori == 0.0)) {
             newflip = (badface *) flippool->alloc();
             newflip->tt = *cavetet; // Queue the adjacent tet (not in cavity).
@@ -699,6 +702,21 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           }
         } // if (pts[7] != dummypoint)
         marktest(*cavetet); // Only test it once.
+      }
+      // Valication is needed when T is not a Delaunay triangulation.
+      if (visflag && !enqflag) {
+        if ((point) cavetet->tet[7] != dummypoint) {
+          // A non-hull cavity boundary face. Validate it.
+          cavetet->ver = 4;
+          pa = org(*cavetet);
+          pb = dest(*cavetet);
+          pc = apex(*cavetet);
+          ori = orient3d(pa, pb, pc, insertpt); orient3dcount++;
+          enqflag = (ori < 0.0);
+          if (enqflag) {
+            updatebwcavitycount++; // Cavity is updated.
+          }
+        }
       }
       if (enqflag) {
         // Found a tet in the cavity. Put other three faces in check list.
@@ -837,59 +855,63 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   // Create new tetrahedra in the Bowyer-Watson cavity and Connect them.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
-    neightet = *cavetet;
-    unmarktest(neightet); // Unmark it.
-    // Get the oldtet (inside the cavity).
-    symedge(neightet, neineitet);
-    if (apex(neightet) != dummypoint) {
-      // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
-      maketetrahedron(&newtet);
-      setorg(newtet, dest(neightet));
-      setdest(newtet, org(neightet));
-      setapex(newtet, apex(neightet));
-      setoppo(newtet, insertpt);
-    } else {
-      // Create a new hull tet (see Fig. bowyerwatson 2).
-      hullsize++;
-      maketetrahedron(&newtet);
-      setorg(newtet, org(neightet));
-      setdest(newtet, dest(neightet));
-      setapex(newtet, insertpt);
-      setoppo(newtet, dummypoint);
-      // Note: the cavity boundary face is at the enext0fnext place.
-      enext0fnextself(newtet);
-    }
-    // Connect newtet <==> neightet, this also disconnect the old bond.
-    bond(newtet, neightet);
-    // Let the oldtet knows newtet (for connecting adjacent new tets).
-    if (org(newtet) != org(neineitet)) esymself(newtet);
-    neineitet.tet[neineitet.loc] = encode(newtet);
-    // Replace the old boundary face with the old tet in list.
-    *cavetet = neineitet; // *cavetet = newtet;
-    if (checksubsegs) {
-      newtet.ver &= ~1;  // Keep in 0th edge ring.
-      for (j = 0; j < 3; j++) {
-        tsspivot(neightet, sseg);
-        if (sseg.sh != NULL) {
-          assert(!sinfected(sseg));
-          /*if (sinfected(sseg)) {
-            // The segment is not missing.
-            if (b->verbose > 2) {
-              printf("      Dequeue encroached segment (%d, %d).\n",
-                pointmark(sorg(sseg)), pointmark(sdest(sseg)));
-            }
-            suninfect(sseg);
-          }*/
-          tssbond1(newtet, sseg);
-        }
-        enextself(neightet);
-        enext2self(newtet);
+    // Only operate on it if it is not infected. It could be infected if
+    //   T is not Delaunay, i.e., visflag == TRUE.
+    if (!infected(*cavetet)) {
+      neightet = *cavetet;
+      unmarktest(neightet); // Unmark it.
+      // Get the oldtet (inside the cavity).
+      symedge(neightet, neineitet);
+      if (apex(neightet) != dummypoint) {
+        // Create a new tet in the cavity (see Fig. bowyerwatson 1 or 3).
+        maketetrahedron(&newtet);
+        setorg(newtet, dest(neightet));
+        setdest(newtet, org(neightet));
+        setapex(newtet, apex(neightet));
+        setoppo(newtet, insertpt);
+      } else {
+        // Create a new hull tet (see Fig. bowyerwatson 2).
+        hullsize++;
+        maketetrahedron(&newtet);
+        setorg(newtet, org(neightet));
+        setdest(newtet, dest(neightet));
+        setapex(newtet, insertpt);
+        setoppo(newtet, dummypoint);
+        // Note: the cavity boundary face is at the enext0fnext place.
+        enext0fnextself(newtet);
       }
-    }
-    if (checksubfaces) {
-      tspivot(neightet, checksh);
-      if (checksh.sh!= NULL) {
-        tsbond(newtet, checksh); // Also disconnect the old bond.
+      // Connect newtet <==> neightet, this also disconnect the old bond.
+      bond(newtet, neightet);
+      // Let the oldtet knows newtet (for connecting adjacent new tets).
+      if (org(newtet) != org(neineitet)) esymself(newtet);
+      neineitet.tet[neineitet.loc] = encode(newtet);
+      // Replace the old boundary face with the old tet in list.
+      *cavetet = neineitet; // *cavetet = newtet;
+      if (checksubsegs) {
+        newtet.ver &= ~1;  // Keep in 0th edge ring.
+        for (j = 0; j < 3; j++) {
+          tsspivot(neightet, sseg);
+          if (sseg.sh != NULL) {
+            assert(!sinfected(sseg));
+            /*if (sinfected(sseg)) {
+              // The segment is not missing.
+              if (b->verbose > 2) {
+                printf("      Dequeue encroached segment (%d, %d).\n",
+                  pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+              }
+              suninfect(sseg);
+            }*/
+            tssbond1(newtet, sseg);
+          }
+          enextself(neightet);
+          enext2self(newtet);
+        }
+      }
+      if (checksubfaces) {
+        tspivot(neightet, checksh);
+        if (checksh.sh!= NULL) {
+          tsbond(newtet, checksh); // Also disconnect the old bond.
+        }
       }
     }
   }
@@ -928,33 +950,37 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
     decode(cavetet->tet[cavetet->loc], newtet);
-    // assert(org(newtet) == org(*cavetet)); // SELF_CHECK
-    for (j = 0; j < 3; j++) {
-      enext0fnext(newtet, neightet); // Go to the face.
-      if (neightet.tet[neightet.loc] == NULL) {
-        spintet = *cavetet;
-        while (1) {
-          enext0fnextself(spintet);
-          decode(spintet.tet[spintet.loc], neineitet);
-          if (!infected(neineitet)) break;
-          symedgeself(spintet);
+    // Only operate on it if it is not infected. It could be infected if
+    //   T is not Delaunay, i.e., visflag == TRUE.
+    if (!infected(newtet)) {
+      // assert(org(newtet) == org(*cavetet)); // SELF_CHECK
+      for (j = 0; j < 3; j++) {
+        enext0fnext(newtet, neightet); // Go to the face.
+        if (neightet.tet[neightet.loc] == NULL) {
+          spintet = *cavetet;
+          while (1) {
+            enext0fnextself(spintet);
+            decode(spintet.tet[spintet.loc], neineitet);
+            if (!infected(neineitet)) break;
+            symedgeself(spintet);
+          }
+          // Find the corresponding edge in neineitet.
+          pa = dest(newtet);
+          for (k = 0; k < 3; k++) {
+            if (org(neineitet) == pa) break;
+            enextself(neineitet);
+          }
+          assert(k < 3);  // SELF_CHECK
+          assert(dest(neineitet) == org(newtet)); // SELF_CHECK
+          enext0fnextself(neineitet);
+          bond(neightet, neineitet);
         }
-        // Find the corresponding edge in neineitet.
-        pa = dest(newtet);
-        for (k = 0; k < 3; k++) {
-          if (org(neineitet) == pa) break;
-          enextself(neineitet);
+        if (checksubsegs || checksubfaces) {
+          point2tet(org(newtet)) = encode(newtet);
         }
-        assert(k < 3);  // SELF_CHECK
-        assert(dest(neineitet) == org(newtet)); // SELF_CHECK
-        enext0fnextself(neineitet);
-        bond(neightet, neineitet);
+        enextself(newtet);
+        enextself(*cavetet);
       }
-      if (checksubsegs || checksubfaces) {
-        point2tet(org(newtet)) = encode(newtet);
-      }
-      enextself(newtet);
-      enextself(*cavetet);
     }
   }
 
@@ -970,7 +996,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   if (bwflag && (futureflip != NULL)) {
     // There may exist degenerate tets. Check and remove them.
     while (futureflip != NULL) {
-      // Dequeued an adjacent tet to the cavity.
+      // Dequeue an adjacent tet to the cavity.
       fliptets[0] = futureflip->tt;
       futureflip = futureflip->nextitem;
 
@@ -1016,7 +1042,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
             tsspivot(fliptets[0], sseg);
             if ((sseg.sh != NULL) && !sinfected(sseg)) {
               // This subsegment will be flipped. Queue it.
-              if (b->verbose > 2) {
+              if (b->verbose > 1) {
                   printf("      Queue a flipped segment (%d, %d).\n",
                     pointmark(sorg(sseg)), pointmark(sdest(sseg)));
               }
@@ -1260,7 +1286,7 @@ void tetgenmesh::incrementaldelaunay()
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
-      insertvertex(permutarray[i], &searchtet, true, false);    
+      insertvertex(permutarray[i], &searchtet, true, false, false);    
     }
   } else {
     // Use incremental flip algorithm.

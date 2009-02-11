@@ -895,8 +895,9 @@ void tetgenmesh::delaunizesegments()
         } else {
           sinsertvertex(newpt, &(splitshs[0]), &sseg, true);
         }
-        // Insert newpt into the DT.
-        insertvertex(newpt, &searchtet, true, false);
+        // Insert newpt into the DT. If 'checksubfaces == 1' the current
+        //   mesh is constrained Delaunay (but may not Delaunay).
+        insertvertex(newpt, &searchtet, true, checksubfaces == 1, false);
       } else {
         if (getpointtype(refpt) != ACUTEVERTEX) {
           setpointtype(refpt, RIDGEVERTEX);
@@ -1666,7 +1667,7 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
     assert(pt[0] != dummypoint); // SELF_CHECK
     if (!pinfected(pt[0])) {
       searchtet = recenttet;
-      insertvertex(pt[0], &searchtet, true, false);
+      insertvertex(pt[0], &searchtet, true, false, false);
     } else {
       puninfect(pt[0]); // It is already inserted.
     }
@@ -2188,7 +2189,7 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces)
   // Insert the point. Do not insert if it will encroach any segment.  
   assert(subsegstack->objects == 0l); // SELF_CHECK
   searchtet = recenttet; // Start search it from recentet
-  insertvertex(newpt, &searchtet, true, true);
+  insertvertex(newpt, &searchtet, true, true, true);
 
   if (subsegstack->objects > 0l) {
     // Some segments are queued. Randomly pick one to split.
@@ -2208,7 +2209,7 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces)
     sinsertvertex(newpt, searchsh, &sseg, true);
     // Insert the point. Missing segments are queued. 
     searchtet = recenttet; // Start search it from recentet
-    insertvertex(newpt, &searchtet, true, false);
+    insertvertex(newpt, &searchtet, true, true, false);
     // Recover queued segments (always use Boyer-Watson algorithm).
     s = b->bowyerwatson;
     b->bowyerwatson = 1;
