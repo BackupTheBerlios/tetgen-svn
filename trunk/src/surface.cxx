@@ -7,16 +7,19 @@
 //                                                                           //
 // sinsertvertex()    Insert a vertex into a triangulation of a facet.       //
 //                                                                           //
+// Point location is not performed inside this routine.  It is assumed that  //
+// 'splitsh' contains 'insertpt' (ONFACE or ONEDGE).  If 'splitseg' is not   //
+// NULL, a segment will be split.                                            //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg, 
-  bool bwflag, bool hullflag)
+void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg, 
+  bool bwflag)
 {
   face *abfaces, *parysh, *pssub;
   face neighsh, newsh, casout, casin;
   face aseg, bseg, aoutseg, boutseg;
   face checkseg;
-  triface neightet;
   point pa, pb, pc;
   enum location loc;
   REAL sign, area;
@@ -25,33 +28,17 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
   tetrahedron ptr;
   shellface sptr;
 
-  if (splitseg == NULL) {
-    assert(searchsh != NULL); // SELF_CHECK
-    // loc = slocate(insertpt, searchsh);
-  } else {
-    spivot(*splitseg, *searchsh);
+  if (splitseg != NULL) {
+    spivot(*splitseg, *splitsh);
     loc = ONEDGE;
-  }
-
-  if (loc == OUTSIDE) {
-    if (hullflag) {
-      // return inserthullvertex();
-    }
-    assert(0); 
-  }
-  // The insert point should not lie on an unknown segment.
-  if ((loc == ONEDGE) && (splitseg->sh == NULL)) {
-    sspivot(*searchsh, checkseg);
-    assert(checkseg.sh == NULL); // SELF_CHECK
-  }
-  if (loc == ONVERTEX) {
-    assert(0);
+  } else {
+    loc = ONFACE;
   }
 
   if (b->verbose > 1) {
-    pa = sorg(*searchsh);
-    pb = sdest(*searchsh);
-    pc = sapex(*searchsh);
+    pa = sorg(*splitsh);
+    pb = sdest(*splitsh);
+    pc = sapex(*splitsh);
     printf("    Insert point %d %s (%d, %d, %d)\n", pointmark(insertpt),
       loc == ONEDGE ? "on edge" : "in face", pointmark(pa), pointmark(pb), 
       pointmark(pc));
@@ -63,15 +50,15 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
     pa = sorg(*splitseg);
     // Count the number of faces at segment [a, b].
     n = 0;
-    neighsh = *searchsh;
+    neighsh = *splitsh;
     do {
       spivotself(neighsh);
       n++;
-    } while ((neighsh.sh != NULL) && (neighsh.sh != searchsh->sh));
+    } while ((neighsh.sh != NULL) && (neighsh.sh != splitsh->sh));
     // n is at least 1.
     abfaces = new face[n];
     // Collect faces at seg [a, b].
-    abfaces[0] = *searchsh;
+    abfaces[0] = *splitsh;
     if (sorg(abfaces[0]) != pa) sesymself(abfaces[0]);
     for (i = 1; i < n; i++) {
       spivot(abfaces[i - 1], abfaces[i]);
@@ -80,9 +67,9 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
   }
 
   // Initialize the cavity.
-  smarktest(*searchsh);
+  smarktest(*splitsh);
   caveshlist->newindex((void **) &parysh);
-  *parysh = *searchsh;
+  *parysh = *splitsh;
   if (loc == ONEDGE) {
     if (splitseg != NULL) {
       for (i = 1; i < n; i++) {
@@ -91,7 +78,7 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
         *parysh = abfaces[i];
       }
     } else {
-      spivot(*searchsh, neighsh);
+      spivot(*splitsh, neighsh);
       if (neighsh.sh != NULL) {
         smarktest(neighsh);
         caveshlist->newindex((void **) &parysh);
@@ -224,6 +211,22 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
     }
   }
 
+  if (checksubfaces) {
+    // Add all new subfaces into list.
+    for (i = 0; i < caveshbdlist->objects; i++) {
+      // Get an old subface at edge [a, b].
+      parysh = (face *) fastlookup(caveshbdlist, i);
+      spivot(*parysh, newsh); // The new subface [a, b, p].
+      if (b->verbose > 1) {
+        printf("      Queue a new subface (%d, %d, %d).\n",
+          pointmark(sorg(newsh)), pointmark(sdest(newsh)),
+          pointmark(sapex(newsh)));
+      }
+      subfacstack->newindex((void **) &pssub);
+      *pssub = newsh;
+    }
+  }
+
   if (splitseg != NULL) {
     // Split the segment [a, b].
     aseg = *splitseg;
@@ -300,12 +303,14 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
     }
     if (checksubsegs) {
       // Add two subsegs into stack (for recovery).
-      s = randomnation(subsegstack->objects + 1);
-      subsegstack->newindex((void **) &parysh);
-      *parysh = * (face *) fastlookup(subsegstack, s);
-      sinfect(aseg); 
-      parysh = (face *) fastlookup(subsegstack, s);
-      *parysh = aseg;
+      if (!sinfected(aseg)) {
+        s = randomnation(subsegstack->objects + 1);
+        subsegstack->newindex((void **) &parysh);
+        *parysh = * (face *) fastlookup(subsegstack, s);
+        sinfect(aseg); 
+        parysh = (face *) fastlookup(subsegstack, s);
+        *parysh = aseg;
+      }
       s = randomnation(subsegstack->objects + 1);
       subsegstack->newindex((void **) &parysh);
       *parysh = * (face *) fastlookup(subsegstack, s);
@@ -319,15 +324,6 @@ void tetgenmesh::sinsertvertex(point insertpt,face *searchsh, face *splitseg,
   // Delete the old subfaces.
   for (i = 0; i < caveshlist->objects; i++) {
     parysh = (face *) fastlookup(caveshlist, i);
-    if (checksubfaces) {
-      // Disconnect in the neighbor tets.
-      stpivot(*parysh, neightet);
-      if (neightet.tet != NULL) {
-        tsdissolve(neightet);
-        symself(neightet);
-        tsdissolve(neightet);
-      }
-    }
     shellfacedealloc(subfacepool, parysh->sh);
   }
 

@@ -1625,7 +1625,7 @@ void incrementaldelaunay();
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void sinsertvertex(point, face*, face*, bool, bool);
+void sinsertvertex(point, face*, face*, bool);
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
 void unifysegments();
 void mergefacets();
@@ -1651,6 +1651,7 @@ void delaunizecavity(arraypool*, arraypool*, arraypool*);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
 void restorecavity(arraypool*, arraypool*, arraypool*);
+void splitsubedge(face*, arraypool*);
 void constrainedfacets();
 
 void markacutevertices();

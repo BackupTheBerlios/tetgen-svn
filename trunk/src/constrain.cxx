@@ -893,7 +893,7 @@ void tetgenmesh::delaunizesegments()
           sspivot(splitshs[1], nsseg);
           lawsonflip();
         } else {
-          sinsertvertex(newpt, &(splitshs[0]), &sseg, true, false);
+          sinsertvertex(newpt, &(splitshs[0]), &sseg, true);
         }
         // Insert newpt into the DT.
         insertvertex(newpt, &searchtet, true, false);
@@ -908,7 +908,7 @@ void tetgenmesh::delaunizesegments()
           sspivot(splitshs[1], nsseg);
           lawsonflip();
         } else {
-          sinsertvertex(refpt, &(splitshs[0]), &sseg, true, false);
+          sinsertvertex(refpt, &(splitshs[0]), &sseg, true);
         }
       }
       if (b->bowyerwatson == 0) {
@@ -1772,7 +1772,6 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   face checksh, tmpsh;
   face checkseg;
   point pa, pb, pc, pf, pg;
-  point newpt, *ppt;
   REAL ori, len, n[3];
   bool mflag, bflag;
   int i, j, k;
@@ -2012,28 +2011,18 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       pf = org(bottet);
       pg = dest(bottet);
     }
-    // Create the midpoint of the non-Delaunay edge.
-    makepoint(&newpt);
-    for (i = 0; i < 3; i++) {
-      newpt[i] = 0.5 * (pf[i] + pg[i]);
-    }
-    setpointtype(newpt, STEINERVERTEX);
     // if (b->verbose > 1) {
-      printf("  p:draw_subseg(%d, %d)\n", pointmark(pf), pointmark(newpt));
-      printf("  p:draw_subseg(%d, %d)\n", pointmark(pg), pointmark(newpt));
+      printf("  Found a non-Delaunay edge (%d, %d)\n", pointmark(pf), 
+        pointmark(pg));
     // }
-    // Save the newpoint in list (re-use facpoints).
-    facpoints->newindex((void **) &ppt);
-    *ppt = newpt;
+    // Create the midpoint of the non-Delaunay edge.
+    for (i = 0; i < 3; i++) {
+      dummypoint[i] = 0.5 * (pf[i] + pg[i]);
+    }
     // Set a tet for searching the new point.
     parytet = (triface *) fastlookup(topfaces, 0);
     recenttet = *parytet;
-    // if (b->verbose > 1) {
-      ppt = (point *) recenttet.tet;
-      printf("  p:draw_tet(%d, %d, %d, %d)\n", pointmark(ppt[4]),
-        pointmark(ppt[5]), pointmark(ppt[6]), pointmark(ppt[7]));
-    // }
-    dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
+    // dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
   // Unmark all facet vertices.
   for (i = 0; i < facpoints->objects; i++) {
@@ -2178,6 +2167,61 @@ void tetgenmesh::restorecavity(arraypool *crosstets, arraypool *topnewtets,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// splitsubedge()    Split a non-Delaunay edge (not a segment) in facet.     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces)
+{
+  triface searchtet;
+  face *psseg, sseg;
+  point newpt, pa, pb;
+  int s, i;
+
+  // Create the new point.
+  makepoint(&newpt);
+  // The coordinates were saved in dummypoint.
+  for (i = 0; i < 3; i++) newpt[i] = dummypoint[i];
+  setpointtype(newpt, STEINERVERTEX);
+  dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
+
+  // Insert the point. Do not insert if it will encroach any segment.  
+  assert(subsegstack->objects == 0l); // SELF_CHECK
+  searchtet = recenttet; // Start search it from recentet
+  insertvertex(newpt, &searchtet, true, true);
+
+  if (subsegstack->objects > 0l) {
+    // Some segments are queued. Randomly pick one to split.
+    s = randomnation(subsegstack->objects);
+    psseg = (face *) fastlookup(subsegstack, s);
+    sseg = *psseg;
+    pa = sorg(sseg);
+    pb = sdest(sseg);
+    for (i = 0; i < 3; i++) newpt[i] = 0.5 * (pa[i] + pb[i]);
+    // Uninfect all queued segments.
+    for (i = 0; i < subsegstack->objects; i++) {
+      psseg = (face *) fastlookup(subsegstack, i);
+      suninfect(*psseg);
+    }
+    subsegstack->restart();  // Clear the queue.
+    // Insert the point. Missing segments are queued. 
+    searchtet = recenttet; // Start search it from recentet
+    insertvertex(newpt, &searchtet, true, false);
+    // Split the segment. Two subsegments are queued.
+    sinsertvertex(newpt, searchsh, &sseg, true);
+    // Recover queued segments (always use Boyer-Watson algorithm).
+    s = b->bowyerwatson;
+    b->bowyerwatson = 1;
+    delaunizesegments();
+    b->bowyerwatson = s;
+  } else {
+    // The point is inserted. Insert it on facet.
+    assert(0); // Not handled yet.
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // constrainedfacets()    Recover subfaces saved in 'subfacestack'.          //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2225,6 +2269,8 @@ void tetgenmesh::constrainedfacets()
     subfacstack->objects--;
     pssub = (face *) fastlookup(subfacstack, subfacstack->objects);
     ssub = *pssub;
+
+    if (ssub.sh[3] == NULL) continue; // Skip a dead subface.
 
     stpivot(ssub, neightet);
     if (neightet.tet == NULL) {
@@ -2332,15 +2378,18 @@ void tetgenmesh::constrainedfacets()
         if (!mflag) break;
       } // while
 
-      if (facfaces->objects > 0l) {
-        dump_facetof(&ssub);
-        outnodes(0);
-        outsubfaces(0);
-        assert(0); // Not handled yet.
-      }
       // Clear the list of facet vertices.
       facpoints->restart();
-      // At this point, the mesh should be constrained Delaunay.
+      // Now the mesh should be constrained Delaunay.
+
+      if (facfaces->objects > 0l) {
+        // Found a non-Delaunay edge, split it.
+        // dump_facetof(&ssub);
+        // outnodes(0);
+        // outsubfaces(0);
+        splitsubedge(&ssub, facfaces);
+        facfaces->restart();
+      }
     } // if (neightet.tet == NULL) 
   }
 

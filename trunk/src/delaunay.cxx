@@ -776,7 +776,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           }
           if (enqflag) {
             if (b->verbose > 1) {
-              printf("      Queue missing segment (%d, %d).\n",
+              printf("      Queue a missing segment (%d, %d).\n",
                 pointmark(sorg(sseg)), pointmark(sdest(sseg)));
             }
             sinfect(sseg);  // Only save it once.
@@ -818,7 +818,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
         if (checksh.sh != NULL) {
           sym(neightet, neineitet);
           if (infected(neineitet)) {
-            if (b->verbose > 2) {
+            if (b->verbose > 1) {
               printf("      Queue a missing subface (%d, %d, %d).\n",
                 pointmark(sorg(checksh)), pointmark(sdest(checksh)),
                 pointmark(sapex(checksh)));
