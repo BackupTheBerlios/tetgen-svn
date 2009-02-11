@@ -20,6 +20,7 @@ void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg,
   face neighsh, newsh, casout, casin;
   face aseg, bseg, aoutseg, boutseg;
   face checkseg;
+  triface neightet;
   point pa, pb, pc;
   enum location loc;
   REAL sign, area;
@@ -324,6 +325,15 @@ void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg,
   // Delete the old subfaces.
   for (i = 0; i < caveshlist->objects; i++) {
     parysh = (face *) fastlookup(caveshlist, i);
+    if (checksubfaces) {		 
+      // Disconnect in the neighbor tets.		 
+      stpivot(*parysh, neightet);		 
+      if (neightet.tet != NULL) {		 
+        tsdissolve(neightet);		 
+        symself(neightet);		 
+        tsdissolve(neightet);		 
+      }		 
+    }
     shellfacedealloc(subfacepool, parysh->sh);
   }
 

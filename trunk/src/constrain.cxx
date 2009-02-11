@@ -2204,11 +2204,11 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces)
       suninfect(*psseg);
     }
     subsegstack->restart();  // Clear the queue.
+    // Split the segment. Two subsegments are queued.
+    sinsertvertex(newpt, searchsh, &sseg, true);
     // Insert the point. Missing segments are queued. 
     searchtet = recenttet; // Start search it from recentet
     insertvertex(newpt, &searchtet, true, false);
-    // Split the segment. Two subsegments are queued.
-    sinsertvertex(newpt, searchsh, &sseg, true);
     // Recover queued segments (always use Boyer-Watson algorithm).
     s = b->bowyerwatson;
     b->bowyerwatson = 1;
