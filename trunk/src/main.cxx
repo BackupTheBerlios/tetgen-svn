@@ -251,7 +251,7 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     if (b->plc) {
       m.checkshells(1);
     }
-    m.checkdelaunay(b->plc);
+    if (m.checkdelaunay(b->plc) > 0) assert(0);
   }
 
   if (!b->quiet) {

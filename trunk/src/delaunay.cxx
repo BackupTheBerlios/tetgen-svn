@@ -703,7 +703,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
         } // if (pts[7] != dummypoint)
         marktest(*cavetet); // Only test it once.
       }
-      // Valication is needed when T is not a Delaunay triangulation.
+      // Valication is needed when T is not a Delaunay triangulation
+      //   (see fig/dump-cavity-case8).
       if (visflag && !enqflag) {
         if ((point) cavetet->tet[7] != dummypoint) {
           // A non-hull cavity boundary face. Validate it.
@@ -712,6 +713,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           pb = dest(*cavetet);
           pc = apex(*cavetet);
           ori = orient3d(pa, pb, pc, insertpt); orient3dcount++;
+          assert(ori != 0.0); // SELF_CHECK
           enqflag = (ori < 0.0);
           if (enqflag) {
             updatebwcavitycount++; // Cavity is updated.

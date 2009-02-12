@@ -7,10 +7,6 @@
 //                                                                           //
 // sinsertvertex()    Insert a vertex into a triangulation of a facet.       //
 //                                                                           //
-// Point location is not performed inside this routine.  It is assumed that  //
-// 'splitsh' contains 'insertpt' (ONFACE or ONEDGE).  If 'splitseg' is not   //
-// NULL, a segment will be split.                                            //
-//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg, 
@@ -33,7 +29,8 @@ void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg,
     spivot(*splitseg, *splitsh);
     loc = ONEDGE;
   } else {
-    loc = ONFACE;
+    assert(splitsh->sh != NULL); // SELF_CHECK
+    // loc = slocate(insertpt, splitsh);
   }
 
   if (b->verbose > 1) {
@@ -379,7 +376,7 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
       senextself(newsh);
     }
   } else {
-    printf("  This code does not do surface mesh yet.\n");
+    // printf("  This code does not do surface mesh yet.\n");
     // terminatetetgen(1);
   }
 }

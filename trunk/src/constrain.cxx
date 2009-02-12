@@ -2172,11 +2172,14 @@ void tetgenmesh::restorecavity(arraypool *crosstets, arraypool *topnewtets,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces)
+void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
+  arraypool *facpoints)
 {
   triface searchtet;
   face *psseg, sseg;
-  point newpt, pa, pb;
+  point pa, pb;
+  point newpt;
+  REAL len, n[3];
   int s, i;
 
   // Create the new point.
@@ -2210,14 +2213,17 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces)
     // Insert the point. Missing segments are queued. 
     searchtet = recenttet; // Start search it from recentet
     insertvertex(newpt, &searchtet, true, true, false);
-    // Recover queued segments (always use Boyer-Watson algorithm).
-    s = b->bowyerwatson;
-    b->bowyerwatson = 1;
-    delaunizesegments();
-    b->bowyerwatson = s;
+    if (subsegstack->objects > 0l) {
+      // Recover queued segments (always use Boyer-Watson algorithm).
+      s = b->bowyerwatson;
+      b->bowyerwatson = 1;
+      delaunizesegments();
+      b->bowyerwatson = s;
+    }
   } else {
-    // The point is inserted. Insert it on facet.
-    assert(0); // Not handled yet.
+    // Insert the new point on facet.
+    // sinsertvertex(newpt, searchsh, NULL, true);
+    assert(0);
   }
 }
 
@@ -2379,18 +2385,17 @@ void tetgenmesh::constrainedfacets()
         if (!mflag) break;
       } // while
 
-      // Clear the list of facet vertices.
-      facpoints->restart();
-      // Now the mesh should be constrained Delaunay.
-
       if (facfaces->objects > 0l) {
         // Found a non-Delaunay edge, split it.
         // dump_facetof(&ssub);
         // outnodes(0);
         // outsubfaces(0);
-        splitsubedge(&ssub, facfaces);
+        splitsubedge(&ssub, facfaces, facpoints);
         facfaces->restart();
       }
+      // Clear the list of facet vertices.
+      facpoints->restart();
+      // Now the mesh should be constrained Delaunay.
     } // if (neightet.tet == NULL) 
   }
 
