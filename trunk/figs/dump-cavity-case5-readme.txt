@@ -1,5 +1,5 @@
 *******************************************
--- The Error Message
+-- Error Message
 *******************************************
     Located (4) tet (3001, 5730, 4566, -1).
     Size of the cavity: 22 faces 22 tets.
