@@ -491,12 +491,12 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
   }
 
   // Update the point-to-tet map.
-  if (checksubsegs || checksubfaces) {
+  // if (checksubsegs || checksubfaces) {
     point2tet(pa) = encode(firsttet);
     point2tet(pb) = encode(firsttet);
     point2tet(pc) = encode(firsttet);
     point2tet(pd) = encode(firsttet);
-  }
+  // }
 
   // Remember the first tetrahedron.
   recenttet = firsttet;
@@ -532,7 +532,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   point *pts, pa, pb, pc;
   enum location loc;
   REAL sign, ori;
-  long tetcount;
+  long tetcount, updatecount;
   bool enqflag;
   int i, j, k;
 
@@ -551,6 +551,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   // loc_start = clock();
 
   tetcount = ptloc_count;
+  updatecount = 0l;
   
   if (searchtet->tet == NULL) {
     randomsample(insertpt, searchtet);
@@ -703,8 +704,8 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
         } // if (pts[7] != dummypoint)
         marktest(*cavetet); // Only test it once.
       }
-      // Valication is needed when T is not a Delaunay triangulation
-      //   (see fig/dump-cavity-case8).
+      // Validation is needed when T is not a Delaunay triangulation. The
+      //   default cavity may not be star-shaped (fig/dump-cavity-case8).
       if (visflag && !enqflag) {
         if ((point) cavetet->tet[7] != dummypoint) {
           // A non-hull cavity boundary face. Validate it.
@@ -716,7 +717,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           assert(ori != 0.0); // SELF_CHECK
           enqflag = (ori < 0.0);
           if (enqflag) {
-            updatebwcavitycount++; // Cavity is updated.
+            updatecount++; // Cavity is updated.
           }
         }
       }
@@ -858,7 +859,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
     // Only operate on it if it is not infected. It could be infected if
-    //   T is not Delaunay, i.e., visflag == TRUE.
+    //   T is not Delaunay (fig/dump-cavity-case8).
     if (!infected(*cavetet)) {
       neightet = *cavetet;
       unmarktest(neightet); // Unmark it.
@@ -920,9 +921,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
 
   // Set a handle for speeding point location.
   recenttet = newtet;
-  if (checksubsegs || checksubfaces) {
+  // if (checksubsegs || checksubfaces) {
     point2tet(insertpt) = encode(newtet);
-  }
+  // }
 
   /*// Connect the set of new tetrahedra together.
   for (i = 0; i < cavebdrylist->objects; i++) {
@@ -948,12 +949,14 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     }
   }*/
 
+  cavetetlist->restart(); // Re-use this list.
+
   // Connect adjacent new tetrahedra together.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
     decode(cavetet->tet[cavetet->loc], newtet);
     // Only operate on it if it is not infected. It could be infected if
-    //   T is not Delaunay, i.e., visflag == TRUE.
+    //   T is not Delaunay (fig/dump-cavity-case8).
     if (!infected(newtet)) {
       // assert(org(newtet) == org(*cavetet)); // SELF_CHECK
       for (j = 0; j < 3; j++) {
@@ -976,10 +979,15 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           assert(dest(neineitet) == org(newtet)); // SELF_CHECK
           enext0fnextself(neineitet);
           bond(neightet, neineitet);
+          // Queue the internal face if the cavity is updated.
+          if (updatecount > 0l) {
+            cavetetlist->newindex((void **) &parytet);
+            *parytet = neightet;
+          }
         }
-        if (checksubsegs || checksubfaces) {
+        // if (checksubsegs || checksubfaces) {
           point2tet(org(newtet)) = encode(newtet);
-        }
+        // }
         enextself(newtet);
         enextself(*cavetet);
       }
@@ -1039,7 +1047,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
             printf("Internal error in insertvertex(): Unknown flip case.\n");
             terminatetetgen(1);
           }
-          if (checksubsegs) {
+          /*if (checksubsegs) {
             // Check if the flip edge is subsegment.
             tsspivot(fliptets[0], sseg);
             if ((sseg.sh != NULL) && !sinfected(sseg)) {
@@ -1056,7 +1064,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
               tssdissolve(fliptets[1]);
               tssdissolve(fliptets[2]);
             }
-          }
+          }*/
           // Do a 3-to-2 flip to remove the degenerate tet.
           flip32(fliptets, 1, 0);
           // Rememebr the new tet.
@@ -1077,6 +1085,12 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
       } // if (ori == 0)
     }
     flippool->restart();
+  }
+
+  if (updatecount > 0l) {
+    // Some internal new faces may be non-Delaunay. Check and fix them.
+    // for (i = 0; i < cavetetlist->objects(); i++) {
+    // }
   }
 
   // Set the point type.
@@ -1295,7 +1309,7 @@ void tetgenmesh::incrementaldelaunay()
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
-      flipinsertvertex(permutarray[i], &searchtet, 1);    
+      flipinsertvertex(permutarray[i], &searchtet, 1); 
     }
   }
 

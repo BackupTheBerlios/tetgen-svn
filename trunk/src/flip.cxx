@@ -544,6 +544,11 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
     bond(newface, casface);
   }
 
+  // Update the point-to-tet map.
+  point2tet(newpt) = encode(*splittet);
+  // The values in pa, pb, and pc are not changed.
+  point2tet(pd) = encode(fliptets[0]);
+
   if (flipflag > 0) {
     // Queue faces which may be locally non-Delaunay.
     for (i = 0; i < 3; i++) {
@@ -662,6 +667,13 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   enext2fnext(fliptets[3], newface);
   enextfnext(symface, casface);
   bond(newface, casface);
+
+  // Update point-to-tet map.
+  point2tet(newpt) = encode(*splitface);
+  // The values in pa and pb are not changed.
+  point2tet(pc) = encode(fliptets[0]);
+  point2tet(pd) = encode(fliptets[0]);
+  point2tet(pe) = encode(fliptets[2]);
 
   if (flipflag > 0) {
     enext0fnext(*splitface, newface);
@@ -799,6 +811,11 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     bond(newface, casface);
   }
 
+  // Update the point-to-tet map.
+  point2tet(newpt) = encode(fliptets[0]);
+  // The values in pa, p[0], ..., p[n-1] are not changed.
+  point2tet(pb) = encode(bfliptets[0]);
+
   if (flipflag > 0) {
     for (i = 0; i < n; i++) {
       enext2fnext(fliptets[i], newface);
@@ -847,10 +864,12 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
 {
   triface topcastets[3], botcastets[3];
   triface newface, casface;
-  face checksh, checkseg;
   point pa, pb, pc, pd, pe;
   int dummyflag;  // range = {-1, 0, 1, 2}.
   int i;
+
+  face *pssub, checksh;
+  face checkseg;
 
   int *iptr;
 
@@ -900,6 +919,22 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
   for (i = 0; i < 3; i++) {
     fnext(fliptets[1], botcastets[i]);
     enext2self(fliptets[1]);
+  }
+
+  if (checksubfaces) {
+    // Check if the flip face is subfaces.
+    tspivot(fliptets[0], checksh);
+    if (checksh.sh != NULL) {
+      if (b->verbose > 1) {
+        printf("      Queue a flipped subface (%d, %d, %d).\n",
+          pointmark(sorg(checksh)), pointmark(sdest(checksh)),
+          pointmark(sapex(checksh)));
+      }
+      stdissolve(checksh); // Disconnect the sub-tet bond.
+      // Add the missing subface into list.
+      subfacstack->newindex((void **) &pssub);
+      *pssub = checksh;
+    }
   }
 
   // Re-use fliptets[0] and fliptets[1].
@@ -1022,6 +1057,7 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
       }
     }
   }
+
   // Bond 6 subfaces if there are.
   if (checksubfaces) {
     for (i = 0; i < 3; i++) {
@@ -1042,14 +1078,14 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
     }
   }
 
-  if (checksubsegs || checksubfaces) {
+  // if (checksubsegs || checksubfaces) {
     // Update the point-to-tet map.
     point2tet(pa) = encode(fliptets[0]);
     point2tet(pb) = encode(fliptets[0]);
     point2tet(pc) = encode(fliptets[1]);
     point2tet(pd) = encode(fliptets[0]);
     point2tet(pe) = encode(fliptets[0]);
-  }
+  // }
 
   if (hullflag > 0) {
     if (dummyflag != 0) {
@@ -1127,6 +1163,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   int dummyflag;  // Rangle = {-1, 0, 1, 2}
   int i;
 
+  face *pssub, checksh;
   face checkseg;
 
   int *iptr; 
@@ -1186,6 +1223,39 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     enext2fnext(fliptets[i], casface);
     enext2self(casface);
     symedge(casface, botcastets[i]);
+  }
+
+  if (checksubsegs) {
+    // Check if the flip edge is subsegment.
+    tsspivot(fliptets[0], checkseg);
+    if ((checkseg.sh != NULL) && !sinfected(checkseg)) {
+      // This subsegment will be flipped. Queue it.
+      if (b->verbose > 1) {
+        printf("      Queue a flipped segment (%d, %d).\n",
+          pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
+      }
+      sinfect(checkseg);  // Only save it once.
+      subsegstack->newindex((void **) &pssub);
+      *pssub = checkseg;
+    }
+  }
+
+  if (checksubfaces) {
+    // Check if the three flip faces are subfaces.
+    for (i = 0; i < 3; i++) {
+      tspivot(fliptets[i], checksh);
+      if (checksh.sh != NULL) {
+        if (b->verbose > 1) {
+          printf("      Queue a flipped subface (%d, %d, %d).\n",
+            pointmark(sorg(checksh)), pointmark(sdest(checksh)),
+            pointmark(sapex(checksh)));
+        }
+        stdissolve(checksh); // Disconnect the sub-tet bond.
+        // Add the missing subface into list.
+        subfacstack->newindex((void **) &pssub);
+        *pssub = checksh;
+      }
+    }
   }
 
   // Re-use fliptets[0] and fliptets[1].
@@ -1253,7 +1323,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     for (i = 0; i < 3; i++) {
       enext0fnext(fliptets[0], newface);
       enextself(newface); // edge b->d, c->d, a->d.
-      tssdissolve(newface);
+      tssdissolve(newface); // Clear the old bond.
       fnext(fliptets[0], casface);
       enextself(casface);
       tsspivot(casface, checkseg);
@@ -1275,7 +1345,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     for (i = 0; i < 3; i++) {
       enext0fnext(fliptets[1], newface);
       enext2self(newface); // edge b<-e, c<-e, a<-e.
-      tssdissolve(newface);
+      tssdissolve(newface); // Clear the old bond.
       fnext(fliptets[1], casface);
       enext2self(casface);
       tsspivot(casface, checkseg);
@@ -1286,14 +1356,38 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     }
   }
 
-  if (checksubsegs || checksubfaces) {
+  if (checksubfaces) {
+    // Clear the old bonds at the middle face.
+    tsdissolve(fliptets[0]);
+    tsdissolve(fliptets[1]);
+    // Bond the top three casing subfaces.
+    for (i = 0; i < 3; i++) {
+      tsdissolve(fliptets[0]); // Clear the old bond.
+      tspivot(topcastets[i], checksh);
+      if (checksh.sh != NULL) {
+        tsbond(fliptets[0], checksh);
+      }
+      enextself(fliptets[0]);
+    }
+    // Bond the bottom three casing subfaces.
+    for (i = 0; i < 3; i++) {
+      tsdissolve(fliptets[1]); // Clear the old bond.
+      tspivot(botcastets[i], checksh);
+      if (checksh.sh != NULL) {
+        tsbond(fliptets[1], checksh);
+      }
+      enext2self(fliptets[1]);
+    }
+  }
+
+  // if (checksubsegs || checksubfaces) {
     // Update the point-to-tet map.
     point2tet(pa) = encode(fliptets[0]);
     point2tet(pb) = encode(fliptets[0]);
     point2tet(pc) = encode(fliptets[0]);
     point2tet(pd) = encode(fliptets[0]);
     point2tet(pe) = encode(fliptets[1]);
-  }
+  // }
 
   if (hullflag > 0) {
     if (dummyflag != 0) {

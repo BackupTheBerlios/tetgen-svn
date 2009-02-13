@@ -1195,7 +1195,7 @@ void tetgenmesh::pvert(point pt)
   }
 }
 
-void tetgenmesh::pverti(int idx)
+int tetgenmesh::pverti(int idx)
 {
   triface adjtet;
   point pt;
@@ -1210,7 +1210,7 @@ void tetgenmesh::pverti(int idx)
 
   if (pt == NULL) {
     printf(" Not exist.\n");
-    return;
+    return 0;
   }
 
   printf("  vertex %d: x%lx\n", idx, (unsigned long) pt);
@@ -1220,15 +1220,22 @@ void tetgenmesh::pverti(int idx)
   decode(point2tet(pt), adjtet);
   if (adjtet.tet == NULL) {
     printf("  No adjacent tet.\n");
-    return;
+    return 0;
   }
   if (adjtet.tet[4] == NULL) {
     printf("  !! A DEAD adjacent tet.\n");
-    return;
+    return 0;
   }
   printf("  adjtet: x%lx (%d, %d, %d, %d).\n", (unsigned long) adjtet.tet,
     pointmark(adjtet.tet[4]), pointmark(adjtet.tet[5]),
     pointmark(adjtet.tet[6]), pointmark(adjtet.tet[7]));
+
+  if (((point) adjtet.tet[4] == pt) || ((point) adjtet.tet[5] == pt) ||
+      ((point) adjtet.tet[6] == pt) || ((point) adjtet.tet[7] == pt)) {
+    return 0;
+  } else {
+    return 1;  // Bad point-to-tet map.
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

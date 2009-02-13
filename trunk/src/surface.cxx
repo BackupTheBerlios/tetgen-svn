@@ -5,12 +5,82 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// sinsertvertex()    Insert a vertex into a triangulation of a facet.       //
+// calculateabovepoint()    Calculate a point above a facet in 'dummypoint'. //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg, 
-  bool bwflag)
+void tetgenmesh::calculateabovepoint(arraypool *facpoints)
+{
+  point *ppt, pa, pb, pc;
+  REAL v1[3], v2[3], n[3];
+  REAL lab, len, A, area;
+  REAL x, y, z;
+  int i;
+
+  ppt = (point *) fastlookup(facpoints, 0);
+  pa = *ppt; // a is the first point.
+
+  // Get a point b s.t. the length of [a, b] is maximal.
+  lab = 0;
+  for (i = 1; i < facpoints->objects; i++) {
+    ppt = (point *) fastlookup(facpoints, i);
+    x = (*ppt)[0] - pa[0];
+    y = (*ppt)[1] - pa[1];
+    z = (*ppt)[2] - pa[2];
+    len = x * x + y * y + z * z;
+    if (len > lab) {
+      lab = len;
+      pb = *ppt;
+    }
+  }
+  lab = sqrt(lab);
+  assert(lab > 0); // SELF_CHECK
+
+  // Get a point c s.t. the area of [a, b, c] is maximal.
+  v1[0] = pb[0] - pa[0];
+  v1[1] = pb[1] - pa[1];
+  v1[2] = pb[2] - pa[2];
+  A = 0;
+  for (i = 1; i < facpoints->objects; i++) {
+    ppt = (point *) fastlookup(facpoints, i);
+    v2[0] = (*ppt)[0] - pa[0];
+    v2[1] = (*ppt)[1] - pa[1];
+    v2[2] = (*ppt)[2] - pa[2];
+    CROSS(v1, v2, n);
+    area = DOT(n, n);
+    if (area > A) {
+      A = area;
+      pc = *ppt;
+    }
+  }
+  assert(A > 0); // SELF_CHECK
+
+  // Calculate an above point of this facet.
+  facenormal(pa, pb, pc, n, 1);
+  len = sqrt(DOT(n, n));
+  n[0] /= len;
+  n[1] /= len;
+  n[2] /= len;
+  lab /= 0.5;
+  dummypoint[0] = 0.5 * (pa[0] + pb[0]) + lab * n[0];
+  dummypoint[1] = 0.5 * (pa[1] + pb[1]) + lab * n[1];
+  dummypoint[2] = 0.5 * (pa[2] + pb[2]) + lab * n[2];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// sinsertvertex()    Insert a vertex into a triangulation of a facet.       //
+//                                                                           //
+// The new point (p) will be located. Searching from 'splitsh'. If 'splitseg'//
+// is not NULL, p is on a segment, no search is needed.                      //
+//                                                                           //
+// If 'hullflag' is TRUE, p may lie on outside of the triangulation.  Other- //
+// wise, do not insert p if it is found in outside.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt, 
+  face *splitsh, face *splitseg, bool bwflag, bool hullflag)
 {
   face *abfaces, *parysh, *pssub;
   face neighsh, newsh, casout, casin;
@@ -33,13 +103,28 @@ void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg,
     // loc = slocate(insertpt, splitsh);
   }
 
+  // Return if p lies on a vertex.
+  if (loc == ONVERTEX) return loc;
+
+  if (loc == OUTSIDE) {
+    // Return if 'hullflag' is not set.
+    if (!hullflag) return loc;
+  }
+
+  if (loc == ONEDGE) {
+    if (splitseg == NULL) {
+      // Do not split a segment.
+      sspivot(*splitsh, checkseg);
+      if (checkseg.sh != NULL) return loc; // return ONSUBSEG;
+    }
+  }
+
   if (b->verbose > 1) {
     pa = sorg(*splitsh);
     pb = sdest(*splitsh);
     pc = sapex(*splitsh);
-    printf("    Insert point %d %s (%d, %d, %d)\n", pointmark(insertpt),
-      loc == ONEDGE ? "on edge" : "in face", pointmark(pa), pointmark(pb), 
-      pointmark(pc));
+    printf("    Insert point %d (%d, %d, %d) loc %d\n", pointmark(insertpt),
+      pointmark(pa), pointmark(pb), pointmark(pc), (int) loc);
   }
 
   // Does 'insertpt' lie on a segment?
@@ -65,10 +150,10 @@ void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg,
   }
 
   // Initialize the cavity.
-  smarktest(*splitsh);
-  caveshlist->newindex((void **) &parysh);
-  *parysh = *splitsh;
   if (loc == ONEDGE) {
+    smarktest(*splitsh);
+    caveshlist->newindex((void **) &parysh);
+    *parysh = *splitsh;
     if (splitseg != NULL) {
       for (i = 1; i < n; i++) {
         smarktest(abfaces[i]);
@@ -83,6 +168,13 @@ void tetgenmesh::sinsertvertex(point insertpt, face *splitsh, face *splitseg,
         *parysh = neighsh;
       }
     }
+  } else if (loc == ONFACE) {
+    smarktest(*splitsh);
+    caveshlist->newindex((void **) &parysh);
+    *parysh = *splitsh;
+  } else {
+    // loc == OUTSIDE;
+    assert(0); // Not handled yet.
   }
 
   // Form the Bowyer-Watson cavity.

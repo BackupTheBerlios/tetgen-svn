@@ -893,7 +893,7 @@ void tetgenmesh::delaunizesegments()
           sspivot(splitshs[1], nsseg);
           lawsonflip();
         } else {
-          sinsertvertex(newpt, &(splitshs[0]), &sseg, true);
+          sinsertvertex(newpt, &(splitshs[0]), &sseg, true, false);
         }
         // Insert newpt into the DT. If 'checksubfaces == 1' the current
         //   mesh is constrained Delaunay (but may not Delaunay).
@@ -909,7 +909,7 @@ void tetgenmesh::delaunizesegments()
           sspivot(splitshs[1], nsseg);
           lawsonflip();
         } else {
-          sinsertvertex(refpt, &(splitshs[0]), &sseg, true);
+          sinsertvertex(refpt, &(splitshs[0]), &sseg, true, false);
         }
       }
       if (b->bowyerwatson == 0) {
@@ -984,7 +984,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
       } else if ((point) searchtet->tet[6] == pa) {
         searchtet->loc = 0; searchtet->ver = 4;
       } else {
-        assert((point) searchtet->tet[7] == pa); // SELF_CHECK
+        if ((point) searchtet->tet[7] != pa) {
+          printf("Error: Bad pt-to-tet at %d\n", pointmark(pa));
+          assert(0);
+        }
         searchtet->loc = 1; searchtet->ver = 2;
       }
       // Search the edge from pa->pb.
@@ -2209,7 +2212,7 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
     }
     subsegstack->restart();  // Clear the queue.
     // Split the segment. Two subsegments are queued.
-    sinsertvertex(newpt, searchsh, &sseg, true);
+    sinsertvertex(newpt, searchsh, &sseg, true, false);
     // Insert the point. Missing segments are queued. 
     searchtet = recenttet; // Start search it from recentet
     insertvertex(newpt, &searchtet, true, true, false);
@@ -2222,7 +2225,7 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
     }
   } else {
     // Insert the new point on facet.
-    // sinsertvertex(newpt, searchsh, NULL, true);
+    // sinsertvertex(newpt, searchsh, NULL, true, false);
     assert(0);
   }
 }
@@ -2354,7 +2357,7 @@ void tetgenmesh::constrainedfacets()
           // Recover subfaces by local retetrahedralization.
           cavitycount++;
           bakhullsize = hullsize;
-          checksubsegs = 0;
+          checksubsegs = checksubfaces = 0;
           crosstets->newindex((void **) &parytet);
           *parytet = searchtet;
           // Form a cavity of crossing tets.
@@ -2374,7 +2377,7 @@ void tetgenmesh::constrainedfacets()
             restorecavity(crosstets, topnewtets, botnewtets);
           }
           hullsize = bakhullsize;
-          checksubsegs = 1;
+          checksubsegs = checksubfaces = 1;
         } else if (dir == ACROSSFACE) {
           // Recover subfaces by flipping edges in surface mesh.
           recoversubedge(&ssub, &searchtet, facfaces);
@@ -2440,7 +2443,7 @@ void tetgenmesh::formskeleton()
   b->epsilon = 0;
 
   // Construct a map from point to tets for speeding point location.
-  makepoint2tetmap();
+  // makepoint2tetmap();
 
   // Mark acutes vertices.
   markacutevertices();

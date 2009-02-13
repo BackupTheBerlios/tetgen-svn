@@ -489,10 +489,10 @@ void tetgenmesh::initializepools()
   //   the index is measured in pointers. Ensure the index is aligned to a
   //   sizeof(tetrahedron)-byte address.
   point2tetindex = (ptsize + sizeof(tetrahedron) - 1) / sizeof(tetrahedron);
-  // Increase the point size by one pointer, which means either
+  // Increase the point size by two pointers, which are
   //   - a pointer to a tet, read by point2tet(), or
   //   - a pointer to a parent point, read by point2ppt().
-  ptsize = (point2tetindex + 1) * sizeof(tetrahedron);
+  ptsize = (point2tetindex + 2) * sizeof(tetrahedron);
   // The index within each point at which the boundary marker is found,
   //   Ensure the marker is aligned to a sizeof(int)-byte address.
   pointmarkindex = (ptsize + sizeof(int) - 1) / sizeof(int);
