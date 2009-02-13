@@ -61,7 +61,7 @@ void tetgenmesh::calculateabovepoint(arraypool *facpoints)
   n[0] /= len;
   n[1] /= len;
   n[2] /= len;
-  lab /= 0.5;
+  lab /= 2.0;
   dummypoint[0] = 0.5 * (pa[0] + pb[0]) + lab * n[0];
   dummypoint[1] = 0.5 * (pa[1] + pb[1]) + lab * n[1];
   dummypoint[2] = 0.5 * (pa[2] + pb[2]) + lab * n[2];
@@ -135,7 +135,7 @@ enum tetgenmesh::location tetgenmesh::slocate(point searchpt, face* searchsh,
     ori_ca = orient3d(pc, pa, dummypoint, searchpt);
 
     if (ori_bc < 0) {
-      if (ori_ca < 0) {
+      if (ori_ca < 0) { // (--)
         // Any of the edges is a viable move.
         senext(*searchsh, neighsh); // At edge [b, c].
         spivotself(neighsh);
@@ -160,24 +160,30 @@ enum tetgenmesh::location tetgenmesh::slocate(point searchpt, face* searchsh,
         } else {
           nextmove = MOVE_BC;
         }
-      } else {
+      } else { // (-#)
         // Edge [b, c] is viable.
         nextmove = MOVE_BC;
       }
     } else {
-      if (ori_ca < 0) {
+      if (ori_ca < 0) { // (#-)
         // Edge [c, a] is viable.
         nextmove = MOVE_CA;
       } else {
-        // The search point must be on the boundary of the face.
-        if (ori_bc == 0) {
-          assert(ori_ca != 0); // SELF_CHECK
-          senextself(*searchsh); // On edge [b, c].
-          return ONEDGE;
-        } else {
-          assert(ori_ca == 0);
-          senext2self(*searchsh); // On edge [c, a].
-          return ONEDGE;
+        if (ori_bc > 0) {
+          if (ori_ca > 0) { // (++)
+            return ONFACE;  // Inside [a, b, c].
+          } else { // (+0)
+            senext2self(*searchsh); // On edge [c, a].
+            return ONEDGE;
+          }
+        } else { // ori_bc == 0
+          if (ori_ca > 0) { // (0+)
+            senextself(*searchsh); // On edge [b, c].
+            return ONEDGE;
+          } else { // (00)
+            // On vertex c. Should be checked in above.
+            assert(0); // SELF_CHECK
+          }
         }
       }
     }

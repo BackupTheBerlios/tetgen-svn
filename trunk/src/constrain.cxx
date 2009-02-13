@@ -2182,7 +2182,6 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
   face *psseg, sseg;
   point newpt, pa, pb;
   enum location loc;
-  REAL len, n[3];
   int s, i;
 
   // Create the new point.
@@ -2226,7 +2225,7 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
       b->bowyerwatson = s;
     }
   } else {
-    // Calc an above point for surface point location.
+    // Calc an above point for point location in surface triangulation.
     calculateabovepoint(facpoints); 
     // Insert the new point on facet. New subfaces are queued for reocvery.
     loc = sinsertvertex(newpt, searchsh, NULL, true, false);
