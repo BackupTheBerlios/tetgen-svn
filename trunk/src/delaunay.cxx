@@ -537,7 +537,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   int i, j, k;
 
   badface *newflip, *lastflip;  // for bowyerwatson
-  triface fliptets[4];
+  triface fliptets[5], baktets[2];
 
   tetrahedron ptr;
   int *iptr, tver;
@@ -1087,10 +1087,89 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     flippool->restart();
   }
 
-  if (updatecount > 0l) {
+  if (bwflag && (updatecount > 0l)) {
     // Some internal new faces may be non-Delaunay. Check and fix them.
-    // for (i = 0; i < cavetetlist->objects(); i++) {
-    // }
+    for (i = 0; i < cavetetlist->objects; i++) {
+      // Get an internal face (whose apex should be p).
+      parytet = (triface *) fastlookup(cavetetlist, i);
+
+      // Skip it if it is dead.
+      if ((point) parytet->tet[4] == NULL) continue;
+      // Skip it if it is a hull face.
+      if ((point) parytet->tet[7] == dummypoint) continue;
+      // Skip it if it is not the same saved face.
+      if (apex(*parytet) != insertpt) continue;
+      assert(apex(*parytet) == insertpt); // SELF_CHECK
+
+      sym(*parytet, neightet);
+      // Skip it if its neighbor is a hull tet.
+      if ((point) neightet.tet[7] == dummypoint) continue;
+
+      pts = (point *) parytet->tet;
+      pa = oppo(neightet);
+      sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pa);
+
+      if (sign < 0) {
+        if (b->verbose > 1) {
+          printf("    Flip a non-Delaunay face (%d, %d, %d, %d) %d.\n", 
+            pointmark(org(*parytet)), pointmark(dest(*parytet)),
+            pointmark(apex(*parytet)), pointmark(oppo(*parytet)),
+            pointmark(pa));
+        }
+        // Check the convexity of its three edges.
+        pb = oppo(*parytet);
+        parytet->ver = 0;
+        for (j = 0; j < 3; j++) {
+          ori = orient3d(org(*parytet), dest(*parytet), pb, pa); 
+          orient3dcount++;
+          if (ori <= 0) break;
+          enextself(*parytet);
+        }
+        if (j == 3) {
+          // A 2-to-3 flip is found.
+          fliptets[0] = *parytet; // tet abcd.
+          symedge(fliptets[0], fliptets[1]); // tet bace.
+          flip23(fliptets, 0, 0);
+          recenttet = fliptets[0]; // for point location.
+        } else {
+          // A 3-to-2 or 4-to-4 may possible.
+          enext0fnext(*parytet, fliptets[0]);
+          esymself(fliptets[0]); // tet badc.
+          k = 0;
+          do {
+            fnext(fliptets[k], fliptets[k + 1]);
+            k++;
+          } while ((fliptets[k].tet != parytet->tet) && (k < 5));
+          if (k == 3) {
+            // Found a 3-to-2 flip.
+            flip32(fliptets, 0, 0);
+            recenttet = fliptets[0]; // for point location.
+          } else if ((k == 4) && (ori == 0)) {
+            // Find a 4-to-4 flip.
+            flipnmcount++;
+            // First do a 2-to-3 flip.
+            fliptets[0] = *parytet; // tet abcd.
+            baktets[0] = fliptets[2];
+            baktets[1] = fliptets[3];
+            flip23(fliptets, 1, 0); // hull tet may involve.
+            // Then do a 3-to-2 flip. 
+            enextfnextself(fliptets[0]);  // fliptets[0] is edab.
+            enextself(fliptets[0]);
+            esymself(fliptets[0]);  // tet badc.
+            fliptets[1] = baktets[0];
+            fliptets[2] = baktets[1];
+            flip32(fliptets, 1, 0); // hull tet may involve.
+            recenttet = fliptets[0]; // for point location.
+          } else {
+            // An unflipable face. Will be flipped later. 
+            if (b->verbose > 1) {
+              printf("    Edge (%d, %d) is not flippable (n = %d).\n",
+                pointmark(org(*parytet)), pointmark(dest(*parytet)), k); 
+            }
+          }
+        }
+      }
+    }
   }
 
   // Set the point type.
