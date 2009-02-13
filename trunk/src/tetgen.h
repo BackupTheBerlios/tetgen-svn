@@ -1627,6 +1627,7 @@ void incrementaldelaunay();
 ///////////////////////////////////////////////////////////////////////////////
 
 void calculateabovepoint(arraypool*);
+enum location slocate(point, face*, bool);
 enum location sinsertvertex(point, face*, face*, bool, bool);
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
 void unifysegments();

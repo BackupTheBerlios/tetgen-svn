@@ -69,18 +69,163 @@ void tetgenmesh::calculateabovepoint(arraypool *facpoints)
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// slocate()    Locate a point in a surface triangulation.                   //
+//                                                                           //
+// Search the point (p) from the input 'searchsh' (it should not be NULL).   //
+//                                                                           //
+// It is assumed that 'dummypoint' lies above the facet of the triangulation,//
+// hence a CCW test (2D orientation) is equal to a below-plane (3D) test.    //
+//                                                                           //
+// The returned value inducates the following cases:                         //
+//   - ONVERTEX, p is the origin of 'searchsh'.                              //
+//   - ONEDGE, p lies on the edge of 'searchsh'.                             //
+//   - ONFACE, p lies in the interior of 'searchsh'.                         //
+//   - OUTSIDE, p lies outside of the triangulation, p is visible by the     //
+//       edge of 'searchsh'.                                                 //
+//                                                                           //
+// If 'cflag' is not TRUE, the triangulation may not be convex.  Stop search //
+// when a segment is met and return OUTSIDE.                                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::location tetgenmesh::slocate(point searchpt, face* searchsh, 
+  bool cflag)
+{
+  face neighsh;
+  face checkseg;
+  point pa, pb, pc, pd;
+  REAL ori, ori_bc, ori_ca;
+  REAL dist_bc, dist_ca;
+  int i;
+
+  enum {MOVE_BC, MOVE_CA} nextmove;
+
+  shellface sptr;
+
+  // Adjust the face orientation s.t. 'dummypt' lies above to it.
+  pa = sorg(*searchsh);
+  pb = sdest(*searchsh);
+  pc = sapex(*searchsh);
+  ori = orient3d(pa, pb, pc, dummypoint);
+  assert(ori != 0); // SELF_CHECK
+  if (ori > 0) {
+    sesymself(*searchsh); // Reverse the face orientation.
+  }
+
+  // Find an edge of the face s.t. p lies on its right-hand side (CCW).
+  for (i = 0; i < 3; i++) {
+    pa = sorg(*searchsh);
+    pb = sdest(*searchsh);
+    ori = orient3d(pa, pb, dummypoint, searchpt);
+    if (ori > 0) break;
+    senextself(*searchsh);
+  }
+  assert(i < 3); // SELF_CHECK
+
+  while (1) {
+
+    pc = sapex(*searchsh);
+
+    if (pc == searchpt) {
+      senext2self(*searchsh);
+      return ONVERTEX;
+    }
+
+    ori_bc = orient3d(pb, pc, dummypoint, searchpt);
+    ori_ca = orient3d(pc, pa, dummypoint, searchpt);
+
+    if (ori_bc < 0) {
+      if (ori_ca < 0) {
+        // Any of the edges is a viable move.
+        senext(*searchsh, neighsh); // At edge [b, c].
+        spivotself(neighsh);
+        if (neighsh.sh != NULL) {
+          pd = sapex(neighsh);
+          dist_bc = NORM2(searchpt[0] - pd[0], searchpt[1] - pd[1],
+            searchpt[2] - pd[2]);
+        } else {
+          dist_bc = NORM2(xmax - xmin, ymax - ymin, zmax - zmin);
+        }
+        senext2(*searchsh, neighsh); // At edge [c, a].
+        spivotself(neighsh);
+        if (neighsh.sh != NULL) {
+          pd = sapex(neighsh);
+          dist_ca = NORM2(searchpt[0] - pd[0], searchpt[1] - pd[1],
+            searchpt[2] - pd[2]);
+        } else {
+          dist_ca = dist_bc;
+        }
+        if (dist_ca < dist_bc) {
+          nextmove = MOVE_CA;
+        } else {
+          nextmove = MOVE_BC;
+        }
+      } else {
+        // Edge [b, c] is viable.
+        nextmove = MOVE_BC;
+      }
+    } else {
+      if (ori_ca < 0) {
+        // Edge [c, a] is viable.
+        nextmove = MOVE_CA;
+      } else {
+        // The search point must be on the boundary of the face.
+        if (ori_bc == 0) {
+          assert(ori_ca != 0); // SELF_CHECK
+          senextself(*searchsh); // On edge [b, c].
+          return ONEDGE;
+        } else {
+          assert(ori_ca == 0);
+          senext2self(*searchsh); // On edge [c, a].
+          return ONEDGE;
+        }
+      }
+    }
+
+    // Move to the next face.
+    if (nextmove == MOVE_BC) {
+      senextself(*searchsh);
+    } else {
+      senext2self(*searchsh);
+    }
+    if (!cflag) {
+      // NON-convex case. Chekc if we will cross a boundary.
+      sspivot(*searchsh, checkseg);
+      if (checkseg.sh != NULL) {
+        return OUTSIDE; // Do not cross a boundary edge.
+      }
+    }
+    spivot(*searchsh, neighsh);
+    if (neighsh.sh == NULL) {
+      return OUTSIDE; // A hull edge.
+    }
+    // Adjust the edge orientation.
+    if (sorg(neighsh) != sdest(*searchsh)) {
+      sesymself(neighsh);
+    }
+    assert(sorg(neighsh) == sdest(*searchsh)); // SELF_CHECK
+
+    // Update the newly discovered face and its endpoints.
+    *searchsh = neighsh;
+    pa = sorg(*searchsh);
+    pb = sdest(*searchsh);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // sinsertvertex()    Insert a vertex into a triangulation of a facet.       //
 //                                                                           //
 // The new point (p) will be located. Searching from 'splitsh'. If 'splitseg'//
 // is not NULL, p is on a segment, no search is needed.                      //
 //                                                                           //
-// If 'hullflag' is TRUE, p may lie on outside of the triangulation.  Other- //
-// wise, do not insert p if it is found in outside.                          //
+// If 'cflag' is not TRUE, the triangulation may be not convex. Don't insert //
+// p if it is found in outside.                                              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt, 
-  face *splitsh, face *splitseg, bool bwflag, bool hullflag)
+  face *splitsh, face *splitseg, bool bwflag, bool cflag)
 {
   face *abfaces, *parysh, *pssub;
   face neighsh, newsh, casout, casin;
@@ -100,15 +245,15 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
     loc = ONEDGE;
   } else {
     assert(splitsh->sh != NULL); // SELF_CHECK
-    // loc = slocate(insertpt, splitsh);
+    loc = slocate(insertpt, splitsh, false);
   }
 
   // Return if p lies on a vertex.
   if (loc == ONVERTEX) return loc;
 
   if (loc == OUTSIDE) {
-    // Return if 'hullflag' is not set.
-    if (!hullflag) return loc;
+    // Return if 'cflag' is not set.
+    if (!cflag) return loc;
   }
 
   if (loc == ONEDGE) {

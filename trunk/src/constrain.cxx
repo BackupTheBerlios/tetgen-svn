@@ -2180,8 +2180,8 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
 {
   triface searchtet;
   face *psseg, sseg;
-  point pa, pb;
-  point newpt;
+  point newpt, pa, pb;
+  enum location loc;
   REAL len, n[3];
   int s, i;
 
@@ -2192,7 +2192,9 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
   setpointtype(newpt, STEINERVERTEX);
   dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
 
-  // Insert the point. Do not insert if it will encroach any segment.  
+  // Try to insert the point. Do not insert if it will encroach any segment
+  //   (noencflag is TRUE). If this point is inserted, some previously 
+  //   recovered subfaces may be queued for recovering again.  
   assert(subsegstack->objects == 0l); // SELF_CHECK
   searchtet = recenttet; // Start search it from recentet
   insertvertex(newpt, &searchtet, true, true, true);
@@ -2224,9 +2226,15 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
       b->bowyerwatson = s;
     }
   } else {
-    // Insert the new point on facet.
-    // sinsertvertex(newpt, searchsh, NULL, true, false);
-    assert(0);
+    // Calc an above point for surface point location.
+    calculateabovepoint(facpoints); 
+    // Insert the new point on facet. New subfaces are queued for reocvery.
+    loc = sinsertvertex(newpt, searchsh, NULL, true, false);
+    if (loc == OUTSIDE) {
+      assert(0); // Not handled yet.
+    }
+    // Clear the above point.
+    dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
 }
 
