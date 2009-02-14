@@ -1092,30 +1092,25 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     for (i = 0; i < cavetetlist->objects; i++) {
       // Get an internal face (whose apex should be p).
       parytet = (triface *) fastlookup(cavetetlist, i);
-
-      // Skip it if it is dead.
-      if ((point) parytet->tet[4] == NULL) continue;
       // Skip it if it is a hull face.
       if ((point) parytet->tet[7] == dummypoint) continue;
-      // Skip it if it is not the same saved face.
-      if (apex(*parytet) != insertpt) continue;
       assert(apex(*parytet) == insertpt); // SELF_CHECK
+      pa = oppo(*parytet);
 
+      /*
       sym(*parytet, neightet);
       // Skip it if its neighbor is a hull tet.
       if ((point) neightet.tet[7] == dummypoint) continue;
-
+      pa = oppo(neightet); // Its opposite point.
       pts = (point *) parytet->tet;
-      pa = oppo(neightet);
       sign = insphere_sos(pts[4], pts[5], pts[6], pts[7], pa);
-
       if (sign < 0) {
-        if (b->verbose > 1) {
+        // if (b->verbose > 1) {
           printf("    Flip a non-Delaunay face (%d, %d, %d, %d) %d.\n", 
             pointmark(org(*parytet)), pointmark(dest(*parytet)),
             pointmark(apex(*parytet)), pointmark(oppo(*parytet)),
             pointmark(pa));
-        }
+        // }
         // Check the convexity of its three edges.
         pb = oppo(*parytet);
         parytet->ver = 0;
@@ -1162,14 +1157,22 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
             recenttet = fliptets[0]; // for point location.
           } else {
             // An unflipable face. Will be flipped later. 
-            if (b->verbose > 1) {
+            // if (b->verbose > 1) {
               printf("    Edge (%d, %d) is not flippable (n = %d).\n",
                 pointmark(org(*parytet)), pointmark(dest(*parytet)), k); 
-            }
+            // }
           }
         }
-      }
+      }*/
+      // Add this internal face into flip list.
+      futureflip = flippush(futureflip, parytet, pa);
     }
+    int bakverbose = b->verbose; // DEBUG ONLY
+    b->verbose = 2;  // DEBUG ONLY
+    // Recover Delaunay faces. Do not propagate at subfaces, see flip23().
+    //   Set 'flipflag' = 2, s.t. all faces are checked for flipping.
+    lawsonflip3d(2); 
+    b->verbose = bakverbose; // DEBUG ONLY
   }
 
   // Set the point type.
@@ -1251,9 +1254,9 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
     setpointtype(insertpt, VOLVERTEX);
   }
 
-  // If flipflag == 1, do Delaunay flip.
+  // If flipflag > 0, do Delaunay flip.
   if (flipflag > 0) {
-    lawsonflip3d();
+    lawsonflip3d(flipflag);
   }
 }
 

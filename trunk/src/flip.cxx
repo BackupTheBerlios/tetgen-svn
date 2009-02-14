@@ -1623,13 +1623,15 @@ bool tetgenmesh::flipnm(int n, triface* oldtets, triface* newtets,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::lawsonflip3d()
+void tetgenmesh::lawsonflip3d(int flipflag)
 { 
   triface fliptets[5], baktets[2];
   triface fliptet, neightet, *parytet;
+  face checksh;
   point *pt, pd, pe;
   REAL sign, ori;
   long flipcount;
+  bool bflag;
   int n, i;
 
   int *iptr;
@@ -1663,7 +1665,7 @@ void tetgenmesh::lawsonflip3d()
         // Visible! Found a 2-to-3 flip on abc.
         fliptets[0] = fliptet;
         fliptets[1] = neightet;
-        flip23(fliptets, 1, 1); // flip a hull tet.
+        flip23(fliptets, 1, flipflag); // flip a hull tet.
         recenttet = fliptets[0];
       } else if (ori == 0) {
         // Handle degenerate case ori == 0.
@@ -1719,10 +1721,19 @@ void tetgenmesh::lawsonflip3d()
       }
       if (i == 3) {
         // A 2-to-3 flip is found.
-        fliptets[0] = fliptet; // tet abcd, d is the new vertex.
-        symedge(fliptets[0], fliptets[1]); // tet bace.
-        flip23(fliptets, 0, 1);
-        recenttet = fliptets[0]; // for point location.
+        if (checksubfaces) {
+          // Do not flip a subface.
+          tspivot(fliptet, checksh);
+          bflag = (checksh.sh == NULL);
+        } else {
+          bflag = true;
+        }
+        if (bflag) {
+          fliptets[0] = fliptet; // tet abcd, d is the new vertex.
+          symedge(fliptets[0], fliptets[1]); // tet bace.
+          flip23(fliptets, 0, flipflag);
+          recenttet = fliptets[0]; // for point location.
+        }
       } else {
         // A 3-to-2 or 4-to-4 may possible.
         enext0fnext(fliptet, fliptets[0]);
@@ -1732,28 +1743,38 @@ void tetgenmesh::lawsonflip3d()
           fnext(fliptets[n], fliptets[n + 1]);
           n++;
         } while ((fliptets[n].tet != fliptet.tet) && (n < 5));
-        if (n == 3) {
-          // Found a 3-to-2 flip.
-          flip32(fliptets, 0, 1);
-          recenttet = fliptets[0]; // for point location.
-        } else if ((n == 4) && (ori == 0)) {
-          // Find a 4-to-4 flip.
-          flipnmcount++;
-          // First do a 2-to-3 flip.
-          fliptets[0] = fliptet; // tet abcd, d is the new vertex.
-          baktets[0] = fliptets[2];
-          baktets[1] = fliptets[3];
-          flip23(fliptets, 1, 1); // hull tet may involve.
-          // Then do a 3-to-2 flip. 
-          enextfnextself(fliptets[0]);  // fliptets[0] is edab.
-          enextself(fliptets[0]);
-          esymself(fliptets[0]);  // tet badc, d is the new vertex.
-          fliptets[1] = baktets[0];
-          fliptets[2] = baktets[1];
-          flip32(fliptets, 1, 1); // hull tet may involve.
-          recenttet = fliptets[0]; // for point location.
-        } else {
-          // An unflipable face. Will be flipped later. 
+        bflag = true;
+        if (checksubfaces) {
+          // Do not flip a subface.
+          for (i = 0; i < n && bflag; i++) {
+            tspivot(fliptets[i], checksh);
+            bflag = (checksh.sh == NULL);
+          }
+        }
+        if (bflag) {
+          if (n == 3) {
+            // Found a 3-to-2 flip.
+            flip32(fliptets, 0, flipflag);
+            recenttet = fliptets[0]; // for point location.
+          } else if ((n == 4) && (ori == 0)) {
+            // Find a 4-to-4 flip.
+            flipnmcount++;
+            // First do a 2-to-3 flip.
+            fliptets[0] = fliptet; // tet abcd, d is the new vertex.
+            baktets[0] = fliptets[2];
+            baktets[1] = fliptets[3];
+            flip23(fliptets, 1, flipflag); // hull tet may involve.
+            // Then do a 3-to-2 flip. 
+            enextfnextself(fliptets[0]);  // fliptets[0] is edab.
+            enextself(fliptets[0]);
+            esymself(fliptets[0]);  // tet badc, d is the new vertex.
+            fliptets[1] = baktets[0];
+            fliptets[2] = baktets[1];
+            flip32(fliptets, 1, flipflag); // hull tet may involve.
+            recenttet = fliptets[0]; // for point location.
+          } else {
+            // An unflipable face. Will be flipped later. 
+          }
         }
       } // if (i == 3)
     } // if (sign < 0)

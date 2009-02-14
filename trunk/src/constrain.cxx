@@ -417,14 +417,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
         }
       }
     }
-    if (!orgflag) {
-      // Locate startpt in tetrahedralization.
-      startpt = sorg(*sseg);
-      randomsample(startpt, searchtet);
-      loc = locate(startpt, searchtet);
-      assert(loc == ONVERTEX);  // SELF_CHECK
-      force_ptloc_count++;
-    }
+    assert(orgflag); // SELF_CHECK
   } else {
     startpt = sorg(*sseg);
     assert(org(*searchtet) == startpt); // SELF_CHECK

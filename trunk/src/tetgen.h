@@ -1491,12 +1491,10 @@ long flip14count, flip26count, flipn2ncount;
 long flip23count, flip32count, flipnmcount;
 long flip13count, flip22count, flipn2nfcount;
 REAL tloctime, tfliptime, tinserttime;
-long force_ptloc_count;
 long triedgcount, triedgcopcount, trivercopcount;
 long across_face_count, across_edge_count, across_max_count;
 long r1count, r2count, r3count;
 long maxcavsize, maxregionsize;
-long updatebwcavitycount;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1591,7 +1589,7 @@ void flipn2n(point newpt, triface* splitedge, int flipflag);
 void flip23(triface* fliptets, int hullflag, int flipflag);
 void flip32(triface* fliptets, int hullflag, int flipflag);
 //bool flipnm(int n, triface* fliptets, int flipflag);
-void lawsonflip3d();
+void lawsonflip3d(int flipflag);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1643,6 +1641,7 @@ void meshsurface();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
+void markacutevertices();
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
@@ -1657,7 +1656,6 @@ void restorecavity(arraypool*, arraypool*, arraypool*);
 void splitsubedge(face*, arraypool*, arraypool*);
 void constrainedfacets();
 
-void markacutevertices();
 void formskeleton();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1734,12 +1732,10 @@ void initialize()
   flip23count = flip32count = flipnmcount = 0l;
   flip13count = flip22count = flipn2nfcount = 0l;
   tloctime = tfliptime = tinserttime = 0.0;
-  force_ptloc_count = 0l;
   triedgcount = triedgcopcount = trivercopcount = 0l;
   across_face_count = across_edge_count = across_max_count = 0l;
   r1count = r2count = r3count = 0l;
   maxcavsize = maxregionsize = 0l;
-  updatebwcavitycount = 0l;
 }
 
 void deinitialize()
