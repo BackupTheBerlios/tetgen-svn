@@ -2442,12 +2442,6 @@ void tetgenmesh::formskeleton()
   bakeps = b->epsilon;
   b->epsilon = 0;
 
-  // Construct a map from point to tets for speeding point location.
-  // makepoint2tetmap();
-
-  // Mark acutes vertices.
-  markacutevertices();
-
   // Put all segments into the list.
   if (b->order == 4) {  // '-o4' option (for debug)
     // The sequential order.
@@ -2499,6 +2493,173 @@ void tetgenmesh::formskeleton()
 
   // checksubsegs = 0;
   b->epsilon = bakeps;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// carveholes()    Remove tetrahedra not in the mesh domain.                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::carveholes()
+{
+  arraypool *exttets;
+  triface tetloop, neightet, hulltet, *parytet;
+  triface openface, casface;
+  face checksh;
+  point *ppt, pa, pb, pc;
+  int i, j;
+
+  tetrahedron ptr;
+  int *iptr, tver;
+
+  if (!b->quiet) {
+    printf("Removing exterior tetrahedra.\n");
+  }
+
+  // Initialize the pool of exterior tets.
+  exttets = new arraypool(sizeof(triface), 10);
+
+  // Mark as infected any unprotected hull tets.
+  tetrahedronpool->traversalinit();
+  tetloop.loc = 0;
+  tetloop.tet = alltetrahedrontraverse();
+  while (tetloop.tet != (tetrahedron *) NULL) {
+    if ((point) tetloop.tet[7] == dummypoint) {
+      // Is this side protected by a subface?
+      tspivot(tetloop, checksh);
+      if (checksh.sh == NULL) {
+        infect(tetloop);
+        exttets->newindex((void **) &parytet);
+        *parytet = tetloop;
+      }
+    }
+    tetloop.tet = alltetrahedrontraverse();
+  }
+
+  hullsize -= exttets->objects;
+
+  if (in->numberofholes > 0) {
+    // Mark as infected any tets inside volume holes.  
+  }
+
+  // Find and infect all exterior tets.
+  for (i = 0; i < exttets->objects; i++) {
+    parytet = (triface *) fastlookup(exttets, i);
+    tetloop = *parytet;
+    for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
+      symedge(tetloop, neightet);
+      // Is this side protected by a subface?
+      tspivot(tetloop, checksh);
+      if (checksh.sh == NULL) {
+        // Not protected. Infect it if it is not a hull tet.
+        if ((point) neightet.tet[7] != dummypoint) {
+          if (!infected(neightet)) {
+            infect(neightet);
+            exttets->newindex((void **) &parytet);
+            *parytet = neightet;
+          }
+        }
+      } else {
+        // Its adjacent tet is protected.
+        if ((point) neightet.tet[7] == dummypoint) {
+          // A hull tet. It is dead.
+          assert(!infected(neightet));
+          infect(neightet);
+          exttets->newindex((void **) &parytet);
+          *parytet = neightet;
+          // Both sides of this subface are exterior.
+          stdissolve(checksh);
+          hullsize--;
+        } else {
+          if (!infected(neightet)) {
+            // Let the subface connect to the "live" tet.
+            tsbond(neightet, checksh);
+          } else {
+            // Both sides of this subface are exterior.
+            stdissolve(checksh);
+          }
+        }
+      }
+    }
+  }
+
+  if (in->numberofregions > 0) {
+    // Mark as marktested any tetrahedra inside volume regions.
+  }
+
+  // Remove all exterior tetrahedra (including infected hull tets).
+  for (i = 0; i < exttets->objects; i++) {
+    parytet = (triface *) fastlookup(exttets, i);
+    tetloop = *parytet;
+    for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
+      symedge(tetloop, neightet);
+      if (!infected(neightet)) {
+        // A "live" tet (may be a hull tet). Clear its adjacent tet.
+        neightet.tet[neightet.loc] = NULL;
+      }
+    }
+    tetrahedrondealloc(parytet->tet);
+  }
+
+  exttets->restart(); // Re-use it for new hull tets.
+
+  // Create new hull faces and update the point-to-tet map.
+  tetrahedronpool->traversalinit();
+  tetloop.ver = 0;
+  tetloop.tet = tetrahedrontraverse();
+  while (tetloop.tet != (tetrahedron *) NULL) {
+    for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
+      if (tetloop.tet[tetloop.loc] == NULL) {
+        tspivot(tetloop, checksh);
+        assert(checksh.sh != NULL); // SELF_CHECK
+        // Create a new hull tet.
+        maketetrahedron(&hulltet);
+        pa = org(tetloop);
+        pb = dest(tetloop);
+        pc = apex(tetloop);
+        setvertices(hulltet, pb, pa, pc, dummypoint);
+        bond(tetloop, hulltet);
+        tsbond(hulltet, checksh);
+        // Save this hull tet in list.
+        exttets->newindex((void **) &parytet);
+        *parytet = hulltet;
+      }
+    }
+    tetloop.loc = 0;
+    ptr = encode(tetloop);
+    ppt = (point *) tetloop.tet;
+    for (i = 4; i < 8; i++) {
+      point2tet(ppt[i]) = ptr;
+    }
+    tetloop.tet = tetrahedrontraverse();
+  }
+
+  // Update the hull size.
+  hullsize += exttets->objects;
+
+  // Connect new hull tets.
+  for (i = 0; i < exttets->objects; i++) {
+    parytet = (triface *) fastlookup(exttets, i);
+    hulltet = *parytet;
+    assert(oppo(hulltet) == dummypoint); // SELF_CHECK
+    hulltet.ver = 0;
+    for (j = 0; j < 3; j++) {
+      enext0fnext(hulltet, neightet);
+      if (neightet.tet[neightet.loc] == NULL) {
+        esym(hulltet, casface);
+        while (1) {
+          symedgeself(casface);
+          enext0fnextself(casface);
+          if (apex(casface) == dummypoint) break;
+        }
+        bond(neightet, casface);
+      }
+      enextself(hulltet);
+    }
+  }
+
+  delete exttets;
 }
 
 #endif // #ifndef constrainCXX

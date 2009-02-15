@@ -1454,7 +1454,7 @@ badface *futureflip;
 arraypool *cavetetlist, *cavebdrylist, *caveoldtetlist;
 arraypool *caveshlist, *caveshbdlist;
 
-// A stack used by the segment recovery algorithm.
+// Stacks used by the boundary recovery algorithm.
 arraypool *subsegstack, *subfacstack;
 
 // Variables for accessing data fields (initialized in initializepools()).
@@ -1463,7 +1463,7 @@ int elemmarkerindex;
 int elemattribindex, volumeboundindex, highorderindex;
 int shmarkindex, areaboundindex;
 
-// The number of hull tetrahedra (which contain dummypoint).
+// The number of hull tetrahedra (= the number of outer boundary faces).
 long hullsize;
 
 // Current random number seed, number of random samples (for point location).
@@ -1628,8 +1628,10 @@ void calculateabovepoint(arraypool*);
 enum location slocate(point, face*, bool);
 enum location sinsertvertex(point, face*, face*, bool, bool);
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
+
 void unifysegments();
 void mergefacets();
+void markacutevertices();
 void meshsurface();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1641,7 +1643,6 @@ void meshsurface();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
-void markacutevertices();
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
@@ -1657,6 +1658,7 @@ void splitsubedge(face*, arraypool*, arraypool*);
 void constrainedfacets();
 
 void formskeleton();
+void carveholes();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

@@ -1083,6 +1083,9 @@ void tetgenmesh::meshsurface()
     mergefacets();
   }
 
+  // Mark acutes vertices.
+  markacutevertices();
+
   // The total number of iunput segments.
   insegments = subsegpool->items;
 }

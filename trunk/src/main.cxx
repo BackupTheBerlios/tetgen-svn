@@ -161,6 +161,7 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
   if (b->plc) {
     m.meshsurface();
     m.formskeleton();
+    m.carveholes();
   }
 
   tv[3] = clock();
