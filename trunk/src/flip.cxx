@@ -1627,7 +1627,7 @@ void tetgenmesh::lawsonflip3d(int flipflag)
 { 
   triface fliptets[5], baktets[2];
   triface fliptet, neightet, *parytet;
-  face checksh;
+  face checksh, checkseg;
   point *pt, pd, pe;
   REAL sign, ori;
   long flipcount;
@@ -1736,22 +1736,21 @@ void tetgenmesh::lawsonflip3d(int flipflag)
         }
       } else {
         // A 3-to-2 or 4-to-4 may possible.
-        enext0fnext(fliptet, fliptets[0]);
-        esymself(fliptets[0]); // tet badc, d is the new vertex.
-        n = 0;
-        do {
-          fnext(fliptets[n], fliptets[n + 1]);
-          n++;
-        } while ((fliptets[n].tet != fliptet.tet) && (n < 5));
-        bflag = true;
         if (checksubfaces) {
-          // Do not flip a subface.
-          for (i = 0; i < n && bflag; i++) {
-            tspivot(fliptets[i], checksh);
-            bflag = (checksh.sh == NULL);
-          }
+          // Do not flip a subsegment.
+          tsspivot(fliptet, checkseg);
+          bflag = (checkseg.sh == NULL);
+        } else {
+          bflag = true;
         }
         if (bflag) {
+          enext0fnext(fliptet, fliptets[0]);
+          esymself(fliptets[0]); // tet badc, d is the new vertex.
+          n = 0;
+          do {
+            fnext(fliptets[n], fliptets[n + 1]);
+            n++;
+          } while ((fliptets[n].tet != fliptet.tet) && (n < 5));
           if (n == 3) {
             // Found a 3-to-2 flip.
             flip32(fliptets, 0, flipflag);
