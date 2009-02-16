@@ -1038,21 +1038,27 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
         tssbond1(newface, checkseg);
       }
     }
-    // The top three: da, db, dc.
+    // The top three: da, db, dc. Each edge belongs to two tets.
     for (i = 0; i < 3; i++) {
       enext2(topcastets[i], casface);
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         enext(fliptets[i], newface);
         tssbond1(newface, checkseg);
+        enext0fnext(fliptets[(i + 2) % 3], newface);
+        enextself(newface);
+        tssbond1(newface, checkseg);
       }
     }
-    // The bot three: ae, be, ce.
+    // The bot three: ae, be, ce. Each edge belongs to two tets.
     for (i = 0; i < 3; i++) {
       enext(botcastets[i], casface);
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         enext2(fliptets[i], newface);
+        tssbond1(newface, checkseg);
+        enext0fnext(fliptets[(i + 2) % 3], newface);
+        enext2self(newface);
         tssbond1(newface, checkseg);
       }
     }
@@ -1261,6 +1267,30 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   // Re-use fliptets[0] and fliptets[1].
   fliptets[0].loc = fliptets[0].ver = 0;
   fliptets[1].loc = fliptets[1].ver = 0;
+  elemmarker(fliptets[0].tet) = 0;
+  elemmarker(fliptets[1].tet) = 0;
+  if (checksubsegs) {
+    // Dealloc the space to subsegments.
+    if (fliptets[0].tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) fliptets[0].tet[8]);
+    }
+    fliptets[0].tet[8] = NULL;
+    if (fliptets[1].tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) fliptets[1].tet[8]);
+    }
+    fliptets[1].tet[8] = NULL;
+  }
+  if (checksubfaces) {
+    // Dealloc the space to subfaces.
+    if (fliptets[0].tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) fliptets[0].tet[9]);
+    }
+    fliptets[0].tet[9] = NULL;
+    if (fliptets[1].tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) fliptets[1].tet[9]);
+    }
+    fliptets[1].tet[9] = NULL;
+  }
 
   // Delete an old tet.
   tetrahedrondealloc(fliptets[2].tet);
@@ -1312,7 +1342,6 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   if (checksubsegs) {
     // Bond segments to new (flipped) tets.
     for (i = 0; i < 3; i++) {
-      tssdissolve(fliptets[0]); // Clear the old bond.
       tsspivot(topcastets[i], checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(fliptets[0], checkseg);
@@ -1323,9 +1352,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     for (i = 0; i < 3; i++) {
       enext0fnext(fliptets[0], newface);
       enextself(newface); // edge b->d, c->d, a->d.
-      tssdissolve(newface); // Clear the old bond.
-      fnext(fliptets[0], casface);
-      enextself(casface);
+      enext(topcastets[i], casface);
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(newface, checkseg);
@@ -1334,7 +1361,6 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     }
     // Process the bottom tet bace.
     for (i = 0; i < 3; i++) {
-      tssdissolve(fliptets[1]); // Clear the old bond.
       tsspivot(botcastets[i], checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(fliptets[1], checkseg);
@@ -1345,9 +1371,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
     for (i = 0; i < 3; i++) {
       enext0fnext(fliptets[1], newface);
       enext2self(newface); // edge b<-e, c<-e, a<-e.
-      tssdissolve(newface); // Clear the old bond.
-      fnext(fliptets[1], casface);
-      enext2self(casface);
+      enext2(botcastets[i], casface);
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(newface, checkseg);
@@ -1357,24 +1381,21 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   }
 
   if (checksubfaces) {
-    // Clear the old bonds at the middle face.
-    tsdissolve(fliptets[0]);
-    tsdissolve(fliptets[1]);
     // Bond the top three casing subfaces.
     for (i = 0; i < 3; i++) {
-      tsdissolve(fliptets[0]); // Clear the old bond.
       tspivot(topcastets[i], checksh);
       if (checksh.sh != NULL) {
-        tsbond(fliptets[0], checksh);
+        enext0fnext(fliptets[0], newface);
+        tsbond(newface, checksh);
       }
       enextself(fliptets[0]);
     }
     // Bond the bottom three casing subfaces.
     for (i = 0; i < 3; i++) {
-      tsdissolve(fliptets[1]); // Clear the old bond.
       tspivot(botcastets[i], checksh);
       if (checksh.sh != NULL) {
-        tsbond(fliptets[1], checksh);
+        enext0fnext(fliptets[1], newface);
+        tsbond(newface, checksh);
       }
       enext2self(fliptets[1]);
     }
@@ -1631,7 +1652,7 @@ void tetgenmesh::lawsonflip3d(int flipflag)
   point *pt, pd, pe;
   REAL sign, ori;
   long flipcount;
-  bool bflag;
+  // bool bflag;
   int n, i;
 
   int *iptr;
@@ -1721,29 +1742,29 @@ void tetgenmesh::lawsonflip3d(int flipflag)
       }
       if (i == 3) {
         // A 2-to-3 flip is found.
-        if (checksubfaces) {
+        /*if (checksubfaces) {
           // Do not flip a subface.
           tspivot(fliptet, checksh);
           bflag = (checksh.sh == NULL);
         } else {
           bflag = true;
-        }
-        if (bflag) {
+        }*/
+        // if (bflag) {
           fliptets[0] = fliptet; // tet abcd, d is the new vertex.
           symedge(fliptets[0], fliptets[1]); // tet bace.
           flip23(fliptets, 0, flipflag);
           recenttet = fliptets[0]; // for point location.
-        }
+        // }
       } else {
         // A 3-to-2 or 4-to-4 may possible.
-        if (checksubfaces) {
+        /*if (checksubfaces) {
           // Do not flip a subsegment.
           tsspivot(fliptet, checkseg);
           bflag = (checkseg.sh == NULL);
         } else {
           bflag = true;
-        }
-        if (bflag) {
+        }*/
+        // if (bflag) {
           enext0fnext(fliptet, fliptets[0]);
           esymself(fliptets[0]); // tet badc, d is the new vertex.
           n = 0;
@@ -1772,9 +1793,20 @@ void tetgenmesh::lawsonflip3d(int flipflag)
             flip32(fliptets, 1, flipflag); // hull tet may involve.
             recenttet = fliptets[0]; // for point location.
           } else {
-            // An unflipable face. Will be flipped later. 
+            // An unflipable face. Will be flipped later.
+            if (flipflag > 1) {
+              // Queue all other faces at the edge for flipping.
+              pe = apex(fliptets[0]);
+              fliptets[1] = fliptets[0];
+              while (1) {
+                pd = oppo(fliptets[1]);
+                futureflip = flippush(futureflip, &fliptets[1], pd);
+                fnextself(fliptets[1]);
+                if (apex(fliptets[1]) == pe) break;
+              }
+            }
           }
-        }
+        // } // bflag
       } // if (i == 3)
     } // if (sign < 0)
   }

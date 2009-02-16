@@ -785,10 +785,10 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
           cavetetlist->newindex((void **) &parytet);
           *parytet = *cavetet; 
         } else {
-          if (b->verbose > 1) {
+          // if (b->verbose > 1) {
             printf("    Cut tet (%d, %d, %d, %d)\n", pointmark(pb), 
               pointmark(pa), pointmark(pc), pointmark(oppo(neightet)));
-          }
+          // }
           uninfect(neightet);
           unmarktest(neightet);
           updatecount++;
@@ -922,6 +922,9 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     }
   }
 
+  // Re-use this list for new cavity faces.
+  cavetetlist->restart();
+
   // Create new tetrahedra in the Bowyer-Watson cavity and Connect them.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
@@ -972,6 +975,11 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
         tsbond(newtet, checksh); // Also disconnect the old bond.
       }
     }
+    if (visflag) {
+      // Save this new tet checking for flip.
+      cavetetlist->newindex((void **) &parytet);
+      *parytet = newtet;
+    }
   }
 
   // Set a handle for speeding point location.
@@ -1001,8 +1009,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
       enextself(*cavetet);
     }
   }*/
-
-  // cavetetlist->restart(); // Re-use this list.
 
   // Connect adjacent new tetrahedra together.
   for (i = 0; i < cavebdrylist->objects; i++) {
@@ -1116,17 +1122,14 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     flippool->restart();
   }
 
-  /*if (bwflag && (updatecount > 0l)) {
-    // Some internal new faces may be non-Delaunay. Check and fix them.
+  if (bwflag && visflag) {
+    // Some new faces may be locally non-Delaunay. Check and fix them.
     for (i = 0; i < cavetetlist->objects; i++) {
-      // Get an internal face (whose apex should be p).
+      // Get a new face (whose opposite is p).
       parytet = (triface *) fastlookup(cavetetlist, i);
-      // Skip it if it is a hull face.
-      if ((point) parytet->tet[7] == dummypoint) continue;
-      assert(apex(*parytet) == insertpt); // SELF_CHECK
-      pa = oppo(*parytet);
-      // Add this internal face into flip list.
-      futureflip = flippush(futureflip, parytet, pa);
+      if ((point) parytet->tet[7] == dummypoint) continue; // Skip a hull face.
+      assert(oppo(*parytet) == insertpt); // SELF_CHECK
+      futureflip = flippush(futureflip, parytet, insertpt);
     }
     int bakverbose = b->verbose; // DEBUG ONLY
     b->verbose = 2;  // DEBUG ONLY
@@ -1134,7 +1137,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     //   Set 'flipflag' = 2, s.t. all faces are checked for flipping.
     lawsonflip3d(2); 
     b->verbose = bakverbose; // DEBUG ONLY
-  }*/
+  }
 
   // Set the point type.
   if (getpointtype(insertpt) == UNUSEDVERTEX) {
