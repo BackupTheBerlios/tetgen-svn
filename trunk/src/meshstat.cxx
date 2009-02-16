@@ -554,6 +554,8 @@ void tetgenmesh::algorithmstatistics()
 
 void tetgenmesh::statistics()
 {
+  long tetnumber, facenumber;
+
   printf("\nStatistics:\n\n");
   printf("  Input points: %d\n", in->numberofpoints);
   if (b->refine) {
@@ -566,19 +568,30 @@ void tetgenmesh::statistics()
     printf("  Input regions: %d\n", in->numberofregions);
   }
 
+  tetnumber = tetrahedronpool->items - hullsize;
+  facenumber = (tetnumber * 4l + hullsize) / 2l;
+
   printf("\n  Mesh points: %ld\n", pointpool->items);
-  printf("  Mesh tetrahedra: %ld\n", tetrahedronpool->items - hullsize);
-  printf("  Mesh faces: %ld\n", ((tetrahedronpool->items - hullsize) * 4 + 
-    hullsize) / 2l);
+  printf("  Mesh tetrahedra: %ld\n", tetnumber);
+  printf("  Mesh faces: %ld\n", facenumber);
   printf("  Mesh edges: %ld\n", meshedges);
 
   if (b->plc || b->refine) {
     printf("  Mesh boundary faces: %ld\n", subfacepool->items);
-    printf("  Mesh boundary edges: %ld\n", subsegpool->items);
+    printf("  Mesh boundary edges: %ld\n", meshsubedges);
+    printf("  Mesh subsegments: %ld\n", subsegpool->items);
   } else {
     printf("  Convex hull faces: %ld\n", hullsize);
   }
   printf("\n");
+
+  if (b->verbose > 0) {
+    printf("  Euler characteristic of mesh domain: %ld\n", pointpool->items 
+      - meshedges + facenumber - tetnumber);
+    printf("  Euler characteristic of boundary: %ld\n", pointpool->items 
+      - meshsubedges + subfacepool->items);
+    printf("\n");
+  }
 
   if (b->verbose > 0) {
     // qualitystatistics();

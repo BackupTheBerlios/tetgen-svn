@@ -420,6 +420,7 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
   int varvolume;                                    // -a without a number
   int fixedvolume;                                     // -a with a number
   int bowyerwatson;                                                  // -b
+  int convexity;                                                     // -c
   int insertaddpoints;                                               // -i
   int regionattrib;                                                  // -A
   int conformdel;                                                    // -D
@@ -1477,7 +1478,7 @@ triface recenttet;
 REAL xmax, xmin, ymax, ymin, zmax, zmin;
 
 // The number of duplicated vertices, mesh edges, and input segments.
-long dupverts, meshedges, insegments;
+long dupverts, meshedges, meshsubedges, insegments;
 
 // Flags to check imposed constraints, subfaces, subsegs.
 int checkconstraints, checksubfaces, checksubsegs, checkpbcs;
@@ -1671,6 +1672,7 @@ void reconstructmesh();
 void jettisonnodes();
 void highorder();
 void numberedges();
+void numbersubedges();
 void outnodes(tetgenio* out);
 void outelements(tetgenio* out);
 void outfaces(tetgenio* out);
@@ -1724,7 +1726,7 @@ void initialize()
   recenttet.tet = (tetrahedron *) NULL;
   recenttet.loc = recenttet.ver = 0;
   xmax = xmin = ymax = ymin = zmax = zmin = 0.0;
-  dupverts = meshedges = insegments = 0l;
+  dupverts = meshedges = meshsubedges = insegments = 0l;
   checkconstraints = checksubfaces = checksubsegs = checkpbcs = 0;
   ptloc_count = ptloc_max_count = 0l;
   orient3dcount = 0l;

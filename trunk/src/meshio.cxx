@@ -121,6 +121,9 @@ void tetgenmesh::jettisonnodes()
 //                                                                           //
 // numberedges()    Count the number of mesh edges (in 'meshedges').         //
 //                                                                           //
+// The edges will be automatically counted in routine 'outelements()'.  This //
+// routine is needed only -E option is used.                                 //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::numberedges()
@@ -151,6 +154,49 @@ void tetgenmesh::numberedges()
       }
     }
     worktet.tet = tetrahedrontraverse();
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// numbersubedges()    Count the number of boundary mesh edges (in           //
+//                     'meshsubedges').                                      //
+//                                                                           //
+// The number of boundary edges will be automatically counted in routine     //
+// 'outsubfaces()'.  This routine is needed only -F option is used.          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::numbersubedges()
+{
+  face faceloop, spinsh;
+  int i;
+
+  shellface sptr;
+
+  meshsubedges = 0l;
+  subfacepool->traversalinit();
+  faceloop.sh = shellfacetraverse(subfacepool);
+  while (faceloop.sh != NULL) {
+    // Count the number of boundary edges. Look at all subfaces sharing at 
+    //   this edge. Count it only if this subface's pointer is the smallest.
+    faceloop.shver = 0;
+    for (i = 0; i < 3; i++) {
+      spivot(faceloop, spinsh);
+      if (spinsh.sh != NULL) {
+        while (spinsh.sh != faceloop.sh) {
+          if ((unsigned long) spinsh.sh < (unsigned long) faceloop.sh) break;
+          spivotself(spinsh);
+        }
+        if (spinsh.sh == faceloop.sh) {
+          meshsubedges++;
+        }
+      } else {
+        meshsubedges++;
+      }
+      senextself(faceloop);
+    }
+    faceloop.sh = shellfacetraverse(subfacepool);
   }
 }
 
@@ -700,6 +746,8 @@ void tetgenmesh::outhullfaces(tetgenio* out)
 //                                                                           //
 // outsubfaces()    Output subfaces to a .face file or a tetgenio object.    //
 //                                                                           //
+// The number of mesh boundary edges ('meshsubedges') will be counted.       //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 void tetgenmesh::outsubfaces(tetgenio* out)
@@ -710,12 +758,14 @@ void tetgenmesh::outsubfaces(tetgenio* out)
   int *emlist;
   int index, index1, index2;
   triface abuttingtet;
-  face faceloop;
+  face faceloop, spinsh;
   point torg, tdest, tapex;
   int bmark, faceid, marker;
   int firstindex, shift;
   int neigh1, neigh2;
-  int facenumber;
+  int facenumber, i;
+
+  shellface sptr;
 
   if (out == (tetgenio *) NULL) {
     strcpy(facefilename, b->outfilename);
@@ -775,6 +825,8 @@ void tetgenmesh::outsubfaces(tetgenio* out)
     shift = 1; // Shift the output indices by 1.
   }
 
+  meshsubedges = 0l;
+
   subfacepool->traversalinit();
   faceloop.sh = shellfacetraverse(subfacepool);
   facenumber = firstindex; // in->firstnumber;
@@ -833,6 +885,24 @@ void tetgenmesh::outsubfaces(tetgenio* out)
         out->adjtetlist[index2++] = neigh1;
         out->adjtetlist[index2++] = neigh2;
       }
+    }
+    // Count the number of boundary edges. Look at all subfaces sharing at 
+    //   this edge. Count it only if this subface's pointer is the smallest.
+    faceloop.shver = 0;
+    for (i = 0; i < 3; i++) {
+      spivot(faceloop, spinsh);
+      if (spinsh.sh != NULL) {
+        while (spinsh.sh != faceloop.sh) {
+          if ((unsigned long) spinsh.sh < (unsigned long) faceloop.sh) break;
+          spivotself(spinsh);
+        }
+        if (spinsh.sh == faceloop.sh) {
+          meshsubedges++;
+        }
+      } else {
+        meshsubedges++;
+      }
+      senextself(faceloop);
     }
     facenumber++;
     faceloop.sh = shellfacetraverse(subfacepool);

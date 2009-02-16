@@ -161,7 +161,9 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
   if (b->plc) {
     m.meshsurface();
     m.formskeleton();
-    m.carveholes();
+    if (b->convexity == 0) {
+      m.carveholes();
+    }
   }
 
   tv[3] = clock();
@@ -196,7 +198,7 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     if (!b->quiet) {
       printf("NOT writing an .ele file.\n");
     }
-    // m.numberedges();
+    m.numberedges();
   } else {
     m.outelements(out);
   }
@@ -205,10 +207,16 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     if (!b->quiet) {
       printf("NOT writing an .face file.\n");
     }
+    if (b->plc || b->refine) {
+      m.numbersubedges();
+    }
   } else {
     if (b->facesout) {
       if (m.tetrahedronpool->items > 0l) {
         m.outfaces(out);  // Output all faces.
+      }
+      if (b->plc || b->refine) {
+        m.numberedges();
       }
     } else {
       if (b->plc || b->refine) {
