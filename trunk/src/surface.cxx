@@ -495,6 +495,9 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
     sbond1(*parysh, newsh);
   }
 
+  // Set a handle for searching.
+  // recentsh = newsh;
+
   // Connect adjacent new subfaces together.
   for (i = 0; i < caveshbdlist->objects; i++) {
     // Get an old subface at edge [a, b].
@@ -686,6 +689,162 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
   caveshbdlist->restart();
 
   return loc;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// sscoutsegment()    Look for a segment in surface triangulation.           //
+//                                                                           //
+// The segment is given by the origin of 'searchsh' and 'endpt'.  Assume the //
+// orientation of 'searchsh' is CCW w.r.t. the above point.                  //
+//                                                                           //
+// If an edge in T is found matching this segment, the segment is "locaked"  //
+// in T at the edge.  Otherwise, flip the first edge in T that the segment   //
+// crosses. Continue the search from the flipped face.                       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
+  point endpt)
+{
+  face flipshs[2], neighsh;
+  face newseg, checkseg;
+  point startpt, pb, pc, pd;
+  enum intersection dir;
+  REAL ori_ab, ori_ca;
+  REAL dist_b, dist_c;
+
+  enum {MOVE_AB, MOVE_CA} nextmove;
+
+  shellface sptr;
+
+  // The origin of 'searchsh' is fixed.
+  startpt = sorg(*searchsh); // pa = startpt;
+
+  // Search an edge in 'searchsh' on the path of this segment.
+  while (1) {
+
+    pb = sdest(*searchsh);
+    if (pb == endpt) {
+      dir = SHAREEDGE; // Found!
+      break;
+    }
+
+    pc = sapex(*searchsh);
+    if (pc == endpt) {
+      senext2self(*searchsh);
+      sesymself(*searchsh);
+      dir = SHAREEDGE; // Found!
+      break;
+    }
+
+    ori_ab = orient3d(startpt, pb, dummypoint, endpt);
+    ori_ca = orient3d(pc, startpt, dummypoint, endpt);
+
+    if (ori_ab < 0) {
+      if (ori_ca < 0) { // (--)
+        // Both sides are viable moves.
+        spivot(*searchsh, neighsh); // At edge [a, b].
+        assert(neighsh.sh != NULL); // SELF_CHECK
+        pd = sapex(neighsh);
+        dist_b = NORM2(endpt[0] - pd[0], endpt[1] - pd[1], endpt[2] - pd[2]);
+        senext2(*searchsh, neighsh); // At edge [c, a].
+        spivotself(neighsh);
+        assert(neighsh.sh != NULL); // SELF_CHECK
+        pd = sapex(neighsh);
+        dist_c = NORM2(endpt[0] - pd[0], endpt[1] - pd[1], endpt[2] - pd[2]);
+        if (dist_c < dist_b) {
+          nextmove = MOVE_CA;
+        } else {
+          nextmove = MOVE_AB;
+        }
+      } else { // (-#)
+        nextmove = MOVE_AB;
+      }
+    } else {
+      if (ori_ca < 0) { // (#-)
+        nextmove = MOVE_CA;
+      } else {
+        if (ori_ab > 0) {
+          if (ori_ca > 0) { // (++)
+            // The segment intersects with edge [b, c].
+            dir = ACROSSEDGE;
+            break;
+          } else { // (+0)
+            // The segment collinear with edge [c, a].
+            senext2self(*searchsh);
+            sesymself(*searchsh);
+            dir = ACROSSVERT;
+            break;
+          }
+        } else {
+          if (ori_ca > 0) { // (0+)
+            // The segment collinear with edge [a, b].
+            dir = ACROSSVERT;
+            break;
+          } else { // (00)
+            // startpt == endpt. Not possible.
+            assert(0); // SELF_CHECK
+          }
+        }
+      }
+    }
+
+    // Move 'searchsh' to the next face, keep the origin unchanged.
+    if (nextmove == MOVE_AB) {
+      spivot(*searchsh, neighsh);
+      if (sorg(neighsh) != pb) sesymself(neighsh);
+      senext(neighsh, *searchsh);      
+    } else {
+      senext2(*searchsh, neighsh);
+      spivot(*searchsh, neighsh);
+      if (sdest(neighsh) != pc) sesymself(neighsh);
+      senext2(neighsh, *searchsh);
+    }
+    assert(sorg(*searchsh) == startpt); // SELF_CHECK
+
+  } // while
+
+  if (dir == SHAREEDGE) {
+    // Insert the segment into the triangulation.
+    makeshellface(subsegpool, &newseg);
+    setshvertices(newseg, startpt, endpt, NULL);
+    ssbond(*searchsh, newseg);
+    spivot(*searchsh, neighsh);
+    if (neighsh.sh != NULL) {
+      ssbond(neighsh, newseg);
+    }
+    return dir;
+  }
+
+  if (dir == ACROSSVERT) {
+    // A point is found collinear with this segment.
+    return dir;
+  }
+
+  if (dir == ACROSSEDGE) {
+    // Edge [b, c] intersects with the segment.
+    senext(*searchsh, flipshs[0]);
+    sspivot(neighsh, checkseg);
+    if (checkseg.sh != NULL) {
+      printf("Error:  Invalid PLC.\n");
+      pb = sorg(flipshs[0]);
+      pc = sdest(flipshs[0]);
+      printf("  Two segments (%d, %d) and (%d, %d) intersect.\n",
+        pointmark(startpt), pointmark(endpt), pointmark(pb), pointmark(pc));
+      terminatetetgen(1);
+    }
+    // Flip edge [b, c], queue unflipped edges (for Delaunay checks).
+    spivot(flipshs[0], flipshs[1]);
+    assert(flipshs[1].sh != NULL); // SELF_CHECK
+    if (sorg(flipshs[1]) != sdest(flipshs[0])) sesymself(flipshs[1]);
+    flip22(flipshs, 1);
+    // Set 'searchsh' s.t. its origin is 'startpt'.
+    *searchsh = flipshs[0];
+    assert(sorg(*searchsh) == startpt);
+  }
+
+  return sscoutsegment(searchsh, endpt);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1028,6 +1187,75 @@ void tetgenmesh::mergefacets()
   }
 
   delete [] segspernodelist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// markacutevertices()    Classify vertices as ACUTEVERTEXs or RIDGEVERTEXs. //
+//                                                                           //
+// Initially, all segment vertices are marked as VOLVERTEX (after calling    //
+// incrementaldelaunay()).                                                   //
+//                                                                           //
+// A segment vertex is ACUTEVERTEX if it two segments incident it form an    //
+// interior angle less than 60 degree, otherwise, it is a RIDGEVERTEX.       //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::markacutevertices()
+{
+  point pa, pb, pc;
+  REAL anglimit, ang;
+  bool acuteflag;
+  int acutecount;
+  int idx, i, j;
+
+  face* segperverlist;
+  int* idx2seglist;
+
+  if (b->verbose) {
+    printf("  Marking acute vertices.\n");
+  }
+
+  // Construct a map from points to segments.
+  makepoint2submap(subsegpool, idx2seglist, segperverlist);
+
+  anglimit = PI / 3.0;  // 60 degree.
+  acutecount = 0;
+
+  // Loop over the set of vertices.
+  pointpool->traversalinit();
+  pa = pointtraverse();
+  while (pa != NULL) {
+    idx = pointmark(pa) - in->firstnumber;
+    // Mark it if it is an endpoint of some segments.
+    if (idx2seglist[idx + 1] > idx2seglist[idx]) {
+      acuteflag = false;
+      // Do a brute-force pair-pair check.
+      for (i = idx2seglist[idx]; i < idx2seglist[idx + 1] && !acuteflag; i++) {
+        pb = sdest(segperverlist[i]);
+        for (j = i + 1; j < idx2seglist[idx + 1] && !acuteflag; j++) {
+          pc = sdest(segperverlist[j]);
+          ang = interiorangle(pa, pb, pc, NULL);
+          acuteflag = ang < anglimit;
+        }
+      }
+      // Now mark the vertex.
+      if (b->verbose > 1) {
+        printf("    Mark %d as %s.\n", pointmark(pa), acuteflag ?
+          "ACUTEVERTEX" : "RIDGEVERTEX");
+      }
+      setpointtype(pa, acuteflag ? ACUTEVERTEX : RIDGEVERTEX);
+      acutecount += (acuteflag ? 1 : 0);
+    }
+    pa = pointtraverse();
+  }
+
+  if (b->verbose) {
+    printf("  %d acute vertices.\n", acutecount);
+  }
+
+  delete [] idx2seglist;
+  delete [] segperverlist;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

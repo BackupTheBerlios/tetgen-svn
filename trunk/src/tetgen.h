@@ -1628,6 +1628,7 @@ void incrementaldelaunay();
 bool calculateabovepoint(arraypool*, point*, point*, point*);
 enum location slocate(point, face*, bool);
 enum location sinsertvertex(point, face*, face*, bool, bool);
+enum intersection sscoutsegment(face* searchsh, point endpt);
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
 
 void unifysegments();
