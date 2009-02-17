@@ -9,7 +9,8 @@
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::calculateabovepoint(arraypool *facpoints)
+bool tetgenmesh::calculateabovepoint(arraypool *facpoints, point *ppa,
+  point *ppb, point *ppc)
 {
   point *ppt, pa, pb, pc;
   REAL v1[3], v2[3], n[3];
@@ -34,7 +35,12 @@ void tetgenmesh::calculateabovepoint(arraypool *facpoints)
     }
   }
   lab = sqrt(lab);
-  assert(lab > 0); // SELF_CHECK
+  if (lab > 0) {
+    if (!b->quiet) {
+      printf("Warning:  All points of a facet are coincident with %d.\n",
+        pointmark(pa));
+    }
+  }
 
   // Get a point c s.t. the area of [a, b, c] is maximal.
   v1[0] = pb[0] - pa[0];
@@ -53,7 +59,14 @@ void tetgenmesh::calculateabovepoint(arraypool *facpoints)
       pc = *ppt;
     }
   }
-  assert(A > 0); // SELF_CHECK
+  if (A == 0) {
+    // All points are collinear. No above point.
+    if (!b->quiet) {
+      printf("Warning:  All points of a facet are collinaer with [%d, %d].\n",
+        pointmark(pa), pointmark(pb));
+    }
+    return false;
+  }
 
   // Calculate an above point of this facet.
   facenormal(pa, pb, pc, n, 1);
@@ -65,6 +78,15 @@ void tetgenmesh::calculateabovepoint(arraypool *facpoints)
   dummypoint[0] = 0.5 * (pa[0] + pb[0]) + lab * n[0];
   dummypoint[1] = 0.5 * (pa[1] + pb[1]) + lab * n[1];
   dummypoint[2] = 0.5 * (pa[2] + pb[2]) + lab * n[2];
+
+  if (ppa != NULL) {
+    // Return the three points.
+    *ppa = pa;
+    *ppb = pb;
+    *ppc = pc;
+  }
+
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,8 +102,8 @@ void tetgenmesh::calculateabovepoint(arraypool *facpoints)
 //   - ONVERTEX, p is the origin of 'searchsh'.                              //
 //   - ONEDGE, p lies on the edge of 'searchsh'.                             //
 //   - ONFACE, p lies in the interior of 'searchsh'.                         //
-//   - OUTSIDE, p lies outside of the triangulation, p is visible by the     //
-//       edge of 'searchsh'.                                                 //
+//   - OUTSIDE, p lies outside of the triangulation, p is on the left-hand   //
+//     side of the edge 'searchsh'(s), i.e., org(s), dest(s), p are CW.      //
 //                                                                           //
 // If 'cflag' is not TRUE, the triangulation may not be convex.  Stop search //
 // when a segment is met and return OUTSIDE.                                 //
@@ -240,7 +262,7 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
   triface neightet;
   point pa, pb, pc;
   enum location loc;
-  REAL sign, area;
+  REAL sign, ori, area;
   int n, s, i, j;
 
   tetrahedron ptr;
@@ -323,9 +345,76 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
     smarktest(*splitsh);
     caveshlist->newindex((void **) &parysh);
     *parysh = *splitsh;
-  } else {
-    // loc == OUTSIDE;
-    assert(0); // Not handled yet.
+  } else { // loc == OUTSIDE;
+    // This is only possible when T is convex.
+    assert(cflag); // SELF_CHECK
+    // Assume p is on top of the edge ('splitsh'). Find a right-most edge
+    //   which is visible by p.
+    neighsh = *splitsh;
+    while (1) {
+      senext2self(neighsh);
+      spivot(neighsh, casout);
+      if (casout.sh == NULL) {
+        // A convex hull edge. Is it visible by p.
+        pa = sorg(neighsh);
+        pb = sdest(neighsh);
+        ori = orient3d(pa, pb, dummypoint, insertpt);
+        if (ori < 0) {
+          *splitsh = neighsh; // Update 'splitsh'.
+        } else {
+          break; // 'splitsh' is the right-most visible edge.
+        }
+      } else {
+        if (sorg(casout) != sdest(neighsh)) sesymself(casout);
+        neighsh = casout;
+      }
+    }
+    // Create new triangles for all visible edges of p (from right to left).
+    casin.sh = NULL;  // No adjacent face at right.
+    pa = sorg(*splitsh);
+    pb = sdest(*splitsh);
+    while (1) {
+      // Create a new subface on top of the (visible) edge.
+      makeshellface(subfacepool, &newsh); 
+      setshvertices(newsh, pb, pa, insertpt);
+      setshellmark(newsh, getshellmark(*splitsh));
+      if (checkconstraints) {
+        area = areabound(*splitsh);
+        areabound(newsh) = area;
+      }
+      // Connect the new subface to the bottom subfaces.
+      sbond1(newsh, *splitsh);
+      sbond1(*splitsh, newsh);
+      // Connect the new subface to its right-adjacent subface.
+      if (casin.sh != NULL) {
+        senext2(newsh, casout);
+        sbond1(casout, casin);
+        sbond1(casin, casout);
+      }
+      // The left-adjacent subface has not been created yet.
+      senext(newsh, casin);
+      // Add the new face into list.
+      smarktest(newsh);
+      caveshlist->newindex((void **) &parysh);
+      *parysh = newsh;
+      // Move to the convex hull edge at the left of 'splitsh'.
+      neighsh = *splitsh;
+      while (1) {
+        senextself(neighsh);
+        spivot(neighsh, casout);
+        if (casout.sh == NULL) {
+          *splitsh = neighsh;
+          break;
+        }
+        if (sorg(casout) != sdest(neighsh)) sesymself(casout);
+        neighsh = casout;
+      }
+      // A convex hull edge. Is it visible by p.
+      pa = sorg(*splitsh);
+      pb = sdest(*splitsh);
+      ori = orient3d(pa, pb, dummypoint, insertpt);
+      if (ori >= 0) break;
+    }
   }
 
   // Form the Bowyer-Watson cavity.
@@ -335,22 +424,27 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
       sspivot(*parysh, checkseg);
       if (checkseg.sh == NULL) {
         spivot(*parysh, neighsh);
-        assert(neighsh.sh != NULL); // SELF_CHECK
-        if (!smarktested(neighsh)) {
-          if (bwflag) {
-            pa = sorg(neighsh);
-            pb = sdest(neighsh);
-            pc = sapex(neighsh);
-            sign = incircle3d(pa, pb, pc, insertpt);
-            if (sign < 0) {
-              smarktest(neighsh);
-              caveshlist->newindex((void **) &pssub);
-              *pssub = neighsh;
+        if (neighsh.sh != NULL) {
+          if (!smarktested(neighsh)) {
+            if (bwflag) {
+              pa = sorg(neighsh);
+              pb = sdest(neighsh);
+              pc = sapex(neighsh);
+              sign = incircle3d(pa, pb, pc, insertpt);
+              if (sign < 0) {
+                smarktest(neighsh);
+                caveshlist->newindex((void **) &pssub);
+                *pssub = neighsh;
+              }
+            } else {
+              sign = 1; // A boundary edge.
             }
           } else {
-            sign = 1; // A boundary edge.
+            sign = -1; // Not a boundary edge.
           }
         } else {
+          assert(loc == OUTSIDE); // SELF_CHECK
+          // The new point is a convex hull face.
           sign = -1; // Not a boundary edge.
         }
       } else {
@@ -416,17 +510,22 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
       while (1) {
         senextself(neighsh);
         spivotself(neighsh);
+        if (neighsh.sh == NULL) break;
         if (!smarktested(neighsh)) break;
         if (sdest(neighsh) != pb) sesymself(neighsh);
       }
-      // Now 'neighsh' is a new subface at edge [b, #].
-      if (sorg(neighsh) != pb) sesymself(neighsh);
-      assert(sorg(neighsh) == pb); // SELF_CHECK
-      assert(sapex(neighsh) == insertpt); // SELF_CHECK
-      senext2self(neighsh); // Go to the open edge [p, b].
-      spivot(neighsh, casout); // SELF_CHECK
-      assert(casout.sh == NULL); // SELF_CHECK
-      sbond2(newsh, neighsh);
+      if (neighsh.sh != NULL) {
+        // Now 'neighsh' is a new subface at edge [b, #].
+        if (sorg(neighsh) != pb) sesymself(neighsh);
+        assert(sorg(neighsh) == pb); // SELF_CHECK
+        assert(sapex(neighsh) == insertpt); // SELF_CHECK
+        senext2self(neighsh); // Go to the open edge [p, b].
+        spivot(neighsh, casout); // SELF_CHECK
+        assert(casout.sh == NULL); // SELF_CHECK
+        sbond2(newsh, neighsh);
+      } else {
+        assert(loc == OUTSIDE); // SELF_CHECK
+      }
     }
     spivot(*parysh, newsh); // The new subface [a, b, p].
     senext2self(newsh); // At edge [p, a].
@@ -438,17 +537,22 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
       while (1) {
         senext2self(neighsh);
         spivotself(neighsh);
+        if (neighsh.sh == NULL) break;
         if (!smarktested(neighsh)) break;
         if (sorg(neighsh) != pa) sesymself(neighsh);
       }
-      // Now 'neighsh' is a new subface at edge [#, a].
-      if (sdest(neighsh) != pa) sesymself(neighsh);
-      assert(sdest(neighsh) == pa); // SELF_CHECK
-      assert(sapex(neighsh) == insertpt); // SELF_CHECK
-      senextself(neighsh); // Go to the open edge [a, p].
-      spivot(neighsh, casout); // SELF_CHECK
-      assert(casout.sh == NULL); // SELF_CHECK
-      sbond2(newsh, neighsh);
+      if (neighsh.sh != NULL) {
+        // Now 'neighsh' is a new subface at edge [#, a].
+        if (sdest(neighsh) != pa) sesymself(neighsh);
+        assert(sdest(neighsh) == pa); // SELF_CHECK
+        assert(sapex(neighsh) == insertpt); // SELF_CHECK
+        senextself(neighsh); // Go to the open edge [a, p].
+        spivot(neighsh, casout); // SELF_CHECK
+        assert(casout.sh == NULL); // SELF_CHECK
+        sbond2(newsh, neighsh);
+      } else {
+        assert(loc == OUTSIDE); // SELF_CHECK
+      }
     }
   }
 
@@ -580,6 +684,8 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
   // Clean the working lists.
   caveshlist->restart();
   caveshbdlist->restart();
+
+  return loc;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

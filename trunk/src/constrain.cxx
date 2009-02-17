@@ -2213,7 +2213,7 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
     insertvertex(newpt, &searchtet, true, true, false);
   } else {
     // Calc an above point for point location in surface triangulation.
-    calculateabovepoint(facpoints); 
+    calculateabovepoint(facpoints, NULL, NULL, NULL); 
     // Insert the new point on facet. New subfaces are queued for reocvery.
     loc = sinsertvertex(newpt, searchsh, NULL, true, false);
     if (loc == OUTSIDE) {
