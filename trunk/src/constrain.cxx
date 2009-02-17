@@ -2437,6 +2437,7 @@ void tetgenmesh::carveholes()
   triface openface, casface;
   face checksh;
   point *ppt, pa, pb, pc;
+  enum location loc;
   int i, j;
 
   tetrahedron ptr;
@@ -2469,7 +2470,22 @@ void tetgenmesh::carveholes()
   hullsize -= exttets->objects;
 
   if (in->numberofholes > 0) {
-    // Mark as infected any tets inside volume holes.  
+    // Mark as infected any tets inside volume holes.
+    for (i = 0; i < 3 * in->numberofholes; i += 3) {
+      // Search a tet containing the i-th hole point.
+      neightet.tet = NULL;
+      randomsample(&(in->holelist[i]), &neightet);
+      loc = locate(&(in->holelist[i]), &neightet);
+      if (loc != OUTSIDE) {
+        infect(neightet);
+        exttets->newindex((void **) &parytet);
+        *parytet = neightet;
+      }
+    }
+  }
+
+  if (in->numberofregions > 0) {
+    // Mark as marktested any tetrahedra inside volume regions.
   }
 
   // Find and infect all exterior tets.
@@ -2511,10 +2527,6 @@ void tetgenmesh::carveholes()
         }
       }
     }
-  }
-
-  if (in->numberofregions > 0) {
-    // Mark as marktested any tetrahedra inside volume regions.
   }
 
   // Remove all exterior tetrahedra (including infected hull tets).
