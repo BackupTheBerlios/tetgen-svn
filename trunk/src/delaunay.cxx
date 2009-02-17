@@ -523,8 +523,8 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
-  bool visflag, bool noencflag)
+enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt, 
+  triface *searchtet, bool bwflag, bool visflag, bool noencflag)
 {
   triface *cavetet, *parytet, spintet, neightet, newtet, neineitet;
   face *pssub, checksh;
@@ -587,7 +587,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     point2ppt(insertpt) = org(*searchtet);
     setpointtype(insertpt, DUPLICATEDVERTEX);
     dupverts++;
-    return;
+    return loc;
   }
 
   // loc_start = clock();
@@ -760,6 +760,87 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
     maxbowatcavsize = cavebdrylist->objects;
   }
 
+  if (checksubsegs || noencflag) {
+    // Check if some (sub)segments are inside the cavity.
+    for (i = 0; i < caveoldtetlist->objects; i++) {
+      cavetet = (triface *) fastlookup(caveoldtetlist, i);
+      for (j = 0; j < 6; j++) {
+        cavetet->loc = edge2locver[j][0];
+        cavetet->ver = edge2locver[j][1];
+        tsspivot(*cavetet, sseg);
+        if ((sseg.sh != NULL) && !sinfected(sseg)) {
+          // Check if this segment is inside the cavity.
+          spintet = *cavetet;
+          pa = apex(spintet);
+          enqflag = true;
+          while (1) {
+            fnextself(spintet);
+            if (!infected(spintet)) {
+              enqflag = false; break; // It is not inside.
+            }
+            if (apex(spintet) == pa) break;
+          }
+          if (enqflag) {
+            if (b->verbose > 1) {
+              printf("      Queue a missing segment (%d, %d).\n",
+                pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+            }
+            sinfect(sseg);  // Only save it once.
+            subsegstack->newindex((void **) &psseg);
+            *psseg = sseg;
+          }
+        }
+      }
+    }
+  }
+
+  if (noencflag && (subsegstack->objects > 0)) {
+    // Found encroached subsegments! Do not insert this point.
+    for (i = 0; i < caveoldtetlist->objects; i++) {
+      cavetet = (triface *) fastlookup(caveoldtetlist, i);
+      uninfect(*cavetet);
+      unmarktest(*cavetet);
+    }
+    for (i = 0; i < cavebdrylist->objects; i++) {
+      cavetet = (triface *) fastlookup(cavebdrylist, i);
+      unmarktest(*cavetet); // Unmark it.
+    }
+    if (bwflag && (futureflip != NULL)) {
+      flippool->restart();
+      futureflip = NULL;
+    }
+    cavetetlist->restart();
+    cavebdrylist->restart();
+    caveoldtetlist->restart();
+    return ENCSEGMENT;
+  }
+
+  if (checksubfaces) {
+    // Check if some subfaces are inside the cavity.
+    for (i = 0; i < caveoldtetlist->objects; i++) {
+      cavetet = (triface *) fastlookup(caveoldtetlist, i);
+      neightet.tet = cavetet->tet;
+      for (neightet.loc = 0; neightet.loc < 4; neightet.loc++) {
+        tspivot(neightet, checksh);
+        if (checksh.sh != NULL) {
+          sym(neightet, neineitet);
+          if (infected(neineitet)) {
+            if (b->verbose > 1) {
+              printf("      Queue a missing subface (%d, %d, %d).\n",
+                pointmark(sorg(checksh)), pointmark(sdest(checksh)),
+                pointmark(sapex(checksh)));
+            }
+            tsdissolve(neineitet); // Disconnect a tet-sub bond.
+            stdissolve(checksh); // Disconnect the sub-tet bond.
+            // Add the missing subface into list.
+            subfacstack->newindex((void **) &pssub);
+            *pssub = checksh;
+          }
+        }
+      }
+    }
+  }
+
   if (visflag) {
     // If T is not a Delaunay triangulation, the formed cavity may not be
     //   star-shaped (fig/dump-cavity-case8). Validation is needed.
@@ -837,87 +918,6 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
       if (b->verbose > 1) {
         printf("    Size of the updated cavity: %d faces %d tets.\n",
           cavebdrylist->objects, caveoldtetlist->objects);
-      }
-    }
-  }
-
-  if (checksubsegs) {
-    // Check if some (sub)segments are inside the cavity.
-    k = subsegstack->objects;
-    for (i = 0; i < caveoldtetlist->objects; i++) {
-      cavetet = (triface *) fastlookup(caveoldtetlist, i);
-      for (j = 0; j < 6; j++) {
-        cavetet->loc = edge2locver[j][0];
-        cavetet->ver = edge2locver[j][1];
-        tsspivot(*cavetet, sseg);
-        if ((sseg.sh != NULL) && !sinfected(sseg)) {
-          // Check if this segment is inside the cavity.
-          spintet = *cavetet;
-          pa = apex(spintet);
-          enqflag = true;
-          while (1) {
-            fnextself(spintet);
-            if (!infected(spintet)) {
-              enqflag = false; break; // It is not inside.
-            }
-            if (apex(spintet) == pa) break;
-          }
-          if (enqflag) {
-            if (b->verbose > 1) {
-              printf("      Queue a missing segment (%d, %d).\n",
-                pointmark(sorg(sseg)), pointmark(sdest(sseg)));
-            }
-            sinfect(sseg);  // Only save it once.
-            subsegstack->newindex((void **) &psseg);
-            *psseg = sseg;
-          }
-        }
-      }
-    }
-    if (noencflag && (k < subsegstack->objects)) {
-      // Found encroached subsegments! Do not insert this point.
-      for (i = 0; i < caveoldtetlist->objects; i++) {
-        cavetet = (triface *) fastlookup(caveoldtetlist, i);
-        uninfect(*cavetet);
-        unmarktest(*cavetet);
-      }
-      for (i = 0; i < cavebdrylist->objects; i++) {
-        cavetet = (triface *) fastlookup(cavebdrylist, i);
-        unmarktest(*cavetet); // Unmark it.
-      }
-      if (bwflag && (futureflip != NULL)) {
-        flippool->restart();
-        futureflip = NULL;
-      }
-      cavetetlist->restart();
-      cavebdrylist->restart();
-      caveoldtetlist->restart();
-      return;
-    }
-  }
-
-  if (checksubfaces) {
-    // Check if some subfaces are inside the cavity.
-    for (i = 0; i < caveoldtetlist->objects; i++) {
-      cavetet = (triface *) fastlookup(caveoldtetlist, i);
-      neightet.tet = cavetet->tet;
-      for (neightet.loc = 0; neightet.loc < 4; neightet.loc++) {
-        tspivot(neightet, checksh);
-        if (checksh.sh != NULL) {
-          sym(neightet, neineitet);
-          if (infected(neineitet)) {
-            if (b->verbose > 1) {
-              printf("      Queue a missing subface (%d, %d, %d).\n",
-                pointmark(sorg(checksh)), pointmark(sdest(checksh)),
-                pointmark(sapex(checksh)));
-            }
-            tsdissolve(neineitet); // Disconnect a tet-sub bond.
-            stdissolve(checksh); // Disconnect the sub-tet bond.
-            // Add the missing subface into list.
-            subfacstack->newindex((void **) &pssub);
-            *pssub = checksh;
-          }
-        }
       }
     }
   }
@@ -1147,6 +1147,7 @@ void tetgenmesh::insertvertex(point insertpt, triface *searchtet, bool bwflag,
   cavetetlist->restart();
   cavebdrylist->restart();
   caveoldtetlist->restart();
+  return loc;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

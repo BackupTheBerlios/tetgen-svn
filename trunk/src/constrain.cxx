@@ -2189,10 +2189,11 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
   //   recovered subfaces may be queued for recovering again.  
   assert(subsegstack->objects == 0l); // SELF_CHECK
   searchtet = recenttet; // Start search it from recentet
-  insertvertex(newpt, &searchtet, true, true, true);
+  loc = insertvertex(newpt, &searchtet, true, true, true);
 
-  if (subsegstack->objects > 0l) {
-    // Some segments are queued. Randomly pick one to split.
+  if (loc == ENCSEGMENT) {
+    // Some segments are encroached. Randomly pick one to split.
+    assert(subsegstack->objects > 0l);
     s = randomnation(subsegstack->objects);
     psseg = (face *) fastlookup(subsegstack, s);
     sseg = *psseg;
@@ -2210,13 +2211,6 @@ void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
     // Insert the point. Missing segments are queued. 
     searchtet = recenttet; // Start search it from recentet
     insertvertex(newpt, &searchtet, true, true, false);
-    if (subsegstack->objects > 0l) {
-      // Recover queued segments (always use Boyer-Watson algorithm).
-      s = b->bowyerwatson;
-      b->bowyerwatson = 1;
-      delaunizesegments();
-      b->bowyerwatson = s;
-    }
   } else {
     // Calc an above point for point location in surface triangulation.
     calculateabovepoint(facpoints); 
@@ -2389,11 +2383,15 @@ void tetgenmesh::constrainedfacets()
       } // while
 
       if (facfaces->objects > 0l) {
-        // Found a non-Delaunay edge, split it.
-        // dump_facetof(&ssub);
-        // outnodes(0);
-        // outsubfaces(0);
+        // Found a non-Delaunay edge, split it (or a segment close to it).
         splitsubedge(&ssub, facfaces, facpoints);
+        if (subsegstack->objects > 0l) {
+          // Recover queued segments (always use Boyer-Watson algorithm).
+          s = b->bowyerwatson;
+          b->bowyerwatson = 1;
+          delaunizesegments();
+          b->bowyerwatson = s;
+        }
         facfaces->restart();
       }
       // Clear the list of facet vertices.

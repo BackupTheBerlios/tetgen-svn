@@ -554,7 +554,7 @@ enum verttype {UNUSEDVERTEX, DUPLICATEDVERTEX, VOLVERTEX, RIDGEVERTEX,
 
 // Labels that signify the result of point location.
 
-enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE};
+enum location {INTET, ONFACE, ONEDGE, ONVERTEX, OUTSIDE, ENCSEGMENT, ENCFACE};
 
 // Labels that signify the result of intersection tests.
 
@@ -1615,8 +1615,8 @@ enum location locate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-void insertvertex(point insertpt, triface* searchtet, bool, bool, bool);
-void flipinsertvertex(point insertpt, triface* searchtet, int flipflag);
+enum location insertvertex(point, triface*, bool, bool, bool);
+void flipinsertvertex(point, triface*, int);
 void incrementaldelaunay();
 
 ///////////////////////////////////////////////////////////////////////////////
