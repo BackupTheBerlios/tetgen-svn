@@ -1470,9 +1470,9 @@ long hullsize;
 // Current random number seed, number of random samples (for point location).
 unsigned long randomseed, samples;
 
-// Pointer to a recently visited tetrahedron. Improves point location if
-//   points are inserted sequentially.
+// Pointers to a recently visited tetrahedron and subface.
 triface recenttet;
+face recentsh;
 
 // The size of bounding boxes.
 REAL xmax, xmin, ymax, ymin, zmax, zmin;

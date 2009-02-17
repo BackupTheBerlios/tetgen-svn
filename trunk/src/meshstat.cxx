@@ -1529,9 +1529,6 @@ void tetgenmesh::dump_facetof(face *pssub)
             tmpfaces->newindex((void **) &parysh2);
             *parysh2 = s;
           }
-        } else {
-          printf("  ! A non-bounded edge (%d, %d)\n", pointmark(sorg(*parysh)),
-            pointmark(sdest(*parysh)));
         }
       }
       senextself(*parysh);

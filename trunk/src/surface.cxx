@@ -496,7 +496,7 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
   }
 
   // Set a handle for searching.
-  // recentsh = newsh;
+  recentsh = newsh;
 
   // Connect adjacent new subfaces together.
   for (i = 0; i < caveshbdlist->objects; i++) {
