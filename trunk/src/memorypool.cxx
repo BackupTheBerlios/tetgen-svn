@@ -524,11 +524,7 @@ void tetgenmesh::initializepools()
                    + (b->regionattrib > 0);
   // If element attributes or an constraint are needed, increase the number
   //   of bytes occupied by an element.
-  if (b->varvolume) {
-    elesize = (volumeboundindex + 1) * sizeof(REAL);
-  } else {
-    elesize = volumeboundindex * sizeof(REAL);
-  }
+  elesize = (volumeboundindex + (b->varvolume > 0)) * sizeof(REAL);
   // The index within each element at which its marker is found, where the
   //   index is measured in ints.
   elemmarkerindex = (elesize + sizeof(int) - 1) / sizeof(int);
@@ -769,12 +765,12 @@ void tetgenmesh::maketetrahedron(triface *newtet)
     newtet->tet[8] = (tetrahedron) NULL;
     newtet->tet[9] = (tetrahedron) NULL;
   }
-  /*for (i = 0; i < in->numberoftetrahedronattributes; i++) {
-    elemattribute(newtet->tet, i) = 0.0;
+  for (i = 0; i < in->numberoftetrahedronattributes; i++) {
+    setelemattribute(newtet->tet, i, 0);
   }
   if (b->varvolume) {
-    volumebound(newtet->tet) = -1.0;
-  }*/
+    setvolumebound(newtet->tet, -1.0);
+  }
   elemmarker(newtet->tet) = 0;
   newtet->loc = 0;
   newtet->ver = 0;

@@ -658,7 +658,10 @@ void tetgenmesh::ptet(triface* t)
     printf("(marktested) ");
   }
   if (edgemarked(*t)) {
-    printf("(edgemarked)");
+    printf("(edgemarked) ");
+  }
+  if (b->regionattrib) {
+    printf("attr(%d)", elemattribute(t->tet, 0));
   }
   printf("\n");
 
