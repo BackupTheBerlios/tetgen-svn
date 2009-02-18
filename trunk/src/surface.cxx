@@ -290,6 +290,12 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
       // Do not split a segment.
       sspivot(*splitsh, checkseg);
       if (checkseg.sh != NULL) return loc; // return ONSUBSEG;
+      // Check if this edge is on the hull.
+      spivot(*splitsh, neighsh);
+      if (neighsh.sh == NULL) {
+        // A convex hull edge. The new point is on the hull.
+        loc = OUTSIDE;
+      }
     }
   }
 
@@ -717,7 +723,7 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
 {
   face flipshs[2], neighsh;
   face newseg, checkseg;
-  point startpt, pb, pc, pd;
+  point startpt, pa, pb, pc, pd;
   enum intersection dir;
   REAL ori_ab, ori_ca;
   REAL dist_b, dist_c;
@@ -852,6 +858,29 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
     assert(flipshs[1].sh != NULL); // SELF_CHECK
     if (sorg(flipshs[1]) != sdest(flipshs[0])) sesymself(flipshs[1]);
     flip22(flipshs, 1);
+    // The flip may create an invered triangle, check it.
+    pa = sapex(flipshs[1]);
+    pb = sapex(flipshs[0]);
+    pc = sorg(flipshs[0]);
+    pd = sdest(flipshs[0]);
+    // Check if pa and pb are on the different sides of [pc, pd]. 
+    // Re-use ori_ab, ori_ca for the tests.
+    ori_ab = orient3d(pc, pd, dummypoint, pb);
+    ori_ca = orient3d(pd, pc, dummypoint, pa);
+    assert(ori_ab * ori_ca != 0); // SELF_CHECK
+    if (ori_ab < 0) {
+      if (b->verbose > 1) {
+        printf("    Queue an inversed triangle (%d, %d, %d) %d\n",
+          pointmark(pc), pointmark(pd), pointmark(pb), pointmark(pa));
+      }
+      futureflip = flipshpush(futureflip, &flipshs[0]);
+    } else if (ori_ca < 0) {
+      if (b->verbose > 1) {
+        printf("    Queue an inversed triangle (%d, %d, %d) %d\n",
+          pointmark(pd), pointmark(pc), pointmark(pa), pointmark(pb));
+      }
+      futureflip = flipshpush(futureflip, &flipshs[1]);
+    }
     // Set 'searchsh' s.t. its origin is 'startpt'.
     *searchsh = flipshs[0];
     assert(sorg(*searchsh) == startpt);

@@ -429,6 +429,7 @@ void tetgenmesh::lawsonflip()
 
     // Get the adjacent face.
     spivot(flipfaces[0], flipfaces[1]);
+    if (flipfaces[1].sh == NULL) continue; // Skip a hull edge.
     pc = sapex(flipfaces[0]);
     pd = sapex(flipfaces[1]);
 
