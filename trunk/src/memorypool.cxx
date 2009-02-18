@@ -526,6 +526,8 @@ void tetgenmesh::initializepools()
   //   of bytes occupied by an element.
   if (b->varvolume) {
     elesize = (volumeboundindex + 1) * sizeof(REAL);
+  } else {
+    elesize = volumeboundindex * sizeof(REAL);
   }
   // The index within each element at which its marker is found, where the
   //   index is measured in ints.

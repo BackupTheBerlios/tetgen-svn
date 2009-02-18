@@ -2432,12 +2432,15 @@ void tetgenmesh::formskeleton()
 
 void tetgenmesh::carveholes()
 {
-  arraypool *exttets;
+  arraypool *tetarray;
   triface tetloop, neightet, hulltet, *parytet;
   triface openface, casface;
+  triface *regiontets;
   face checksh;
   point *ppt, pa, pb, pc;
   enum location loc;
+  REAL volume;
+  int attrnum, attr, maxattr;
   int i, j;
 
   tetrahedron ptr;
@@ -2448,7 +2451,7 @@ void tetgenmesh::carveholes()
   }
 
   // Initialize the pool of exterior tets.
-  exttets = new arraypool(sizeof(triface), 10);
+  tetarray = new arraypool(sizeof(triface), 10);
 
   // Mark as infected any unprotected hull tets.
   tetrahedronpool->traversalinit();
@@ -2460,14 +2463,14 @@ void tetgenmesh::carveholes()
       tspivot(tetloop, checksh);
       if (checksh.sh == NULL) {
         infect(tetloop);
-        exttets->newindex((void **) &parytet);
+        tetarray->newindex((void **) &parytet);
         *parytet = tetloop;
       }
     }
     tetloop.tet = alltetrahedrontraverse();
   }
 
-  hullsize -= exttets->objects;
+  hullsize -= tetarray->objects;
 
   if (in->numberofholes > 0) {
     // Mark as infected any tets inside volume holes.
@@ -2478,19 +2481,37 @@ void tetgenmesh::carveholes()
       loc = locate(&(in->holelist[i]), &neightet);
       if (loc != OUTSIDE) {
         infect(neightet);
-        exttets->newindex((void **) &parytet);
+        tetarray->newindex((void **) &parytet);
         *parytet = neightet;
       }
     }
   }
 
-  if (in->numberofregions > 0) {
+  if (b->regionattrib && (in->numberofregions > 0)) { // If has -A option.
+    // Record the tetrahedra that contains the region points for assigning
+    //   region attributes after the holes have been carved.
+    regiontets = new triface[in->numberofregions];
+    maxattr = 0; // Choose a small number here.
     // Mark as marktested any tetrahedra inside volume regions.
+    for (i = 0; i < 5 * in->numberofregions; i += 5) {
+      // Search a tet containing the i-th hole point.
+      neightet.tet = NULL;
+      randomsample(&(in->regionlist[i]), &neightet);
+      loc = locate(&(in->regionlist[i]), &neightet);
+      if (loc != OUTSIDE) {
+        regiontets[i/5] = neightet;
+        if ((int) in->regionlist[i + 3] > maxattr) {
+          maxattr = (int) in->regionlist[i + 3];
+        }
+      } else {
+        regiontets[i/5].tet = NULL;
+      }
+    }
   }
 
   // Find and infect all exterior tets.
-  for (i = 0; i < exttets->objects; i++) {
-    parytet = (triface *) fastlookup(exttets, i);
+  for (i = 0; i < tetarray->objects; i++) {
+    parytet = (triface *) fastlookup(tetarray, i);
     tetloop = *parytet;
     for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
       symedge(tetloop, neightet);
@@ -2501,7 +2522,7 @@ void tetgenmesh::carveholes()
         if ((point) neightet.tet[7] != dummypoint) {
           if (!infected(neightet)) {
             infect(neightet);
-            exttets->newindex((void **) &parytet);
+            tetarray->newindex((void **) &parytet);
             *parytet = neightet;
           }
         }
@@ -2511,7 +2532,7 @@ void tetgenmesh::carveholes()
           // A hull tet. It is dead.
           assert(!infected(neightet));
           infect(neightet);
-          exttets->newindex((void **) &parytet);
+          tetarray->newindex((void **) &parytet);
           *parytet = neightet;
           // Both sides of this subface are exterior.
           stdissolve(checksh);
@@ -2530,8 +2551,8 @@ void tetgenmesh::carveholes()
   }
 
   // Remove all exterior tetrahedra (including infected hull tets).
-  for (i = 0; i < exttets->objects; i++) {
-    parytet = (triface *) fastlookup(exttets, i);
+  for (i = 0; i < tetarray->objects; i++) {
+    parytet = (triface *) fastlookup(tetarray, i);
     tetloop = *parytet;
     for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
       symedge(tetloop, neightet);
@@ -2543,7 +2564,7 @@ void tetgenmesh::carveholes()
     tetrahedrondealloc(parytet->tet);
   }
 
-  exttets->restart(); // Re-use it for new hull tets.
+  tetarray->restart(); // Re-use it for new hull tets.
 
   // Create new hull faces and update the point-to-tet map.
   tetrahedronpool->traversalinit();
@@ -2563,7 +2584,7 @@ void tetgenmesh::carveholes()
         bond(tetloop, hulltet);
         tsbond(hulltet, checksh);
         // Save this hull tet in list.
-        exttets->newindex((void **) &parytet);
+        tetarray->newindex((void **) &parytet);
         *parytet = hulltet;
       }
     }
@@ -2577,11 +2598,11 @@ void tetgenmesh::carveholes()
   }
 
   // Update the hull size.
-  hullsize += exttets->objects;
+  hullsize += tetarray->objects;
 
   // Connect new hull tets.
-  for (i = 0; i < exttets->objects; i++) {
-    parytet = (triface *) fastlookup(exttets, i);
+  for (i = 0; i < tetarray->objects; i++) {
+    parytet = (triface *) fastlookup(tetarray, i);
     hulltet = *parytet;
     assert(oppo(hulltet) == dummypoint); // SELF_CHECK
     hulltet.ver = 0;
@@ -2600,7 +2621,119 @@ void tetgenmesh::carveholes()
     }
   }
 
-  delete exttets;
+  // Set region attributes (when has -A and -AA options).
+  if (b->regionattrib) {
+
+    if (!b->quiet) {
+      printf("Spreading region attributes.\n");
+    }
+
+    // If has user-defined region attributes.
+    if (in->numberofregions > 0) {
+      attrnum = in->numberoftetrahedronattributes;
+      // Spread region attributes.
+      for (i = 0; i < 5 * in->numberofregions; i += 5) {
+        if (regiontets[i].tet != NULL) {
+          attr = (int) in->regionlist[i + 3];
+          volume = in->regionlist[i + 4];
+          tetarray->restart(); // Re-use this array.
+          infect(regiontets[i/5]);
+          tetarray->newindex((void **) &parytet);
+          *parytet = regiontets[i/5];
+          // Collect and set attrs for all tets of this region.
+          for (j = 0; j < tetarray->objects; j++) {
+            parytet = (triface *) fastlookup(tetarray, j);
+            tetloop = *parytet;
+            setelemattribute(tetloop.tet, attrnum, attr);
+            if (b->varvolume) { // If has -a option.
+              setvolumebound(tetloop.tet, volume);
+            }
+            for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
+              symedge(tetloop, neightet);
+              // Is this side protected by a subface?
+              tspivot(tetloop, checksh);
+              if (checksh.sh == NULL) {
+                // Not protected. It must not be a hull tet.
+                assert((point) neightet.tet[7] != dummypoint);
+                if (!infected(neightet)) {
+                  infect(neightet);
+                  tetarray->newindex((void **) &parytet);
+                  *parytet = neightet;
+                }
+              } else {
+                // Protected. Set attribute for hull tet as well.
+                if ((point) neightet.tet[7] == dummypoint) {
+                  setelemattribute(neightet.tet, attrnum, attr);
+                  if (b->varvolume) { // If has -a option.
+                    setvolumebound(neightet.tet, volume);
+                  }
+                }
+              }
+            } // loc
+          } // j
+        }
+      } // i
+      delete [] regiontets;
+    }
+
+    if (b->regionattrib > 1) { // If has -AA option.
+      // Set attributes for all tetrahedra.
+      attr = maxattr + 1;
+      tetrahedronpool->traversalinit();
+      tetloop.tet = tetrahedrontraverse();
+      while (tetloop.tet != (tetrahedron *) NULL) {
+        if (!infected(tetloop)) {
+          // An unmarked region.
+          tetarray->restart(); // Re-use this array.
+          infect(tetloop);
+          tetarray->newindex((void **) &parytet);
+          *parytet = tetloop;
+          // Find and mark all tets.
+          for (j = 0; j < tetarray->objects; j++) {
+            parytet = (triface *) fastlookup(tetarray, j);
+            tetloop = *parytet;
+            setelemattribute(tetloop.tet, attrnum, attr);
+            for (tetloop.loc = 0; tetloop.loc < 4; tetloop.loc++) {
+              symedge(tetloop, neightet);
+              // Is this side protected by a subface?
+              tspivot(tetloop, checksh);
+              if (checksh.sh == NULL) {
+                // Not protected. It must not be a hull tet.
+                assert((point) neightet.tet[7] != dummypoint);
+                if (!infected(neightet)) {
+                  infect(neightet);
+                  tetarray->newindex((void **) &parytet);
+                  *parytet = neightet;
+                }
+              } else {
+                // Protected. Set attribute for hull tet as well.
+                if ((point) neightet.tet[7] == dummypoint) {
+                  setelemattribute(neightet.tet, attrnum, attr);
+                }
+              }
+            } // loc
+          }
+          attr++; // Increase the attribute.
+        }
+        tetloop.tet = tetrahedrontraverse();
+      }
+      // Until here, every tet has a region attribute.
+    }
+
+    // Uninfect processed tets.
+    tetrahedronpool->traversalinit();
+    tetloop.tet = tetrahedrontraverse();
+    while (tetloop.tet != (tetrahedron *) NULL) {
+      uninfect(tetloop);
+      tetloop.tet = tetrahedrontraverse();
+    }
+
+    // Mesh elements contain region attributes now.
+    in->numberoftetrahedronattributes++;
+
+  } // if (b->regionattrib)
+
+  delete tetarray;
 }
 
 #endif // #ifndef constrainCXX

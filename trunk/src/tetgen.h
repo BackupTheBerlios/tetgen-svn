@@ -1063,9 +1063,15 @@ void bond(triface& t1, triface& t2) {
 
 #define elemattribute(ptr, num) (((REAL *) (ptr))[elemattribindex + num])
 
+#define setelemattribute(ptr, num, value) \
+  ((REAL *) (ptr))[elemattribindex + num] = value
+
 // volumebound() -- to check or set element's maximum volume bound.
 
 #define volumebound(ptr) (((REAL *) (ptr))[volumeboundindex])
+
+#define setvolumebound(ptr, value) \
+  ((REAL *) (ptr))[volumeboundindex] = value
 
 // infect(), infected(), uninfect() -- primitives to flag or unflag a
 //   tetrahedron. The last bit of the element marker is flagged (1)

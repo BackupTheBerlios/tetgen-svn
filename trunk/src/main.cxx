@@ -158,24 +158,50 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     printf("  %g\n", (tv[2] - tv[1]) / (REAL) CLOCKS_PER_SEC);
   }
 
-  if (b->plc) {
+  if (b->plc) { // if has -p option
     m.meshsurface();
-    m.formskeleton();
-    if (b->convexity == 0) {
-      m.carveholes();
-    }
   }
 
   tv[3] = clock();
 
   if (!b->quiet) {
     if (b->plc) {
+      printf("Surface meshing seconds:  %g\n", 
+        (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+    }
+  }
+
+  if (b->plc) { // if has -p option
+    m.formskeleton();
+  }
+  
+  tv[4] = clock();
+
+  if (!b->quiet) {
+    if (b->plc) {
       if (b->diagnose != 1) {
-        printf("Segment and facet ");
+        printf("Boundary recovery ");
       } else {
         printf("Intersection "); 
       }
-      printf("seconds:  %g\n", (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+      printf("seconds:  %g\n", (tv[4] - tv[3]) / (REAL) CLOCKS_PER_SEC);
+    }
+  }
+
+  if (b->plc) { 
+    if (b->convexity == 0) { // if has no -c option.
+      m.carveholes();
+    }
+  }
+
+  tv[5] = clock();
+
+  if (!b->quiet) {
+    if (b->plc) {
+      if (b->convexity == 0) { // if has no -c option.
+        printf("Holes and region seconds:  %g\n", 
+          (tv[5] - tv[4]) / (REAL) CLOCKS_PER_SEC);
+      }
     }
   }
 
@@ -247,13 +273,13 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     // m.outvoronoi(out);
   }
 
-  tv[4] = clock();
+  tv[6] = clock();
 
   if (!b->quiet) {
     printf("\nOutput seconds:  %g\n",
-           (tv[4] - tv[3]) / (REAL) CLOCKS_PER_SEC);
+           (tv[6] - tv[5]) / (REAL) CLOCKS_PER_SEC);
     printf("Total running seconds:  %g\n\n",
-           (tv[4] - tv[0]) / (REAL) CLOCKS_PER_SEC);
+           (tv[6] - tv[0]) / (REAL) CLOCKS_PER_SEC);
   }
 
   if (b->docheck) {
