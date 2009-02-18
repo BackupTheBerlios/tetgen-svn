@@ -383,6 +383,8 @@ void tetgenmesh::flip22(face* flipfaces, int flipflag)
     }
   }
 
+  recentsh = flipfaces[0];
+
   if (flipflag) {
     // Put the boundary edges into flip stack.
     for (i = 0; i < 4; i++) {

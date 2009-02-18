@@ -35,11 +35,12 @@ bool tetgenmesh::calculateabovepoint(arraypool *facpoints, point *ppa,
     }
   }
   lab = sqrt(lab);
-  if (lab > 0) {
+  if (lab == 0) {
     if (!b->quiet) {
       printf("Warning:  All points of a facet are coincident with %d.\n",
         pointmark(pa));
     }
+    return false;
   }
 
   // Get a point c s.t. the area of [a, b, c] is maximal.
@@ -387,12 +388,12 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
       sbond1(*splitsh, newsh);
       // Connect the new subface to its right-adjacent subface.
       if (casin.sh != NULL) {
-        senext2(newsh, casout);
+        senext(newsh, casout);
         sbond1(casout, casin);
         sbond1(casin, casout);
       }
       // The left-adjacent subface has not been created yet.
-      senext(newsh, casin);
+      senext2(newsh, casin);
       // Add the new face into list.
       smarktest(newsh);
       caveshlist->newindex((void **) &parysh);
@@ -443,9 +444,16 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
             sign = -1; // Not a boundary edge.
           }
         } else {
-          assert(loc == OUTSIDE); // SELF_CHECK
-          // The new point is a convex hull face.
-          sign = -1; // Not a boundary edge.
+          if (loc == OUTSIDE) {
+            // It is a boundary edge if it does not contain insertp.
+            if ((sorg(*parysh)==insertpt) || (sdest(*parysh)==insertpt)) {
+              sign = -1; // Not a boundary edge.
+            } else {
+              sign = 1; // A boundary edge.
+            }
+          } else {
+            sign = 1; // A boundary edge.
+          }
         }
       } else {
         sign = 1; // A segment!
@@ -721,6 +729,11 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
   // The origin of 'searchsh' is fixed.
   startpt = sorg(*searchsh); // pa = startpt;
 
+  if (b->verbose > 1) {
+    printf("    Scout segment (%d, %d).\n", pointmark(startpt),
+      pointmark(endpt));
+  }
+
   // Search an edge in 'searchsh' on the path of this segment.
   while (1) {
 
@@ -797,9 +810,9 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
       senext(neighsh, *searchsh);      
     } else {
       senext2(*searchsh, neighsh);
-      spivot(*searchsh, neighsh);
+      spivotself(neighsh);
       if (sdest(neighsh) != pc) sesymself(neighsh);
-      senext2(neighsh, *searchsh);
+      *searchsh = neighsh;
     }
     assert(sorg(*searchsh) == startpt); // SELF_CHECK
 
@@ -825,7 +838,7 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
   if (dir == ACROSSEDGE) {
     // Edge [b, c] intersects with the segment.
     senext(*searchsh, flipshs[0]);
-    sspivot(neighsh, checkseg);
+    sspivot(flipshs[0], checkseg);
     if (checkseg.sh != NULL) {
       printf("Error:  Invalid PLC.\n");
       pb = sorg(flipshs[0]);
@@ -849,6 +862,100 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// scarveholes()    Remove triangles not in the facet.                       //
+//                                                                           //
+// This routine re-uses the two global arrays: caveshlist and caveshbdlist.  //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::scarveholes(int holes, REAL* holelist)
+{
+  face *parysh, searchsh, neighsh;
+  face checkseg;
+  enum location loc;
+  int i, j;
+
+  // Get all triangles. Infect unprotected convex hull triangles. 
+  smarktest(recentsh);
+  caveshlist->newindex((void **) &parysh);
+  *parysh = recentsh;
+  for (i = 0; i < caveshlist->objects; i++) {
+    parysh = (face *) fastlookup(caveshlist, i);
+    searchsh = *parysh;
+    searchsh.shver = 0;
+    for (j = 0; j < 3; j++) {
+      spivot(searchsh, neighsh);
+      // Is this side on the convex hull?
+      if (neighsh.sh != NULL) {
+        if (!smarktested(neighsh)) {
+          smarktest(neighsh);
+          caveshlist->newindex((void **) &parysh);
+          *parysh = neighsh;
+        }
+      } else {
+        // A hull side. Check if it is protected by a segment.
+        sspivot(searchsh, checkseg);
+        if (checkseg.sh == NULL) {
+          // Not protected. Save this face.
+          if (!sinfected(searchsh)) {
+            sinfect(searchsh);
+            caveshbdlist->newindex((void **) &parysh);
+            *parysh = searchsh;
+          }
+        }
+      }
+      senextself(searchsh);
+    }
+  }
+
+  // Infect the triangles in the holes.
+  for (i = 0; i < 3 * holes; i += 3) {
+    searchsh = recentsh;
+    loc = slocate(&(holelist[i]), &searchsh, true);
+    if (loc != OUTSIDE) {
+      sinfect(searchsh);
+      caveshbdlist->newindex((void **) &parysh);
+      *parysh = searchsh;
+    }
+  }
+
+  // Find and infect all exterior triangles.
+  for (i = 0; i < caveshbdlist->objects; i++) {
+    parysh = (face *) fastlookup(caveshbdlist, i);
+    searchsh = *parysh;
+    searchsh.shver = 0;
+    for (j = 0; j < 3; j++) {
+      spivot(searchsh, neighsh);
+      if (neighsh.sh != NULL) {
+        sspivot(searchsh, checkseg);
+        if (checkseg.sh == NULL) {
+          if (!sinfected(neighsh)) {
+            sinfect(neighsh);
+            caveshbdlist->newindex((void **) &parysh);
+            *parysh = neighsh;
+          }
+        }
+      }
+      senextself(searchsh);
+    }
+  }
+
+  // Delete exterior triangles, unmark interior triangles.
+  for (i = 0; i < caveshlist->objects; i++) {
+    parysh = (face *) fastlookup(caveshlist, i);
+    if (sinfected(*parysh)) {
+      shellfacedealloc(subfacepool, parysh->sh);
+    } else {
+      sunmarktest(*parysh);
+    }
+  }
+
+  caveshlist->restart();
+  caveshbdlist->restart();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // triangulate()    Create a CDT for the facet.                              //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -856,8 +963,10 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
 void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
   int holes, REAL* holelist)
 {
-  face newsh, newseg;
-  point *ppa, *ppb, *ppc;
+  face searchsh, newsh; 
+  face newseg;
+  point pa, pb, pc, *ppt, *cons;
+  enum location loc;
   int i;
 
   if (b->verbose > 1) {
@@ -868,13 +977,20 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
     printf(", shmark: %d.\n", shmark);
   }
 
-  if ((ptlist->objects == 3) && (conlist->objects == 3)) {
-    // This CDT contains only one triangle.
-    ppa = (point *) fastlookup(ptlist, 0);
-    ppb = (point *) fastlookup(ptlist, 1);
-    ppc = (point *) fastlookup(ptlist, 2);
+  if (ptlist->objects < 3l) {
+    return; // No enough points. Do nothing.
+  }
+  if (conlist->objects < 3l) {
+    return; // No enough segments. Do nothing.
+  }
+
+  if (ptlist->objects == 3l) {
+    // The facet has only one triangle.
+    pa = * (point *) fastlookup(ptlist, 0);
+    pb = * (point *) fastlookup(ptlist, 1);
+    pc = * (point *) fastlookup(ptlist, 2);
     makeshellface(subfacepool, &newsh);
-    setshvertices(newsh, *ppa, *ppb, *ppc);
+    setshvertices(newsh, pa, pb, pc);
     setshellmark(newsh, shmark);
     // Create three new segments.
     for (i = 0; i < 3; i++) {
@@ -883,10 +999,50 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
       ssbond(newsh, newseg);
       senextself(newsh);
     }
-  } else {
-    // printf("  This code does not do surface mesh yet.\n");
-    // terminatetetgen(1);
+    return;
   }
+
+  // Calulcate an above point of this facet.
+  if (!calculateabovepoint(ptlist, &pa, &pb, &pc)) {
+    return; // The point set is degenerate.
+  }
+
+  // Create an initial triangulation.
+  makeshellface(subfacepool, &newsh);
+  setshvertices(newsh, pa, pb, pc);
+  setshellmark(newsh, shmark);
+  recentsh = newsh;
+
+  // Incrementally build the triangulation.
+  pinfect(pa);
+  pinfect(pb);
+  pinfect(pc);
+  for (i = 0; i < ptlist->objects; i++) {
+    ppt = (point *) fastlookup(ptlist, i);
+    if (!pinfected(*ppt)) {
+      searchsh = recentsh;
+      loc = sinsertvertex(*ppt, &searchsh, NULL, true, true);      
+    } else {
+      puninfect(*ppt); // This point has inserted.
+    }
+  }
+
+  // Insert the segments.
+  for (i = 0; i < conlist->objects; i++) {
+    cons = (point *) fastlookup(conlist, i);
+    searchsh = recentsh;
+    loc = slocate(cons[0], &searchsh, true);
+    assert(loc == ONVERTEX); // SELF_CHECK
+    // Recover the segment. Some edges may be flipped.
+    sscoutsegment(&searchsh, cons[1]);
+    if (futureflip != NULL) {
+      // Recover locally Delaunay edges.
+      lawsonflip();
+    }
+  }
+
+  // Remove exterior and hole triangles.
+  scarveholes(holes, holelist);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1271,7 +1427,6 @@ void tetgenmesh::meshsurface()
   point tstart, tend, *pnewpt, *cons;
   tetgenio::facet *f;
   tetgenio::polygon *p;
-  int *worklist;
   int end1, end2;
   int shmark, i, j;
 
@@ -1279,14 +1434,12 @@ void tetgenmesh::meshsurface()
     printf("Creating surface mesh.\n");
   }
 
-  // Initialize dynamic arrays (length: 2^8 = 256).
+  // Create a map from indices to points.
+  makeindex2pointmap(idx2verlist);
+
+  // Initialize arrays (block size: 2^8 = 256).
   ptlist = new arraypool(sizeof(point *), 8);
   conlist = new arraypool(2 * sizeof(point *), 8);
-  worklist = new int[pointpool->items + 1];
-  for (i = 0; i < pointpool->items + 1; i++) worklist[i] = 0;
-
-  // Compute a mapping from indices to points.
-  makeindex2pointmap(idx2verlist);
 
   // Loop the facet list, triangulate each facet.
   for (shmark = 1; shmark <= in->numberoffacets; shmark++) {
@@ -1331,10 +1484,10 @@ void tetgenmesh::meshsurface()
       }
       tstart = idx2verlist[end1];
       // Add tstart to V if it haven't been added yet.
-      if (worklist[end1] == 0) {
+      if (!pinfected(tstart)) {
+        pinfect(tstart);
         ptlist->newindex((void **) &pnewpt);
         *pnewpt = tstart;
-        worklist[end1] = 1;
       }
       // Loop other vertices of this polygon.
       for (j = 1; j <= p->numberofvertices; j++) {
@@ -1355,10 +1508,10 @@ void tetgenmesh::meshsurface()
             // 'end1' and 'end2' form a segment.
             tend = idx2verlist[end2];
             // Add tstart to V if it haven't been added yet.
-            if (worklist[end2] == 0) {
+            if (!pinfected(tend)) {
+              pinfect(tend);
               ptlist->newindex((void **) &pnewpt);
               *pnewpt = tend;
-              worklist[end2] = 1;
             }
             // Save the segment in S (conlist).
             conlist->newindex((void **) &cons);
@@ -1387,8 +1540,7 @@ void tetgenmesh::meshsurface()
     // Unmark vertices.
     for (i = 0; i < ptlist->objects; i++) {
       pnewpt = (point *) fastlookup(ptlist, i);
-      end1 = pointmark(*pnewpt);
-      worklist[end1] = 0;
+      puninfect(*pnewpt);
     }
 
     // Triangulate F into a CDT.
@@ -1401,7 +1553,6 @@ void tetgenmesh::meshsurface()
 
   delete ptlist;
   delete conlist;
-  delete [] worklist;
   delete [] idx2verlist;
 
   // Remove redundant segments and build the face links.
