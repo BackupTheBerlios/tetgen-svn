@@ -882,6 +882,9 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
             enextself(neightet);
           }
         }
+      } else {
+        // This face is not on the cavity boundary anymore.
+        unmarktest(*cavetet);
       }
     }
     if (updatecount > 0) {
