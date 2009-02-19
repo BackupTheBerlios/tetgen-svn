@@ -1001,9 +1001,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutsubface(face* pssub,
 enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub, 
   triface* searchtet, arraypool* facpoints)
 {
-  triface spintet;
+  triface spintet, crossface;
   point pa, pb, pc, pd, pe;
-  REAL ori, r, len, n[3];
+  REAL ori, len, n[3];
+  REAL r, dr, drmin;
   bool cofacetflag;
   int i;
 
@@ -1023,6 +1024,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
   pb = sdest(*pssub);
   pc = sapex(*pssub);
 
+  // Search an apex lies below the subface. Note that such apex may not
+  //   exist which indicates there is a co-facet apex.
   cofacetflag = false;
   pd = apex(*searchtet);
   spintet = *searchtet;
@@ -1055,7 +1058,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
           break;  // stop at pd->pe.
         }
         if (ori == 0) {
-          cofacetflag = true; break; // Not found.
+          cofacetflag = true; break; // Found a co-facet point.
         }
       }    
       fnextself(spintet);
@@ -1064,7 +1067,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
   }
 
   if (cofacetflag) {
-    // Calculate a point above the faces.
+    // There are co-facet points. Calculate a point above the subface.
     facenormal(pa, pb, pc, n, 1);
     len = sqrt(DOT(n, n));
     n[0] /= len;
@@ -1078,9 +1081,10 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
     dummypoint[1] = pa[1] + len * n[1];
     dummypoint[2] = pa[2] + len * n[2];
     // Search a co-facet point d, s.t. (i) [a, b, d] intersects [a, b, c],
-    //   AND (ii) a, b, c, d are co-circular (approximately).
+    //   AND (ii) a, b, c, d has the closet circumradius of [a, b, c].
     // NOTE: (ii) is needed since there may be several points satisfy (i).
     circumsphere(pa, pb, pc, NULL, n, &r);
+    crossface.tet = NULL;
     pe = apex(*searchtet);
     spintet = *searchtet;
     while (1) {
@@ -1091,16 +1095,31 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
           if (ori > 0) {
             // [a, b, d] intersects with [a, b, c].
             len = DIST(n, pd);
-            if ((fabs(len - r) / r) < 1e-6) {
-              break; // d is (approx.) co-circular with a, b, c.
+            dr = fabs(len - r);
+            if (crossface.tet == NULL) {
+              // This is the first cross face.
+              crossface = spintet;
+              drmin = dr;
+            } else {
+              if (dr < drmin) {
+                crossface = spintet;
+                drmin = dr;
+              }
             }
+            // if ((fabs(len - r) / r) < 1e-6) {
+            //   break; // d is (approx.) co-circular with a, b, c.
+            // }
           }
         }
       }
       fnextself(spintet); // Go to the next face.
-      assert(apex(spintet) != pe); // SELF_CHECK
+      // assert(apex(spintet) != pe); // SELF_CHECK
+      if (apex(spintet) == pe) {
+        break;
+      }
     }
-    *searchtet = spintet;
+    assert(crossface.tet != NULL);
+    *searchtet = crossface;
     dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
 

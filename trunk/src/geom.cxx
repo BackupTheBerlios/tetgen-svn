@@ -4049,6 +4049,10 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+/*  This version (which uses insphere test) is not good. It may give 
+  undesired result when four points are nearly coplanar.
+  An example is in fig/dump-incircle3d-case1.*/
+
 REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
 {
   REAL area2[2], n1[3], n2[3], pe[3];
@@ -4059,7 +4063,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
   area2[0] = DOT(n1, n1);
   facenormal(pb, pa, pd, n2, 1);
   area2[1] = DOT(n2, n2);
-  L = sqrt(DIST(pa, pb));
+  L = DIST(pa, pb);
 
   if (area2[0] > area2[1]) {
     // Choose [a, b, c] as the base triangle.
