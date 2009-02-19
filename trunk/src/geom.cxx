@@ -4049,7 +4049,7 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-/*  This version (which uses insphere test) is not good. It may give 
+/*  This version (which uses insphere test) is not save. It may give 
   undesired result when four points are nearly coplanar.
   An example is in fig/dump-incircle3d-case1.*/
 
@@ -4071,6 +4071,9 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
     n1[0] /= len;
     n1[1] /= len;
     n1[2] /= len;
+    L += DIST(pb, pc);
+    L += DIST(pc, pa);
+    L /= 3.0;
     pe[0] = pa[0] + L * n1[0];
     pe[1] = pa[1] + L * n1[1];
     pe[2] = pa[2] + L * n1[2];
@@ -4081,6 +4084,9 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
     n2[0] /= len;
     n2[1] /= len;
     n2[2] /= len;
+    L += DIST(pa, pd);
+    L += DIST(pd, pb);
+    L /= 3.0;
     pe[0] = pa[0] + L * n2[0];
     pe[1] = pa[1] + L * n2[1];
     pe[2] = pa[2] + L * n2[2];
@@ -4089,6 +4095,34 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
 
   return sign;
 }
+
+/* This code has problem with file2.poly
+REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
+{
+  REAL area2[2], n1[3], n2[3], c[3];
+  REAL sign, r, d;
+
+  // Calculate the areas of the two triangles [a, b, c] and [b, a, d].
+  facenormal(pa, pb, pc, n1, 1);
+  area2[0] = DOT(n1, n1);
+  facenormal(pb, pa, pd, n2, 1);
+  area2[1] = DOT(n2, n2);
+
+  if (area2[0] > area2[1]) {
+    // Choose [a, b, c] as the base triangle.
+    assert(area2[0] > 0); // SELF_CHECK
+    circumsphere(pa, pb, pc, NULL, c, &r);
+    d = DIST(c, pd);
+  } else {
+    // Choose [b, a, d] as the base triangle.
+    assert(area2[1] > 0); // SELF_CHECK
+    circumsphere(pb, pa, pd, NULL, c, &r);
+    d = DIST(c, pc);
+  }
+  sign = d - r;
+
+  return sign;
+}*/
 
 /*
 REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
