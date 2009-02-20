@@ -485,6 +485,7 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
 {
   triface fliptets[3], castets[3];
   triface newface, casface;
+  face checksh, checkseg;
   point pa, pb, pc, pd;
   int i;
 
@@ -511,6 +512,21 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
   for(i = 0; i < 3; i++) {
     fnext(*splittet, castets[i]);
     enextself(*splittet);
+  }
+
+  if (checksubsegs) {
+    // Dealloc the space to subsegments.
+    if (splittet->tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) splittet->tet[8]);
+    }
+    splittet->tet[8] = NULL;
+  }
+  if (checksubfaces) {
+    // Dealloc the space to subfaces.
+    if (splittet->tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) splittet->tet[9]);
+    }
+    splittet->tet[9] = NULL;
   }
 
   // Update the number of hull tets.
@@ -545,6 +561,49 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
     enextfnext(fliptets[i], newface);
     enext2fnext(fliptets[(i + 1) % 3], casface);
     bond(newface, casface);
+  }
+
+  if (checksubsegs) {
+    // Bond segments to new tets. Each new tet has three edges to be
+    //   checked, e.g., abpd has [a,b], [b,d], and [d,a]. The base tet 
+    //   abcd has three edges [a,b], [b,c] and [c,a], total 12 edges.
+    for (i = 0; i < 3; i++) {
+      enext0fnext(fliptets[i], newface); // [a,b], [b,c], [c,a].
+      tsspivot(castets[i], checkseg); 
+      if (checkseg.sh != NULL) {
+        tssbond1(*splittet, checkseg);
+        tssbond1(newface, checkseg);
+      }
+      enextself(newface); // [b,d], [c,d], [a,d]
+      enext(castets[i], casface);
+      tsspivot(casface, checkseg); 
+      if (checkseg.sh != NULL) {
+        tssbond1(newface, checkseg);
+      }
+      enextself(newface); // [d,a], [d,b], [d,c]
+      enext2(castets[i], casface);
+      tsspivot(casface, checkseg);
+      if (checkseg.sh != NULL) {
+        tssbond1(newface, checkseg);
+      }
+      enextself(*splittet);
+    }
+  }
+
+  if (checksubfaces) {
+    // Bond subfaces to new tets.
+    sym(*splittet, casface);
+    tspivot(casface, checksh);
+    if (checksh.sh != NULL) {
+      tsbond(*splittet, checksh);
+    }
+    for (i = 0; i < 3; i++) {
+      enext0fnext(fliptets[i], newface);
+      tspivot(castets[i], checksh);
+      if (checksh.sh != NULL) {
+        tsbond(newface, checksh);
+      }
+    }
   }
 
   // Update the point-to-tet map.
@@ -583,8 +642,9 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 {
   triface fliptets[4], castets[4];
   triface symface, newface, casface;
+  face checksh, checkseg;
   point pa, pb, pc, pd, pe;
-  int i;
+  int i, j;
 
   int *iptr;
 
@@ -618,6 +678,29 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
 
   for (i = 0; i < 4; i++) {
     fnext(fliptets[i], castets[i]);
+  }
+
+  if (checksubsegs) {
+    // Dealloc the space to subsegments.
+    if (splitface->tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) splitface->tet[8]);
+    }
+    splitface->tet[8] = NULL;
+    if (symface.tet[8] != NULL) {
+      tet2segpool->dealloc((shellface *) symface.tet[8]);
+    }
+    symface.tet[8] = NULL;
+  }
+  if (checksubfaces) {
+    // Dealloc the space to subfaces.
+    if (splitface->tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) splitface->tet[9]);
+    }
+    splitface->tet[9] = NULL;
+    if (symface.tet[9] != NULL) {
+      tet2subpool->dealloc((shellface *) symface.tet[9]);
+    }
+    symface.tet[9] = NULL;
   }
 
   // Update the number of hull tets.
@@ -671,6 +754,75 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
   enextfnext(symface, casface);
   bond(newface, casface);
 
+  if (checksubsegs) {
+    // Bond segments. For each tet there are three edges to be checked,
+    //   total there are 18 edges.
+    for (i = 0; i < 3; i++) {
+      if (i < 2) {
+        enext0fnext(fliptets[i], newface);
+        casface = castets[i];
+      } else {
+        enext0fnext(*splitface, newface);
+        symedge(newface, casface);
+      }
+      for (j = 0; j < 3; j++) {
+        tsspivot(casface, checkseg);
+        if (checkseg.sh != NULL) {
+          tssbond1(newface, checkseg);
+        }
+        enextself(casface);
+        enextself(newface);
+      }
+    }
+    for (i = 0; i < 3; i++) {
+      if (i < 2) {
+        enext0fnext(fliptets[i + 2], newface);
+        casface = castets[i + 2];
+      } else {
+        enext0fnext(symface, newface);
+        symedge(newface, casface);
+      }
+      for (j = 0; j < 3; j++) {
+        tsspivot(casface, checkseg);
+        if (checkseg.sh != NULL) {
+          tssbond1(newface, checkseg);
+        }
+        enextself(casface);
+        enextself(newface);
+      }
+    }
+  }
+
+  if (checksubfaces) {
+    // Bond subfaces. There are total 6 faces to be checked.
+    for (i = 0; i < 3; i++) {
+      if (i < 2) {
+        enext0fnext(fliptets[i], newface);
+        casface = castets[i];
+      } else {
+        enext0fnext(*splitface, newface);
+        symedge(newface, casface);
+      }
+      tspivot(casface, checksh);
+      if (checksh.sh != NULL) {
+        tsbond(newface, checksh);
+      }
+    }
+    for (i = 0; i < 3; i++) {
+      if (i < 2) {
+        enext0fnext(fliptets[i + 2], newface);
+        casface = castets[i + 2];
+      } else {
+        enext0fnext(symface, newface);
+        symedge(newface, casface);
+      }
+      tspivot(casface, checksh);
+      if (checksh.sh != NULL) {
+        tsbond(newface, checksh);
+      }
+    }
+  }
+
   // Update point-to-tet map.
   point2tet(newpt) = encode(*splitface);
   // The values in pa and pb are not changed.
@@ -713,9 +865,10 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 {
   triface *fliptets, *bfliptets, *castets;
   triface newface, casface;
+  face checksh, checkseg;
   point pa, pb, *pt;
   int dummyflag; // 0 or 1.
-  int n, i;
+  int n, i, j;
 
   int *iptr;
 
@@ -761,8 +914,25 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
 
   // Get the outer boundary faces.
   for (i = 0; i < n; i++) {
-    enext(fliptets[i], casface);  // at edge p[i]a.
+    enext(fliptets[i], casface);  // at edge bp[i].
     fnext(casface, castets[i]);
+  }
+
+  if (checksubsegs) {
+    for (i = 0; i < n; i++) {
+      if (fliptets[i].tet[8] != NULL) {
+        tet2segpool->dealloc((shellface *) fliptets[i].tet[8]);
+      }
+      fliptets[i].tet[8] = NULL;
+    }
+  }
+  if (checksubfaces) {
+    for (i = 0; i < n; i++) {
+      if (fliptets[i].tet[9] != NULL) {
+        tet2segpool->dealloc((shellface *) fliptets[i].tet[9]);
+      }
+      fliptets[i].tet[9] = NULL;
+    }
   }
 
   // Update the number of hull tets.
@@ -812,6 +982,54 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
     enextfnext(fliptets[i], newface);
     enext2fnext(bfliptets[i], casface);
     bond(newface, casface);
+  }
+
+  if (checksubsegs) {
+    // Bond segments. There are total n x 3 edges.
+    for (i = 0; i < n; i++) {  // Top edges.
+      enext2fnext(fliptets[i], newface);
+      symedge(newface, casface);
+      for(j = 0; j < 3; j++) {
+        tsspivot(casface, checkseg);
+        if (checkseg.sh != NULL) {
+          tssbond1(newface, checkseg);
+        }
+        enextself(casface);
+        enextself(newface);
+      }
+    }
+    for (i = 0; i < n; i++) {  // Bottom edges.
+      enextfnext(bfliptets[i], newface);
+      casface = castets[i];
+      for(j = 0; j < 3; j++) {
+        tsspivot(casface, checkseg);
+        if (checkseg.sh != NULL) {
+          tssbond1(newface, checkseg);
+        }
+        enextself(casface);
+        enextself(newface);
+      }
+    }
+  }
+
+  if (checksubfaces) {
+    // Bond subfaces.
+    for (i = 0; i < n; i++) {  // Top faces.
+      enext2fnext(fliptets[i], newface);
+      symedge(newface, casface);
+      tspivot(casface, checksh);
+      if (checksh.sh != NULL) {
+        tsbond(newface, checksh);
+      }
+    }
+    for (i = 0; i < n; i++) {  // Bottom faces.
+      enextfnext(bfliptets[i], newface);
+      casface = castets[i];
+      tspivot(casface, checksh);
+      if (checksh.sh != NULL) {
+        tsbond(newface, checksh);
+      }
+    }
   }
 
   // Update the point-to-tet map.
