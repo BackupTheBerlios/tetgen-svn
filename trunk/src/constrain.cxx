@@ -2241,9 +2241,13 @@ void tetgenmesh::constrainedfacets()
             spivot(ssub, neighsh);
             assert(neighsh.sh != NULL); // SELF_CHECK
             if (!smarktested(neighsh)) {
-              smarktest(neighsh);
-              facfaces->newindex((void **) &pssub);
-              *pssub = neighsh;
+              // It may be already recovered.
+              stpivot(neighsh, neightet);
+              if (neightet.tet == NULL) {
+                smarktest(neighsh);
+                facfaces->newindex((void **) &pssub);
+                *pssub = neighsh;
+              }
             }
           }
           pt = sorg(ssub);
