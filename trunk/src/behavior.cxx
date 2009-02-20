@@ -29,7 +29,7 @@ tetgenbehavior::tetgenbehavior()
   fixedvolume = 0;
   maxvolume = -1.0;
   regionattrib = 0;
-  bowyerwatson = 0;
+  bowyerwatson = 1;
   convexity = 0;
   insertaddpoints = 0;
   diagnose = 0;
@@ -294,7 +294,7 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
       } else if (argv[i][j] == 'A') {
         regionattrib++;
       } else if (argv[i][j] == 'b') {
-        bowyerwatson++;
+        bowyerwatson = 0;
       } else if (argv[i][j] == 'c') {
         convexity++;
       } else if (argv[i][j] == 'i') {

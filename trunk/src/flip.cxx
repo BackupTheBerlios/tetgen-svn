@@ -1248,7 +1248,7 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
     bond(newface, botcastets[i]);
   }
 
-  // Bond 9 subsegments if there are.
+  // Bond 15 subsegments if there are.
   if (checksubsegs) {
     // The middle three: ab, bc, ca.
     for (i = 0; i < 3; i++) {

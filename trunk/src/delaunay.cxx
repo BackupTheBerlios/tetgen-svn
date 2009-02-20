@@ -978,8 +978,8 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         tsbond(newtet, checksh); // Also disconnect the old bond.
       }
     }
-    if (visflag) {
-      // Save this new tet checking for flip.
+    if (updatecount > 0l) {
+      // Save this face for locally Delaunay test.
       cavetetlist->newindex((void **) &parytet);
       *parytet = newtet;
     }
@@ -1125,7 +1125,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     flippool->restart();
   }
 
-  if (bwflag && visflag) {
+  if (bwflag && (updatecount > 0l)) {
     // Some new faces may be locally non-Delaunay. Check and fix them.
     for (i = 0; i < cavetetlist->objects; i++) {
       // Get a new face (whose opposite is p).

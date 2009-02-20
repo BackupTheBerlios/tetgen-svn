@@ -673,6 +673,7 @@ enum tetgenmesh::location tetgenmesh::sinsertvertex(point insertpt,
         parysh = (face *) fastlookup(subsegstack, s);
         *parysh = aseg;
       }
+      assert(!sinfected(bseg)); // SELF_CHECK
       s = randomnation(subsegstack->objects + 1);
       subsegstack->newindex((void **) &parysh);
       *parysh = * (face *) fastlookup(subsegstack, s);

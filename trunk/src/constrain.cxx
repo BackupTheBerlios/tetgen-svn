@@ -777,12 +777,11 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
 void tetgenmesh::delaunizesegments()
 {
   triface searchtet;
-  face *psseg, sseg, nsseg, splitshs[2];
+  face splitsh;
+  face *psseg, sseg;
   point refpt, newpt;
   enum intersection dir;
-  int s;
-
-  shellface sptr;
+  bool visflag;
 
   if (b->verbose) {
     printf("  Delaunizing segments.\n");
@@ -804,51 +803,24 @@ void tetgenmesh::delaunizesegments()
 
     if (dir != SHAREVERT) {
       // The segment is missing, split it.
-      spivot(sseg, splitshs[0]);
+      spivot(sseg, splitsh);
       if (dir != ACROSSVERT) {
         // Create the new point.
         makepoint(&newpt);
         getsegmentsplitpoint(&sseg, refpt, newpt);
         setpointtype(newpt, STEINERVERTEX);
         // Split the segment by newpt.
-        if (b->bowyerwatson == 0) {
-          flipn2nf(newpt, splitshs, 1);
-          sspivot(splitshs[0], sseg);
-          sspivot(splitshs[1], nsseg);
-          lawsonflip();
-        } else {
-          sinsertvertex(newpt, &(splitshs[0]), &sseg, true, false);
-        }
+        sinsertvertex(newpt, &splitsh, &sseg, true, false);
         // Insert newpt into the DT. If 'checksubfaces == 1' the current
         //   mesh is constrained Delaunay (but may not Delaunay).
-        insertvertex(newpt, &searchtet, true, checksubfaces == 1, false);
+        visflag = (checksubfaces == 1);
+        insertvertex(newpt, &searchtet, true, visflag, false);
       } else {
         if (getpointtype(refpt) != ACUTEVERTEX) {
           setpointtype(refpt, RIDGEVERTEX);
         }
         // Split the segment by refpt.
-        if (b->bowyerwatson == 0) {
-          flipn2nf(refpt, splitshs, 1);
-          sspivot(splitshs[0], sseg);
-          sspivot(splitshs[1], nsseg);
-          lawsonflip();
-        } else {
-          sinsertvertex(refpt, &(splitshs[0]), &sseg, true, false);
-        }
-      }
-      if (b->bowyerwatson == 0) {
-        s = randomnation(subsegstack->objects + 1);
-        subsegstack->newindex((void **) &psseg);
-        *psseg = * (face *) fastlookup(subsegstack, s);
-        sinfect(sseg); 
-        psseg = (face *) fastlookup(subsegstack, s);
-        *psseg = sseg;
-        s = randomnation(subsegstack->objects + 1);
-        subsegstack->newindex((void **) &psseg);
-        *psseg = * (face *) fastlookup(subsegstack, s);
-        sinfect(nsseg);
-        psseg = (face *) fastlookup(subsegstack, s);
-        *psseg = nsseg;
+        sinsertvertex(refpt, &splitsh, &sseg, true, false);
       }
     }
   }
@@ -2340,11 +2312,8 @@ void tetgenmesh::constrainedfacets()
         // Found a non-Delaunay edge, split it (or a segment close to it).
         splitsubedge(&ssub, facfaces, facpoints);
         if (subsegstack->objects > 0l) {
-          // Recover queued segments (always use Boyer-Watson algorithm).
-          s = b->bowyerwatson;
-          b->bowyerwatson = 1;
+          // Recover queued segments.
           delaunizesegments();
-          b->bowyerwatson = s;
         }
         facfaces->restart();
       }
