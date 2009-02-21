@@ -1480,6 +1480,9 @@ unsigned long randomseed, samples;
 triface recenttet;
 face recentsh;
 
+// Two handles used in facet recovery (formcavity and fillcavity).
+triface firsttopface, firstbotface;
+
 // The size of bounding boxes.
 REAL xmax, xmin, ymax, ymin, zmax, zmin;
 

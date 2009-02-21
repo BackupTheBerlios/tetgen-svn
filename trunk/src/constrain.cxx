@@ -1416,10 +1416,35 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
   }
   crossedges->restart();
 
-  // Collect the top and bottom faces and the middle vertices. 
-  //   Remember that each cross tet was saved in the standard form: deab,
-  //   where de is a corrsing edge, orient3d(d,e,a,b) < 0, in particular,
-  //   topfaces[0] is abe, and botfaces[0] is bad.
+  // Find a pair of cavity boundary faces from the top and bottom sides of
+  //   the facet each, and they share the same edge. Save them in the
+  //   global variables: firsttopface, firstbotface. They will be used in
+  //   fillcavity() for gluing top and bottom new tets.
+  for (i = 0; i < crosstets->objects; i++) {
+    crosstet = * (triface *) fastlookup(crosstets, i);
+    enextfnext(crosstet, spintet);
+    enextself(spintet);
+    symedge(spintet, neightet);
+    if (!infected(neightet)) {
+      // A top face.
+      firsttopface = neightet;
+    } else {
+      continue; // Go to the next cross tet.
+    }
+    enext2fnext(crosstet, spintet);
+    enext2self(spintet);
+    symedge(spintet, neightet);
+    if (!infected(neightet)) {
+      // A bottom face.
+      firstbotface = neightet;
+    } else {
+      continue;
+    }
+    break;
+  }
+  assert(i < crosstets->objects); // SELF_CHECK
+  
+  // Collect the top and bottom faces and the middle vertices.
   // NOTE 1: Hull tets may be collected. Process them as normal one.
   // NOTE 2: Some previously recovered subfaces may be completely
   //   contained in a cavity (see fig/dump-cavity-case6.lua). In such case,
@@ -1745,7 +1770,8 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
   mflag = true;  // Initialize it.
 
   // The first pair of top and bottom tets share the same edge [a, b].
-  toptet = * (triface *) fastlookup(topfaces, 0);
+  // toptet = * (triface *) fastlookup(topfaces, 0);
+  toptet = firsttopface;
   symedgeself(toptet);
   // Search a subface from the top mesh.
   while (1) {
@@ -1755,7 +1781,8 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     symedgeself(toptet); // Go to the same face in the adjacent tet.
   }
   // Search the subface [a,b,c] in the bottom mesh.
-  bottet = * (triface *) fastlookup(botfaces, 0);
+  // bottet = * (triface *) fastlookup(botfaces, 0);
+  bottet = firstbotface;
   symedgeself(bottet);
   while (1) {
     enext0fnextself(bottet); // The next face in the same tet.
