@@ -852,7 +852,7 @@ enum tetgenmesh::intersection tetgenmesh::sscoutsegment(face *searchsh,
       pc = sdest(flipshs[0]);
       printf("  Two segments (%d, %d) and (%d, %d) intersect.\n",
         pointmark(startpt), pointmark(endpt), pointmark(pb), pointmark(pc));
-      terminatetetgen(1);
+      terminatetetgen(2);
     }
     // Flip edge [b, c], queue unflipped edges (for Delaunay checks).
     spivot(flipshs[0], flipshs[1]);
@@ -1168,7 +1168,7 @@ void tetgenmesh::unifysegments()
                 // apex(f) is above f2, continue.
               } else { // ori3 == 0; 
                 // f is coplanar and codirection with f2. 
-                assert(0);
+                terminatetetgen(2); // assert(0);
               }
             } else if (ori2 < 0) {
               // apex(f) is above f1 below f2, inset it (see Fig. 2).
@@ -1181,7 +1181,7 @@ void tetgenmesh::unifysegments()
                 break; 
               } else {
                 // f is coplanar and codirection with f1.
-                assert(0);
+                terminatetetgen(2); // assert(0);
               }
             }
           } else if (ori1 < 0) {
@@ -1198,13 +1198,14 @@ void tetgenmesh::unifysegments()
                 // apex(f) is above f2, continue.
               } else { // ori3 == 0;
                 // f is coplanar and codirection with f2.
-                assert(0);
+                terminatetetgen(2); // assert(0);
               }
             } else { // ori2 == 0;
               // f is coplanar and with f1 (see Fig. 7).
               ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
               if (ori3 > 0) {
-                assert(0);  // f is also codirection with f1.
+                // f is also codirection with f1.
+                terminatetetgen(2); // assert(0); 
               } else {
                 // f is above f2, continue.
               }
@@ -1219,7 +1220,8 @@ void tetgenmesh::unifysegments()
               break;
             } else { // ori2 == 0.
               // apex(f) is coplanar with f1 (see Fig. 8).
-              assert(0);  // Two more cases need to work out here.
+              // Two more cases need to work out here.
+              terminatetetgen(2); // assert(0);  
             }
           }
           // Go to the next item;
@@ -1240,7 +1242,8 @@ void tetgenmesh::unifysegments()
           facenormal(torg, tdest, sapex(sface), n2, 1);
           if (DOT(n1, n2) > 0) {
             // The two faces are codirectional as well.
-            assert(0);
+            printf("Error:  Invalid PLC.\n"); // assert(0);
+            terminatetetgen(2);
           }
         }
         // Add this face into link.
