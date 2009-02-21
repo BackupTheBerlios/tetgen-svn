@@ -816,11 +816,15 @@ void tetgenmesh::delaunizesegments()
         visflag = (checksubfaces == 1);
         insertvertex(newpt, &searchtet, true, visflag, false);
       } else {
-        if (getpointtype(refpt) != ACUTEVERTEX) {
+        /*if (getpointtype(refpt) != ACUTEVERTEX) {
           setpointtype(refpt, RIDGEVERTEX);
         }
         // Split the segment by refpt.
-        sinsertvertex(refpt, &splitsh, &sseg, true, false);
+        sinsertvertex(refpt, &splitsh, &sseg, true, false);*/
+        printf("Error: Invalid PLC.\n");
+        printf("  Point %d is on segment (%d, %d).\n", pointmark(refpt),
+          pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+        terminatetetgen(1);
       }
     }
   }
