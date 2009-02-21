@@ -964,6 +964,8 @@ void tetgenmesh::scarveholes(int holes, REAL* holelist)
             caveshbdlist->newindex((void **) &parysh);
             *parysh = neighsh;
           }
+        } else {
+          sdissolve(neighsh); // Disconnect a protected face.
         }
       }
       senextself(searchsh);
@@ -1029,6 +1031,15 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
       ssbond(newsh, newseg);
       senextself(newsh);
     }
+    if (getpointtype(pa) == VOLVERTEX) {
+      setpointtype(pa, FACETVERTEX);
+    }
+    if (getpointtype(pb) == VOLVERTEX) {
+      setpointtype(pb, FACETVERTEX);
+    }
+    if (getpointtype(pc) == VOLVERTEX) {
+      setpointtype(pc, FACETVERTEX);
+    }
     return;
   }
 
@@ -1043,6 +1054,16 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
   setshellmark(newsh, shmark);
   recentsh = newsh;
 
+  if (getpointtype(pa) == VOLVERTEX) {
+    setpointtype(pa, FACETVERTEX);
+  }
+  if (getpointtype(pb) == VOLVERTEX) {
+    setpointtype(pb, FACETVERTEX);
+  }
+  if (getpointtype(pc) == VOLVERTEX) {
+    setpointtype(pc, FACETVERTEX);
+  }
+
   // Incrementally build the triangulation.
   pinfect(pa);
   pinfect(pb);
@@ -1051,7 +1072,10 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
     ppt = (point *) fastlookup(ptlist, i);
     if (!pinfected(*ppt)) {
       searchsh = recentsh;
-      loc = sinsertvertex(*ppt, &searchsh, NULL, true, true);      
+      loc = sinsertvertex(*ppt, &searchsh, NULL, true, true);
+      if (getpointtype(*ppt) == VOLVERTEX) {
+        setpointtype(*ppt, FACETVERTEX);
+      }
     } else {
       puninfect(*ppt); // This point has inserted.
     }
