@@ -979,7 +979,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
 {
   triface spintet, crossface;
   point pa, pb, pc, pd, pe;
-  REAL ori, len, n[3];
+  REAL ori, ori1, len, n[3];
   REAL r, dr, drmin;
   bool cofacetflag;
   int i;
@@ -1040,6 +1040,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
       fnextself(spintet);
     }
     *searchtet = spintet;
+    // Now if "cofacetflag != true", searchtet contains a cross tet (abde), 
+    //   where d and e lie below and above abc, respectively, and 
+    //   orient3d(a, b, d, e) < 0.
   }
 
   if (cofacetflag) {
@@ -1066,25 +1069,32 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
     while (1) {
       pd = apex(spintet);
       if (pd != dummypoint) {
-        if (pinfected(pd)) {
-          ori = orient3d(pa, pb, dummypoint, pd);
-          if (ori > 0) {
+        ori = orient3d(pa, pb, pc, pd);
+        if ((ori == 0) || pinfected(pd)) {
+          ori1 = orient3d(pa, pb, dummypoint, pd);
+          if (ori1 > 0) {
             // [a, b, d] intersects with [a, b, c].
-            len = DIST(n, pd);
-            dr = fabs(len - r);
-            if (crossface.tet == NULL) {
-              // This is the first cross face.
-              crossface = spintet;
-              drmin = dr;
-            } else {
-              if (dr < drmin) {
+            if (pinfected(pd)) {
+              len = DIST(n, pd);
+              dr = fabs(len - r);
+              if (crossface.tet == NULL) {
+                // This is the first cross face.
                 crossface = spintet;
                 drmin = dr;
+              } else {
+                if (dr < drmin) {
+                  crossface = spintet;
+                  drmin = dr;
+                }
               }
+            } else {
+              assert(ori == 0); // SELF_CHECK
+              // Found a coplanar but not co-facet point (pd).
+              printf("Error:  Invalid PLC.\n");
+              printf("  Point %d lies on facet (%d, %d, %d, ...).\n",
+                pointmark(pd), pointmark(pa), pointmark(pb), pointmark(pc));
+              terminatetetgen(1);
             }
-            // if ((fabs(len - r) / r) < 1e-6) {
-            //   break; // d is (approx.) co-circular with a, b, c.
-            // }
           }
         }
       }
@@ -1094,14 +1104,16 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
         break;
       }
     }
-    assert(crossface.tet != NULL);
+    if(crossface.tet == NULL) {
+      assert(crossface.tet != NULL); // Not handled yet.
+    }
     *searchtet = crossface;
     dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
 
   if (cofacetflag) {
     if (b->verbose > 1) {
-      printf("    Found a coplanar face (%d, %d, %d) op (%d).\n", 
+      printf("    Found a co-facet face (%d, %d, %d) op (%d).\n", 
         pointmark(pa), pointmark(pb), pointmark(apex(*searchtet)), 
         pointmark(oppo(*searchtet)));
     }
