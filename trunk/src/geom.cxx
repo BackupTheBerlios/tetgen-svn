@@ -4119,7 +4119,11 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
     circumsphere(pb, pa, pd, NULL, c, &r);
     d = DIST(c, pc);
   }
+
   sign = d - r;
+  if (fabs(sign) / r < b->epsilon) {
+    sign = 0;
+  }
 
   return sign;
 }

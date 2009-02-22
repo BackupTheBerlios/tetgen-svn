@@ -473,12 +473,12 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   if (dir == ACROSSEDGE) {
     tsspivot(*searchtet, checkseg);
     if (checkseg.sh != NULL) {
-      printf("  Invalid PLC!  Two segments intersect each other.\n");
+      printf("Error:  Invalid PLC. Two segments intersect.\n");
       startpt = farsorg(*sseg);
       endpt = farsdest(*sseg);
       pa = farsorg(checkseg);
       pb = farsdest(checkseg);
-      printf("    1st: (%d, %d), 2nd: (%d, %d).\n", pointmark(startpt), 
+      printf("  1st: (%d, %d), 2nd: (%d, %d).\n", pointmark(startpt), 
         pointmark(endpt), pointmark(pa), pointmark(pb));
       terminatetetgen(1);
     }
@@ -588,7 +588,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       // Check whether two segments are intersecting.
       tsspivot(*searchtet, checkseg);
       if (checkseg.sh != NULL) {
-        printf("  Invalid PLC!  Two segments intersect each other.\n");
+        printf("Error:  Invalid PLC! Two segments intersect.\n");
         startpt = farsorg(*sseg);
         endpt = farsdest(*sseg);
         pa = farsorg(checkseg);
@@ -821,8 +821,8 @@ void tetgenmesh::delaunizesegments()
         }
         // Split the segment by refpt.
         sinsertvertex(refpt, &splitsh, &sseg, true, false);*/
-        printf("Error: Invalid PLC.\n");
-        printf("  Point %d is on segment (%d, %d).\n", pointmark(refpt),
+        printf("Error:  Invalid PLC! A point and a segment intersect.\n");
+        printf("  Point: %d. Segment: (%d, %d).\n", pointmark(refpt),
           pointmark(sorg(sseg)), pointmark(sdest(sseg)));
         terminatetetgen(1);
       }
