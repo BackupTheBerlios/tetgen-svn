@@ -4053,7 +4053,7 @@ REAL tetgenmesh::insphere_sos(point pa, point pb, point pc, point pd, point pe)
   undesired result when four points are nearly coplanar.
   An example is in fig/dump-incircle3d-case1.*/
 
-REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
+/*REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
 {
   REAL area2[2], n1[3], n2[3], pe[3];
   REAL sign, L, len;
@@ -4094,9 +4094,9 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
   }
 
   return sign;
-}
+}*/
 
-/* This code has problem with file2.poly
+/* This code had problem with file2.poly*/
 REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
 {
   REAL area2[2], n1[3], n2[3], c[3];
@@ -4122,7 +4122,7 @@ REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)
   sign = d - r;
 
   return sign;
-}*/
+}
 
 /*
 REAL tetgenmesh::incircle3d(point pa, point pb, point pc, point pd)

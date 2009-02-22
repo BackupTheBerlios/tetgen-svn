@@ -1167,7 +1167,14 @@ void tetgenmesh::unifysegments()
               } else if (ori3 < 0) {
                 // apex(f) is above f2, continue.
               } else { // ori3 == 0; 
-                // f is coplanar and codirection with f2. 
+                // f is coplanar and codirection with f2.
+                printf("Error:  Invalid PLC.\n");
+                printf("  Two facets, (%d, %d, %d, ...) and",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
+                printf(" (%d, %d, %d, ...), %s.\n",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(f2->ss)),
+                  sapex(sface) != sapex(f2->ss) ? "intersect" : 
+                  "are identical");
                 terminatetetgen(2); // assert(0);
               }
             } else if (ori2 < 0) {
@@ -1181,6 +1188,13 @@ void tetgenmesh::unifysegments()
                 break; 
               } else {
                 // f is coplanar and codirection with f1.
+                printf("Error:  Invalid PLC.\n");
+                printf("  Two facets, (%d, %d, %d, ...) and",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
+                printf(" (%d, %d, %d, ...), %s.\n",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
+                  sapex(sface) != sapex(f1->ss) ? "intersect" : 
+                  "are identical");
                 terminatetetgen(2); // assert(0);
               }
             }
@@ -1198,13 +1212,27 @@ void tetgenmesh::unifysegments()
                 // apex(f) is above f2, continue.
               } else { // ori3 == 0;
                 // f is coplanar and codirection with f2.
+                printf("Error:  Invalid PLC.\n");
+                printf("  Two facets, (%d, %d, %d, ...) and",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
+                printf(" (%d, %d, %d, ...), %s.\n",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(f2->ss)),
+                  sapex(sface) != sapex(f2->ss) ? "intersect" : 
+                  "are identical");
                 terminatetetgen(2); // assert(0);
               }
             } else { // ori2 == 0;
-              // f is coplanar and with f1 (see Fig. 7).
+              // f is coplanar and with f1 (see Fig. 6).
               ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
               if (ori3 > 0) {
                 // f is also codirection with f1.
+                printf("Error:  Invalid PLC.\n");
+                printf("  Two facets, (%d, %d, %d, ...) and",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
+                printf(" (%d, %d, %d, ...), %s.\n",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
+                  sapex(sface) != sapex(f1->ss) ? "intersect" : 
+                  "are identical");
                 terminatetetgen(2); // assert(0); 
               } else {
                 // f is above f2, continue.
@@ -1220,7 +1248,24 @@ void tetgenmesh::unifysegments()
               break;
             } else { // ori2 == 0.
               // apex(f) is coplanar with f1 (see Fig. 8).
-              // Two more cases need to work out here.
+              // f is either codirection with f1 or is codirection with f2. 
+              //   In either case, the input is not valid.
+              printf("Error:  Invalid PLC.\n");
+              printf("  Two facets, (%d, %d, %d, ...) and",
+                pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
+              facenormal(torg, tdest, sapex(f1->ss), n1, 1);
+              facenormal(torg, tdest, sapex(sface), n2, 1);
+              if (DOT(n1, n2) > 0) {
+                printf(" (%d, %d, %d, ...), %s.\n",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
+                  sapex(sface) != sapex(f1->ss) ? "intersect" : 
+                  "are identical");
+              } else {
+                printf(" (%d, %d, %d, ...), %s.\n",
+                  pointmark(torg),pointmark(tdest),pointmark(sapex(f2->ss)),
+                  sapex(sface) != sapex(f2->ss) ? "intersect" : 
+                  "are identical");
+              }
               terminatetetgen(2); // assert(0);  
             }
           }
@@ -1243,6 +1288,11 @@ void tetgenmesh::unifysegments()
           if (DOT(n1, n2) > 0) {
             // The two faces are codirectional as well.
             printf("Error:  Invalid PLC.\n"); // assert(0);
+            printf("  Two facets, (%d, %d, %d, ...) and",
+              pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
+            printf(" (%d, %d, %d, ...), %s.\n",
+              pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
+              sapex(sface) != sapex(f1->ss) ? "intersect" : "are identical");
             terminatetetgen(2);
           }
         }
