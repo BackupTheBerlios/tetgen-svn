@@ -822,8 +822,11 @@ void tetgenmesh::delaunizesegments()
         // Split the segment by refpt.
         sinsertvertex(refpt, &splitsh, &sseg, true, false);*/
         printf("Error:  Invalid PLC! A point and a segment intersect.\n");
+        point pa, pb;
+        pa = farsorg(sseg);
+        pb = farsdest(sseg);
         printf("  Point: %d. Segment: (%d, %d).\n", pointmark(refpt),
-          pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+          pointmark(pa), pointmark(pb));
         terminatetetgen(1);
       }
     }
@@ -1090,9 +1093,11 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
             } else {
               assert(ori == 0); // SELF_CHECK
               // Found a coplanar but not co-facet point (pd).
-              printf("Error:  Invalid PLC.\n");
-              printf("  Point %d lies on facet (%d, %d, %d, ...).\n",
-                pointmark(pd), pointmark(pa), pointmark(pb), pointmark(pc));
+              printf("Error:  Invalid PLC! A point and a facet intersect\n");
+              // get_origin_facet_corners(pssub, &pa, &pb, &pc);
+              printf("  Point %d. Facet #%d: %d, %d, %d, ...\n", 
+                pointmark(pd), getshellmark(*pssub), pointmark(pa), 
+                pointmark(pb), pointmark(pc));
               terminatetetgen(1);
             }
           }
@@ -1347,12 +1352,12 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
         // Check the validity of the PLC.
         tspivot(spintet, checksh);
         if (checksh.sh != NULL) {
-          printf("Error:  Invalid PLC.\n");
-          printf("  Two facets (%d, %d, %d, ...) and (%d, %d, %d, ...)",
-            pointmark(pa), pointmark(pb), pointmark(pc),
+          printf("Error:  Invalid PLC! Two facets intersect.\n");
+          printf("  1st #%d: %d, %d, %d, ...\n", getshellmark(*pssub),
+            pointmark(pa), pointmark(pb), pointmark(pc));
+          printf("  2nd #%d: %d, %d, %d, ...\n", getshellmark(checksh),
             pointmark(sorg(checksh)), pointmark(sdest(checksh)),
             pointmark(sapex(checksh)));
-          printf(" intersect.\n");
           terminatetetgen(1);
         }
         if (apex(spintet) == pg) break;
