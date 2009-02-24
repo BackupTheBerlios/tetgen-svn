@@ -965,7 +965,11 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
       for (j = 0; j < 3; j++) {
         tsspivot(neightet, sseg);
         if (sseg.sh != NULL) {
-          assert(!sinfected(sseg));
+          if (sinfected(sseg)) {
+            // This case is only possible when the cavity has been updated.
+            assert(updatecount > 0); // SELF_CHECK
+            suninfect(sseg); // Dequeue a non-missing segment.
+          }
           tssbond1(newtet, sseg);
         }
         enextself(neightet);
