@@ -77,8 +77,8 @@ void tetgenmesh::jettisonnodes()
   oldidx = newidx = 0; // in->firstnumber;
   remcount = 0;
   while (pointloop != (point) NULL) {
-    // jetflag = (pointtype(pointloop) == DUPLICATEDVERTEX) || 
-    //   (pointtype(pointloop) == UNUSEDVERTEX);
+    jetflag = (getpointtype(pointloop) == DUPLICATEDVERTEX) || 
+      (getpointtype(pointloop) == UNUSEDVERTEX);
     jetflag = (getpointtype(pointloop) == DUPLICATEDVERTEX);
     if (jetflag) {
       // It is a duplicated point, delete it.

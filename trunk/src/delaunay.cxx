@@ -1042,11 +1042,12 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         assert(dest(neineitet) == org(newtet)); // SELF_CHECK
         enext0fnextself(neineitet);
         bond(neightet, neineitet);
-        /*// Queue the internal face if the cavity is updated.
-        if (updatecount > 0l) {
+        // Queue the internal face if the visflag is set.
+        //   See also fig/dump-cavity-case13.
+        if (visflag) {
           cavetetlist->newindex((void **) &parytet);
           *parytet = neightet;
-        }*/
+        }
       }
       point2tet(org(newtet)) = encode(newtet);
       enextself(newtet);
@@ -1129,18 +1130,18 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     flippool->restart();
   }
 
-  if (bwflag && (updatecount > 0l)) {
+  if (bwflag && visflag) {
     // Some new faces may be locally non-Delaunay. Check and fix them.
     for (i = 0; i < cavetetlist->objects; i++) {
       // Get a new face (whose opposite is p).
       parytet = (triface *) fastlookup(cavetetlist, i);
-      if ((point) parytet->tet[7] == dummypoint) continue; // Skip a hull face.
-      assert(oppo(*parytet) == insertpt); // SELF_CHECK
-      futureflip = flippush(futureflip, parytet, insertpt);
+      if ((point) parytet->tet[7] == dummypoint) continue; // A hull face.
+      pa = oppo(*parytet);
+      futureflip = flippush(futureflip, parytet, pa);
     }
     int bakverbose = b->verbose; // DEBUG ONLY
     b->verbose = 2;  // DEBUG ONLY
-    // Recover Delaunay faces. Do not propagate at subfaces, see flip23().
+    // Recover Delaunay faces.
     //   Set 'flipflag' = 2, s.t. all faces are checked for flipping.
     lawsonflip3d(2); 
     b->verbose = bakverbose; // DEBUG ONLY
