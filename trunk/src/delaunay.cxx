@@ -581,8 +581,10 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
   if (loc == ONVERTEX) {
     // The point already exists. Mark it and do nothing on it.
     if (b->object != tetgenbehavior::STL) {
-      printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
-        pointmark(insertpt), pointmark(org(*searchtet)));
+      if (!b->quiet) {
+        printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
+          pointmark(insertpt), pointmark(org(*searchtet)));
+      }
     }
     point2ppt(insertpt) = org(*searchtet);
     setpointtype(insertpt, DUPLICATEDVERTEX);
@@ -1199,8 +1201,10 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
     // The point already exists. Mark it and do nothing on it.
     // In a STL mesh, duplicated points are implicitly included.
     if (b->object != tetgenbehavior::STL) {
-      printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
-        pointmark(insertpt), pointmark(org(*searchtet)));
+      if (!b->quiet) {
+        printf("Warning:  Point #%d is duplicated with Point #%d. Ignored!\n",
+          pointmark(insertpt), pointmark(org(*searchtet)));
+      }
     }
     point2ppt(insertpt) = org(*searchtet);
     setpointtype(insertpt, DUPLICATEDVERTEX);

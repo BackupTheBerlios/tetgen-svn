@@ -1352,10 +1352,10 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
         // Check the validity of the PLC.
         tspivot(spintet, checksh);
         if (checksh.sh != NULL) {
-          printf("Error:  Invalid PLC! Two facets intersect.\n");
-          printf("  1st #%d: %d, %d, %d, ...\n", getshellmark(*pssub),
+          printf("Error:  Invalid PLC! Two subfaces intersect.\n");
+          printf("  1st (#%4d): (%d, %d, %d)\n", getshellmark(*pssub),
             pointmark(pa), pointmark(pb), pointmark(pc));
-          printf("  2nd #%d: %d, %d, %d, ...\n", getshellmark(checksh),
+          printf("  2nd (#%4d): (%d, %d, %d)\n", getshellmark(checksh),
             pointmark(sorg(checksh)), pointmark(sdest(checksh)),
             pointmark(sapex(checksh)));
           terminatetetgen(1);

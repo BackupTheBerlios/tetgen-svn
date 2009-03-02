@@ -1101,6 +1101,110 @@ void tetgenmesh::triangulate(int shmark, arraypool* ptlist, arraypool* conlist,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// unifysubfaces()    Unify two identical subfaces.                          //
+//                                                                           //
+// Two subfaces, f1 [a, b, c] and f2 [a, b, d], share the same edge [a, b].  //
+// If c = d, then f1 and f2 are identical. In such case, f2 is deleted, all  //
+// connections to f2 are re-directed to f1.  Otherwise, these two subfaces   //
+// intersect, and the mesher is stopped.                                     //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::unifysubfaces(face *f1, face *f2)
+{
+  face casout, casin, neighsh;
+  face sseg, checkseg;
+  point pa, pb, pc, pd;
+  int i;
+
+  assert(f1->sh != f2->sh); // SELF_CHECK
+
+  pa = sorg(*f1);
+  pb = sdest(*f1);
+  pc = sapex(*f1);
+
+  assert(sorg(*f2) == pa); // SELF_CHECK
+  assert(sdest(*f2) == pb); // SELF_CHECK
+  pd = sapex(*f2);
+
+  if (pc != pd) {
+    printf("Error:  Invalid PLC! Two coplanar subfaces intersect.\n");
+    printf("  1st (#%4d): (%d, %d, %d)\n", getshellmark(*f1),
+      pointmark(pa), pointmark(pb), pointmark(pc));
+    printf("  2nd (#%4d): (%d, %d, %d)\n", getshellmark(*f2),
+      pointmark(pa), pointmark(pb), pointmark(pd));
+    terminatetetgen(2);
+  }
+
+  // f1 and f2 are identical, replace f2 by f1.
+  if (!b->quiet) {
+    printf("Warning:  Facet #%d is duplicated with Facet #%d. Removed!\n",
+      getshellmark(*f2), getshellmark(*f1));
+  }
+
+  // Make possible disconnections/reconnections at neighbors of f2.
+  for (i = 0; i < 3; i++) {
+    spivot(*f1, casout);
+    if (casout.sh == NULL) {
+      // f1 has no adjacent subfaces yet.
+      spivot(*f2, casout);
+      if (casout.sh != NULL) {
+        // Re-direct the adjacent connections of f2 to f1.
+        casin = casout;
+        spivot(casin, neighsh);
+        while (neighsh.sh != f2->sh) {
+          casin = neighsh;
+          spivot(casin, neighsh);
+        }
+        // Connect casout <= f1 <= casin.
+        sbond1(*f1, casout);
+        sbond1(casin, *f1);
+      }
+    }
+    sspivot(*f2, sseg); 
+    if (sseg.sh != NULL) {
+      // f2 has a segment. It must be different to f1's.
+      sspivot(*f1, checkseg); // SELF_CHECK
+      if (checkseg.sh != NULL) { // SELF_CHECK
+        assert(checkseg.sh != sseg.sh); // SELF_CHECK
+      }
+      // Disconnect bonds of subfaces to this segment.
+      spivot(*f2, casout);
+      if (casout.sh != NULL) {
+        casin = casout;
+        ssdissolve(casin);
+        spivot(casin, neighsh);
+        while (neighsh.sh != f2->sh) {
+          casin = neighsh;
+          ssdissolve(casin);
+          spivot(casin, neighsh);
+        }
+      }
+      // Delete the segment.
+      shellfacedealloc(subsegpool, sseg.sh);
+    }
+    spivot(*f2, casout);
+    if (casout.sh != NULL) {
+      // Find the subface (casin) pointing to f2.
+      casin = casout;
+      spivot(casin, neighsh);
+      while (neighsh.sh != f2->sh) {
+        casin = neighsh;
+        spivot(casin, neighsh);
+      }
+      // Disconnect f2 <= casin.
+      sdissolve(casin);
+    }
+    senextself(*f1);
+    senextself(*f2);
+  } // i
+
+  // Delete f2.
+  shellfacedealloc(subfacepool, f2->sh);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // unifysegments()    Remove redundant segments and create face links.       //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1168,14 +1272,8 @@ void tetgenmesh::unifysegments()
                 // apex(f) is above f2, continue.
               } else { // ori3 == 0; 
                 // f is coplanar and codirection with f2.
-                printf("Error:  Invalid PLC.\n");
-                printf("  Two facets, (%d, %d, %d, ...) and",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
-                printf(" (%d, %d, %d, ...), %s.\n",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(f2->ss)),
-                  sapex(sface) != sapex(f2->ss) ? "intersect" : 
-                  "are identical");
-                terminatetetgen(2); // assert(0);
+                unifysubfaces(&(f2->ss), &sface);
+                break;
               }
             } else if (ori2 < 0) {
               // apex(f) is above f1 below f2, inset it (see Fig. 2).
@@ -1188,14 +1286,8 @@ void tetgenmesh::unifysegments()
                 break; 
               } else {
                 // f is coplanar and codirection with f1.
-                printf("Error:  Invalid PLC.\n");
-                printf("  Two facets, (%d, %d, %d, ...) and",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
-                printf(" (%d, %d, %d, ...), %s.\n",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
-                  sapex(sface) != sapex(f1->ss) ? "intersect" : 
-                  "are identical");
-                terminatetetgen(2); // assert(0);
+                unifysubfaces(&(f1->ss), &sface);
+                break;
               }
             }
           } else if (ori1 < 0) {
@@ -1212,28 +1304,16 @@ void tetgenmesh::unifysegments()
                 // apex(f) is above f2, continue.
               } else { // ori3 == 0;
                 // f is coplanar and codirection with f2.
-                printf("Error:  Invalid PLC.\n");
-                printf("  Two facets, (%d, %d, %d, ...) and",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
-                printf(" (%d, %d, %d, ...), %s.\n",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(f2->ss)),
-                  sapex(sface) != sapex(f2->ss) ? "intersect" : 
-                  "are identical");
-                terminatetetgen(2); // assert(0);
+                unifysubfaces(&(f2->ss), &sface);
+                break;
               }
             } else { // ori2 == 0;
               // f is coplanar and with f1 (see Fig. 6).
               ori3 = orient3d(torg, tdest, sapex(f2->ss), sapex(sface));
               if (ori3 > 0) {
                 // f is also codirection with f1.
-                printf("Error:  Invalid PLC.\n");
-                printf("  Two facets, (%d, %d, %d, ...) and",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
-                printf(" (%d, %d, %d, ...), %s.\n",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
-                  sapex(sface) != sapex(f1->ss) ? "intersect" : 
-                  "are identical");
-                terminatetetgen(2); // assert(0); 
+                unifysubfaces(&(f1->ss), &sface);
+                break;
               } else {
                 // f is above f2, continue.
               }
@@ -1249,34 +1329,26 @@ void tetgenmesh::unifysegments()
             } else { // ori2 == 0.
               // apex(f) is coplanar with f1 (see Fig. 8).
               // f is either codirection with f1 or is codirection with f2. 
-              //   In either case, the input is not valid.
-              printf("Error:  Invalid PLC.\n");
-              printf("  Two facets, (%d, %d, %d, ...) and",
-                pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
               facenormal(torg, tdest, sapex(f1->ss), n1, 1);
               facenormal(torg, tdest, sapex(sface), n2, 1);
               if (DOT(n1, n2) > 0) {
-                printf(" (%d, %d, %d, ...), %s.\n",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
-                  sapex(sface) != sapex(f1->ss) ? "intersect" : 
-                  "are identical");
+                unifysubfaces(&(f1->ss), &sface);
               } else {
-                printf(" (%d, %d, %d, ...), %s.\n",
-                  pointmark(torg),pointmark(tdest),pointmark(sapex(f2->ss)),
-                  sapex(sface) != sapex(f2->ss) ? "intersect" : 
-                  "are identical");
+                unifysubfaces(&(f2->ss), &sface);
               }
-              terminatetetgen(2); // assert(0);  
+              break;
             }
           }
           // Go to the next item;
           f1 = f2;
         } // for (m = 0; ...)
-        // Insert sface between f1 and f2.
-        newlinkitem = (badface *) flippool->alloc();
-        newlinkitem->ss = sface;
-        newlinkitem->nextitem = f1->nextitem;
-        f1->nextitem = newlinkitem;
+        if (sface.sh[3] != NULL) {
+          // Insert sface between f1 and f2.
+          newlinkitem = (badface *) flippool->alloc();
+          newlinkitem->ss = sface;
+          newlinkitem->nextitem = f1->nextitem;
+          f1->nextitem = newlinkitem;
+        }
       } else if (flippool->items == 1) {
         f1 = facelink;
         // Make sure that f is not coplanar and codirection with f1.
@@ -1287,20 +1359,17 @@ void tetgenmesh::unifysegments()
           facenormal(torg, tdest, sapex(sface), n2, 1);
           if (DOT(n1, n2) > 0) {
             // The two faces are codirectional as well.
-            printf("Error:  Invalid PLC.\n"); // assert(0);
-            printf("  Two facets, (%d, %d, %d, ...) and",
-              pointmark(torg),pointmark(tdest),pointmark(sapex(sface)));
-            printf(" (%d, %d, %d, ...), %s.\n",
-              pointmark(torg),pointmark(tdest),pointmark(sapex(f1->ss)),
-              sapex(sface) != sapex(f1->ss) ? "intersect" : "are identical");
-            terminatetetgen(2);
+            unifysubfaces(&(f1->ss), &sface);
           }
         }
-        // Add this face into link.
-        newlinkitem = (badface *) flippool->alloc();
-        newlinkitem->ss = sface;
-        newlinkitem->nextitem = NULL;
-        f1->nextitem = newlinkitem;
+        // Add this face to link if it is not deleted.
+        if (sface.sh[3] != NULL) {
+          // Add this face into link.
+          newlinkitem = (badface *) flippool->alloc();
+          newlinkitem->ss = sface;
+          newlinkitem->nextitem = NULL;
+          f1->nextitem = newlinkitem;
+        }
       } else {
         // The first face.
         newlinkitem = (badface *) flippool->alloc();

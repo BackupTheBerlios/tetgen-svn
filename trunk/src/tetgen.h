@@ -1641,6 +1641,7 @@ enum intersection sscoutsegment(face* searchsh, point endpt);
 void scarveholes(int, REAL*);
 void triangulate(int, arraypool*, arraypool*, int, REAL*);
 
+void unifysubfaces(face*, face*);
 void unifysegments();
 void mergefacets();
 void markacutevertices();
