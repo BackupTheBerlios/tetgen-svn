@@ -987,10 +987,12 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
   bool cofacetflag;
   int i;
 
-  // Infect all vertices of the facet.
-  for (i = 0; i < facpoints->objects; i++) {
-    pd = * (point *) fastlookup(facpoints, i);
-    pinfect(pd);
+  if (facpoints != NULL) {
+    // Infect all vertices of the facet.
+    for (i = 0; i < facpoints->objects; i++) {
+      pd = * (point *) fastlookup(facpoints, i);
+      pinfect(pd);
+    }
   }
 
   // Search an edge crossing the facet containing abc.
@@ -1093,9 +1095,9 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
             } else {
               assert(ori == 0); // SELF_CHECK
               // Found a coplanar but not co-facet point (pd).
-              printf("Error:  Invalid PLC! A point and a facet intersect\n");
+              printf("Error:  Invalid PLC! A point and a subface intersect\n");
               // get_origin_facet_corners(pssub, &pa, &pb, &pc);
-              printf("  Point %d. Facet #%d: %d, %d, %d, ...\n", 
+              printf("  Point %d. Subface (#%d) (%d, %d, %d)\n", 
                 pointmark(pd), getshellmark(*pssub), pointmark(pa), 
                 pointmark(pb), pointmark(pc));
               terminatetetgen(1);
@@ -1122,10 +1124,12 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
         pointmark(pa), pointmark(pb), pointmark(apex(*searchtet)), 
         pointmark(oppo(*searchtet)));
     }
-    // Unmark all facet vertices.
-    for (i = 0; i < facpoints->objects; i++) {
-      pd = * (point *) fastlookup(facpoints, i);
-      puninfect(pd);
+    if (facpoints != NULL) {
+      // Unmark all facet vertices.
+      for (i = 0; i < facpoints->objects; i++) {
+        pd = * (point *) fastlookup(facpoints, i);
+        puninfect(pd);
+      }
     }
     // Comment: Now no vertex is infected.
     if (getpointtype(apex(*searchtet)) == VOLVERTEX) {
@@ -1140,6 +1144,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
       printf("    Found a crossing tet (%d, %d, %d, %d).\n", pointmark(pa),
         pointmark(pb), pointmark(apex(spintet)), pointmark(pe));
     }
+    // Comment: if facpoints != NULL, co-facet vertices are stll infected.
+    //   They will be uninfected in formcavity();
     return ACROSSTET; // abc intersects the volume of 'searchtet'.
   }
 }
@@ -1472,6 +1478,7 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
   
   // Collect the top and bottom faces and the middle vertices.
   // NOTE 1: Hull tets may be collected. Process them as normal one.
+  //   (see fig/dump-cavity-case2.lua.)
   // NOTE 2: Some previously recovered subfaces may be completely
   //   contained in a cavity (see fig/dump-cavity-case6.lua). In such case,
   //   we create two faked tets to hold this subface, one at each side.
@@ -1573,7 +1580,7 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces, 
+bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces, 
   arraypool *newtets)
 {
   triface *parytet, searchtet, neightet, spintet;
@@ -1715,13 +1722,47 @@ void tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       assert(dest(searchtet) == pt[0]); // SELF_CHECK
       tmpsh.sh[9] = (shellface) encode(searchtet);
     } else {
-      printf("  Face (%d, %d, %d) - %d is missing\n", pointmark(pt[0]),
-        pointmark(pt[1]), pointmark(pt[2]), i);
-      assert(0); // Face unmatched. Not process yet.
+      // if (b->verbose > 1) {
+        printf("  Face (%d, %d, %d) - %d is missing\n", pointmark(pt[0]),
+          pointmark(pt[1]), pointmark(pt[2]), i);
+      // }
+      if (dir == EDGETRIINT) {
+        assert(0); // Face unmatched. Not process yet.
+      }
+      // Search an edge crossing this face.
+      dir = scoutcrosstet(&tmpsh, &searchtet, NULL);
+      assert(dir == ACROSSTET); // SELF_CHECK
+      // if (b->verbose > 1) {        
+        printf("  p:draw_subseg(%d, %d)\n", pointmark(apex(searchtet)),
+          pointmark(oppo(searchtet)));
+      // }
+      break;
     }
   }
+
   cavpoints->restart();
   // Comment: Now no vertex is marked.
+
+  if (i < cavfaces->objects) {
+    // The i-th boundary face is missing.
+    for (j = 0; j < cavfaces->objects; j++) {
+      parytet = (triface *) fastlookup(cavfaces, j);
+      if (j <= i) {
+        // Delete a temporary subface.
+        sdecode(parytet->tet[parytet->loc], tmpsh);
+        shellfacedealloc(subfacepool, tmpsh.sh);
+        parytet->tet[parytet->loc] = NULL;
+      }
+      if (oppo(*parytet) == NULL) {
+        // Delete a faked tet.
+        tetrahedrondealloc(parytet->tet);
+      }
+    }
+    cavfaces->restart();
+    return false;
+  }
+
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2216,7 +2257,7 @@ void tetgenmesh::constrainedfacets()
   face checkseg;
   point *ppt, pt;
   enum intersection dir;
-  bool mflag;
+  bool success, delaunayflag;
   long bakflip22count;
   long cavitycount;
   int facetcount;
@@ -2336,29 +2377,47 @@ void tetgenmesh::constrainedfacets()
           // Form a cavity of crossing tets.
           formcavity(&ssub, crosstets, topfaces, botfaces, toppoints,
             botpoints, facpoints);
+          delaunayflag = true;
           // Tetrahedralize the top part.
-          delaunizecavity(toppoints, topfaces, topnewtets);
-          // Tetrahedralize the bottom part.
-          delaunizecavity(botpoints, botfaces, botnewtets);
-          // Fill the cavity with new tets.
-          mflag = fillcavity(topfaces, botfaces, midfaces, facpoints);
-          if (mflag) {
-            // Delete old tets and outer new tets.
-            carvecavity(crosstets, topnewtets, botnewtets);
+          success = delaunizecavity(toppoints, topfaces, topnewtets);
+          if (success) {
+            // Tetrahedralize the bottom part.
+            success = delaunizecavity(botpoints, botfaces, botnewtets);
+            if (success) {
+              // Fill the cavity with new tets.
+              success = fillcavity(topfaces, botfaces, midfaces, facpoints);
+              if (success) {
+                // Delete old tets and outer new tets.
+                carvecavity(crosstets, topnewtets, botnewtets);
+              }
+            } else {
+              topfaces->restart();
+              delaunayflag = false;
+            }
           } else {
+            botfaces->restart();
+            botpoints->restart();
+            delaunayflag = false;
+          }
+          if (!success) {
             // Restore old tets and delete new tets.
             restorecavity(crosstets, topnewtets, botnewtets);
+          }
+          if (!delaunayflag) {
+            outnodes(0);
+            dump_facetof(&ssub);
+            assert(0); // Stop the program.
           }
           hullsize = bakhullsize;
           checksubsegs = checksubfaces = 1;
         } else if (dir == ACROSSFACE) {
           // Recover subfaces by flipping edges in surface mesh.
           recoversubedge(&ssub, &searchtet, facfaces);
-          mflag = true;
+          success = true;
         } else { // dir == TOUCHFACE
           assert(0);
         }
-        if (!mflag) break;
+        if (!success) break;
       } // while
 
       if (facfaces->objects > 0l) {

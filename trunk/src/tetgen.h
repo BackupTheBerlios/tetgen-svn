@@ -1663,7 +1663,7 @@ enum intersection scoutcrosstet(face* ssub, triface* searchtet, arraypool*);
 void recoversubedge(face* ssub, triface* subedge, arraypool*);
 void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
-void delaunizecavity(arraypool*, arraypool*, arraypool*);
+bool delaunizecavity(arraypool*, arraypool*, arraypool*);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
 void restorecavity(arraypool*, arraypool*, arraypool*);
