@@ -1156,7 +1156,7 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
 //                                                                           //
 // A subface [a, b, c] ('pssub') intersects with a face [a, b, d] ('cross-   //
 // face'), where a, b, c, and d belong to the same facet.  It indicates that //
-// the face [a, b, d] should appear in the surface mesh.                     // 
+// the face [a, b, d] should appear in the surface mesh.                     //
 //                                                                           //
 // This routine recovers [a, b, d] in the surface mesh through a sequence of //
 // 2-to-2 flips. No Steiner points is needed. 'pssub' returns [a, b, d].     //
@@ -2189,25 +2189,26 @@ void tetgenmesh::restorecavity(arraypool *crosstets, arraypool *topnewtets,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// splitsubedge()    Split a non-Delaunay edge (not a segment) in facet.     //
+// splitsubedge()    Split a non-Delaunay edge (not a segment) in the        //
+//                   surface mesh of a facet.                                //
+//                                                                           //
+// The new point 'newpt' will be inserted in the tetrahedral mesh if it does //
+// not cause any existing (sub)segments become non-Delaunay.  Otherwise, the //
+// new point is not inserted and one of such subsegments will be split.      //
+//                                                                           //
+// Next,the actual inserted new point is also inserted into the surface mesh.//
+// Non-Delaunay segments and newly created subfaces are queued for recovery. //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::splitsubedge(face *searchsh, arraypool *facfaces,
+void tetgenmesh::splitsubedge(point newpt, face *searchsh, arraypool *facfaces,
   arraypool *facpoints)
 {
   triface searchtet;
   face *psseg, sseg;
-  point newpt, pa, pb;
+  point pa, pb;
   enum location loc;
   int s, i;
-
-  // Create the new point.
-  makepoint(&newpt);
-  // The coordinates were saved in dummypoint.
-  for (i = 0; i < 3; i++) newpt[i] = dummypoint[i];
-  setpointtype(newpt, STEINERVERTEX);
-  dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
 
   // Try to insert the point. Do not insert if it will encroach any segment
   //   (noencflag is TRUE). If this point is inserted, some previously 
@@ -2264,7 +2265,7 @@ void tetgenmesh::constrainedfacets()
   triface *parytet, searchtet, neightet;
   face *pssub, ssub, neighsh;
   face checkseg;
-  point *ppt, pt;
+  point *ppt, pt, newpt;
   enum intersection dir;
   bool success, delaunayflag;
   long bakflip22count;
@@ -2431,9 +2432,16 @@ void tetgenmesh::constrainedfacets()
 
       if (facfaces->objects > 0l) {
         // Found a non-Delaunay edge, split it (or a segment close to it).
-        splitsubedge(&ssub, facfaces, facpoints);
+        // Create a new point at the middle of this edge, its coordinates
+        //   were saved in dummypoint in 'fillcavity()'.
+        makepoint(&newpt);
+        for (i = 0; i < 3; i++) newpt[i] = dummypoint[i];
+        setpointtype(newpt, STEINERVERTEX);
+        dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
+        // Insert the new point. Starting search it from 'ssub'.
+        splitsubedge(newpt, &ssub, facfaces, facpoints);
+        // Some subsegments may be queued, recover them.
         if (subsegstack->objects > 0l) {
-          // Recover queued segments.
           delaunizesegments();
         }
         facfaces->restart();

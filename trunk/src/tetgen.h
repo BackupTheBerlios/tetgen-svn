@@ -1667,7 +1667,7 @@ bool delaunizecavity(arraypool*, arraypool*, arraypool*);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
 void restorecavity(arraypool*, arraypool*, arraypool*);
-void splitsubedge(face*, arraypool*, arraypool*);
+void splitsubedge(point, face*, arraypool*, arraypool*);
 void constrainedfacets();
 
 void formskeleton();
