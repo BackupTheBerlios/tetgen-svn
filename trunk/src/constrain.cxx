@@ -1152,11 +1152,20 @@ enum tetgenmesh::intersection tetgenmesh::scoutcrosstet(face *pssub,
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// recoversubedge()    Recover an edge (by flips) in surface mesh.           //
+// recoversubfacebyflips()   Recover a subface by flips in the surface mesh. //
+//                                                                           //
+// A subface [a, b, c] ('pssub') intersects with a face [a, b, d] ('cross-   //
+// face'), where a, b, c, and d belong to the same facet.  It indicates that //
+// the face [a, b, d] should appear in the surface mesh.                     // 
+//                                                                           //
+// This routine recovers [a, b, d] in the surface mesh through a sequence of //
+// 2-to-2 flips. No Steiner points is needed. 'pssub' returns [a, b, d].     //
+//                                                                           //
+// If 'facfaces' is not NULL, all flipped subfaces are queued for recovery.  //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::recoversubedge(face* pssub, triface* crosstet, 
+void tetgenmesh::recoversubfacebyflips(face* pssub, triface* crossface, 
   arraypool *facfaces)
 {
   triface neightet;
@@ -1169,16 +1178,16 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet,
   shellface sptr;
   int tver;
 
-  // Get the missing subface [a, b, c].
+  // Get the missing subface is [a, b, c].
   pa = sorg(*pssub);
   pb = sdest(*pssub);
   pc = sapex(*pssub);
 
-  // The crosstet must be [a, b, d, e].
-  // assert(org(*crosstet) == pa);
-  // assert(dest(*crosstet) == pb);
-  pd = apex(*crosstet);
-  pe = dummypoint; // oppo(*crosstet);
+  // The crossface is [a, b, d, e].
+  // assert(org(*crossface) == pa);
+  // assert(dest(*crossface) == pb);
+  pd = apex(*crossface);
+  pe = dummypoint; // oppo(*crossface);
 
   if (pe == dummypoint) {
     // Calculate a point above the faces.
@@ -1203,13 +1212,13 @@ void tetgenmesh::recoversubedge(face* pssub, triface* crosstet,
   if (ori > 0) {
     // Swap a and b.
     sesymself(*pssub);
-    symedgeself(*crosstet);
+    symedgeself(*crossface);
     pa = sorg(*pssub);
     pb = sdest(*pssub);
     if (pe == dummypoint) {
       pe[0] = pe[1] = pe[2] = 0;
     }
-    pe = dummypoint; // oppo(*crosstet);
+    pe = dummypoint; // oppo(*crossface);
   }
 
   while (1) {
@@ -2412,7 +2421,7 @@ void tetgenmesh::constrainedfacets()
           checksubsegs = checksubfaces = 1;
         } else if (dir == ACROSSFACE) {
           // Recover subfaces by flipping edges in surface mesh.
-          recoversubedge(&ssub, &searchtet, facfaces);
+          recoversubfacebyflips(&ssub, &searchtet, facfaces);
           success = true;
         } else { // dir == TOUCHFACE
           assert(0);

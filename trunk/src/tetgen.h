@@ -1660,7 +1660,7 @@ void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
 enum intersection scoutcrosstet(face* ssub, triface* searchtet, arraypool*);
-void recoversubedge(face* ssub, triface* subedge, arraypool*);
+void recoversubfacebyflips(face* pssub, triface* crossface, arraypool*);
 void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
 bool delaunizecavity(arraypool*, arraypool*, arraypool*);
