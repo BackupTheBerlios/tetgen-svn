@@ -1484,8 +1484,10 @@ void tetgenmesh::dump_cavity(arraypool *topfaces, arraypool *botfaces = NULL)
   triface *paryface;
   int i, k;
 
-  printf("  dump %ld faces to cavity.lua\n", topfaces->objects + 
-    botfaces->objects);
+  printf("  dump %ld topfaces to cavity.lua\n", topfaces->objects);
+  if (botfaces != NULL) {
+    printf("  dump %ld botfaces to cavity.lua\n", botfaces->objects);
+  }
   fout = fopen("cavity.lua", "w");
 
   for (k = 0; k < 2; k++) {
@@ -1506,9 +1508,10 @@ void tetgenmesh::dump_cavity(arraypool *topfaces, arraypool *botfaces = NULL)
 ///////////////////////////////////////////////////////////////////////////////
 // dump a facet containing a given subface s.
 
-void tetgenmesh::dump_facetof(face *pssub)
+void tetgenmesh::dump_facetof(face *pssub, char *filename)
 {
   FILE *fout;
+  char outfilename[256];
   arraypool *tmpfaces;
   face *parysh, *parysh2, s;
   face checkseg;
@@ -1543,8 +1546,14 @@ void tetgenmesh::dump_facetof(face *pssub)
     sunmarktest(*parysh);
   }
 
-  printf("  dump %ld subfaces to facet.lua\n", tmpfaces->objects);
-  fout = fopen("facet.lua", "w");
+  if (filename != NULL) {
+    sprintf(outfilename, filename);
+  } else {
+    sprintf(outfilename, "facet.lua");
+  }
+
+  printf("  dump %ld subfaces to %s\n", tmpfaces->objects, outfilename);
+  fout = fopen(outfilename, "w");
 
   for (ii = 0; ii < tmpfaces->objects; ii++) {
     parysh = (face *) fastlookup(tmpfaces, ii);
