@@ -1959,8 +1959,8 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       tmpsh.sh[9] = (shellface) encode(searchtet);
     } else {
       // if (b->verbose > 1) {
-        printf("  Face (%d, %d, %d) - %d is missing\n", pointmark(pt[0]),
-          pointmark(pt[1]), pointmark(pt[2]), i);
+        printf("  p:draw_subface(%d, %d, %d) -- %d is missing\n",
+          pointmark(pt[0]), pointmark(pt[1]), pointmark(pt[2]), i);
       // }
       if (dir == EDGETRIINT) {
         assert(0); // Face unmatched. Not process yet.
