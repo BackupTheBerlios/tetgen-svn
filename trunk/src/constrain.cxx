@@ -2736,6 +2736,7 @@ void tetgenmesh::constrainedfacets()
   delete botpoints;
   delete facpoints;
   delete facfaces;
+  delete misfaces;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
