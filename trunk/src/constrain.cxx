@@ -1294,13 +1294,26 @@ void tetgenmesh::recoversubfacebyflips(face* pssub, triface* crossface,
 //                                                                           //
 // formcavity()    Form the cavity of a missing region.                      //
 //                                                                           //
-// 'crosstets' contains only one crossing tet, abde, where d and e lie below //
-// and above abc, respectively. Starting from this tet(abde), other crossing //
-// tets are found one by one and added into 'crosstets'.                     //
+// A missing region R is a set of co-facet (co-palanr) subfaces. 'pssub' is  //
+// a missing subface [a, b, c]. 'crosstets' contains only one tet, [a, b, d, //
+// e], where d and e lie below and above [a, b, c], respectively.  Other     //
+// crossing tets are sought from this tet and saved in 'crosstets'.          //
 //                                                                           //
-// 'topfaces' and 'botfaces' return the upper and lower boundary faces of C, //
-// respectively. Moreover 'topfaces[0]' is face abe, 'botfaces[0]' is bad,   //
-// i.e., topfaces[0] and botfaces[0] share edge ab.                          //
+// The cavity C is divided into two parts by R,one at top and one at bottom. //
+// 'topfaces' and 'botfaces' return the upper and lower boundary faces of C. //
+// 'toppoints' contains vertices of 'crosstets' in the top part of C, and so //
+// does 'botpoints'. Both 'toppoints' and 'botpoints' contain vertices of R. //
+//                                                                           //
+// NOTE: 'toppoints' may contain points which are not vertices of any top    //
+// faces, and so may 'botpoints'. Such points may belong to other facets and //
+// need to be present after the recovery of this cavity (P1029.poly).        //
+//                                                                           //
+// A pair of boundary faces: 'firsttopface' and 'firstbotface', are saved.   //
+// They share the same edge in the boundary of the missing region.           //
+//                                                                           //
+// 'facpoints' contains all vertices of the facet containing R.  They are    //
+// used for searching the crossing tets. On input all vertices are infected. //
+// They are uninfected after the cavity is formed.                           //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1382,7 +1395,13 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
           if (!pinfected(pf)) {
             // There exist a crossing edge, either d->f, or f->e.
             ori = orient3d(pa, pb, pc, pf);
-            assert(ori != 0);
+            if (ori == 0) {
+              printf("Error:  Invalid PLC! Point and subface intersect.\n");
+              printf("   Point %d, subface (#%4d): (%d, %d, %d)\n", 
+                pointmark(pf), getshellmark(*pssub), pointmark(pa), 
+                pointmark(pb), pointmark(pc));
+              terminatetetgen(1);
+            }
             if (ori < 0) {
               // The edge d->f corsses the facet.
               enext2fnext(spintet, neightet);
@@ -1482,7 +1501,9 @@ void tetgenmesh::formcavity(face *pssub, arraypool* crosstets,
   }
   assert(i < crosstets->objects); // SELF_CHECK
   
-  // Collect the top and bottom faces and the middle vertices.
+  // Collect the top and bottom faces and the middle vertices. Since all top
+  //   and bottom vertices have been marked in above. Unmarked vertices are
+  //   middle vertices.
   // NOTE 1: Hull tets may be collected. Process them as normal one.
   //   (see fig/dump-cavity-case2.lua.)
   // NOTE 2: Some previously recovered subfaces may be completely
@@ -1613,14 +1634,13 @@ void tetgenmesh::formedgecavity(point pa, point pb, arraypool* crosstets,
   }
   assert(i < 8); // SELF_CHECK
 
-  if (b->verbose > 1) {
-    printf("    Form edge cavity (%d, %d).\n", pointmark(pa), pointmark(pb));
-  }
-
   dir = finddirection(&searchtet, pb);
+  if (dir == ACROSSVERT) return; // The edge is not missing.
 
+  // if (b->verbose > 1) {
+    printf("    Form edge cavity (%d, %d).\n", pointmark(pa), pointmark(pb));
+  // }
   // The possible cases are: ACROSSFACE and ACROSSEDGE.
-  assert(dir != ACROSSVERT); // SELF_CHECK
 
   // Go to the opposite (intersect) face.
   enextfnextself(searchtet);
@@ -1797,8 +1817,8 @@ void tetgenmesh::formedgecavity(point pa, point pb, arraypool* crosstets,
   // Only for debugging.
   if (firstcrosssh.sh != NULL) {
     dump_facetof(&firstcrosssh, "facet2.lua");
+    dump_cavity(cavfaces, NULL);
   }
-  dump_cavity(cavfaces, NULL);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1817,10 +1837,10 @@ void tetgenmesh::formedgecavity(point pa, point pb, arraypool* crosstets,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces, 
-  arraypool *newtets)
+  arraypool *newtets, arraypool *misfaces)
 {
   triface *parytet, searchtet, neightet, spintet;
-  face checksh, tmpsh;
+  face checksh, tmpsh, *parysh;
   point pa, pb, pc, pd, pt[3];
   enum intersection dir;
   REAL ori;
@@ -1902,7 +1922,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
     }
   }
 
-  // Indentify boundary faces. Mark interior tets.
+  // Indentify boundary faces. Mark interior tets. Save missing subfaces.
   for (i = 0; i < cavfaces->objects; i++) {
     parytet = (triface *) fastlookup(cavfaces, i);
     pt[0] = org(*parytet);
@@ -1933,7 +1953,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       // Identify the inter and outer tets at tempsh.
       stpivot(tmpsh, neightet);
       // neightet and tmpsh refer to the same edge [pt[0], pt[1]].
-      //   Morover, neightet is in 0th edge ring (see decode()).
+      //   Moreover, neightet is in 0th edge ring (see decode()).
       if (org(neightet) != pt[1]) {
         symedgeself(neightet);
         assert(org(neightet) == pt[1]); // SELF_CHECK
@@ -1968,35 +1988,43 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       // Search an edge crossing this face.
       dir = scoutcrosstet(&tmpsh, &searchtet, NULL);
       assert(dir == ACROSSTET); // SELF_CHECK
-      firstpt = apex(searchtet);
-      secondpt = oppo(searchtet);
+      // firstpt = apex(searchtet);
+      // secondpt = oppo(searchtet);
+      // Save this pair of points.
+      badface *newflipface;
+      newflipface = (badface *) flippool->alloc();
+      newflipface->forg = apex(searchtet);
+      newflipface->fdest = oppo(searchtet);
+      newflipface->nextitem = futureflip;
+      futureflip = newflipface;
       // if (b->verbose > 1) {        
-        printf("  p:draw_subseg(%d, %d)\n", pointmark(firstpt),
-          pointmark(secondpt));
+        printf("  p:draw_subseg(%d, %d)\n", pointmark(newflipface->forg),
+          pointmark(newflipface->fdest));
       // }
-      break;
+      // Save this subface into list.
+      misfaces->newindex((void **) &parysh);
+      *parysh = tmpsh;
     }
   }
 
   cavpoints->restart();
   // Comment: Now no vertex is marked.
 
-  if (i < cavfaces->objects) {
-    // The i-th boundary face is missing.
+  if (misfaces->objects > 0) {
+    // There are missing boundary faces.
     for (j = 0; j < cavfaces->objects; j++) {
       parytet = (triface *) fastlookup(cavfaces, j);
-      if (j <= i) {
-        // Delete a temporary subface.
-        sdecode(parytet->tet[parytet->loc], tmpsh);
-        shellfacedealloc(subfacepool, tmpsh.sh);
-        parytet->tet[parytet->loc] = NULL;
-      }
+      // Delete a temporary subface.
+      sdecode(parytet->tet[parytet->loc], tmpsh);
+      shellfacedealloc(subfacepool, tmpsh.sh);
+      parytet->tet[parytet->loc] = NULL;
       if (oppo(*parytet) == NULL) {
         // Delete a faked tet.
         tetrahedrondealloc(parytet->tet);
       }
     }
     cavfaces->restart();
+    misfaces->restart();
     return false;
   }
 
@@ -2491,6 +2519,7 @@ void tetgenmesh::constrainedfacets()
   arraypool *topfaces, *botfaces, *midfaces;
   arraypool *toppoints, *botpoints;
   arraypool *facfaces, *facpoints;
+  arraypool *misfaces;
   triface *parytet, searchtet, neightet;
   face *pssub, ssub, neighsh;
   face checkseg;
@@ -2518,6 +2547,7 @@ void tetgenmesh::constrainedfacets()
   botpoints = new arraypool(sizeof(point), 8);
   facpoints = new arraypool(sizeof(point), 8);
   facfaces = new arraypool(sizeof(face), 10);
+  misfaces = new arraypool(sizeof(face), 8);
 
   bakflip22count = flip22count;
   cavitycount = 0;
@@ -2618,10 +2648,10 @@ void tetgenmesh::constrainedfacets()
             botpoints, facpoints);
           delaunayflag = true;
           // Tetrahedralize the top part.
-          success = delaunizecavity(toppoints, topfaces, topnewtets);
+          success = delaunizecavity(toppoints, topfaces, topnewtets, misfaces);
           if (success) {
             // Tetrahedralize the bottom part.
-            success = delaunizecavity(botpoints, botfaces, botnewtets);
+            success = delaunizecavity(botpoints,botfaces,botnewtets,misfaces);
             if (success) {
               // Fill the cavity with new tets.
               success = fillcavity(topfaces, botfaces, midfaces, facpoints);
@@ -2643,8 +2673,16 @@ void tetgenmesh::constrainedfacets()
             restorecavity(crosstets, topnewtets, botnewtets);
           }
           if (!delaunayflag) {
-            formedgecavity(firstpt, secondpt, crosstets, topfaces, toppoints);
             dump_facetof(&ssub, "facet1.lua");
+            while (futureflip != NULL) {
+              formedgecavity(futureflip->forg, futureflip->fdest, crosstets, 
+                topfaces, toppoints);
+              crosstets->restart();
+              topfaces->restart();
+              toppoints->restart();
+              futureflip = futureflip->nextitem;
+            }
+            flippool->restart();
             outnodes(0);
             assert(0); // Stop the program.
           }
