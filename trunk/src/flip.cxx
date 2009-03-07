@@ -1873,7 +1873,7 @@ void tetgenmesh::lawsonflip3d(int flipflag)
   point *pt, pd, pe;
   REAL sign, ori;
   long flipcount;
-  // bool bflag;
+  // bool bflag; // for flipflag = 3.
   int n, i;
 
   int *iptr;
@@ -1963,13 +1963,13 @@ void tetgenmesh::lawsonflip3d(int flipflag)
       }
       if (i == 3) {
         // A 2-to-3 flip is found.
-        /*if (checksubfaces) {
-          // Do not flip a subface.
-          tspivot(fliptet, checksh);
-          bflag = (checksh.sh == NULL);
-        } else {
-          bflag = true;
-        }*/
+        // if (flipflag == 3) {
+        //   // Do not flip a subface.
+        //   tspivot(fliptet, checksh);
+        //   bflag = (checksh.sh == NULL);
+        // } else {
+        //   bflag = true;
+        // }
         // if (bflag) {
           fliptets[0] = fliptet; // tet abcd, d is the new vertex.
           symedge(fliptets[0], fliptets[1]); // tet bace.
@@ -1978,13 +1978,13 @@ void tetgenmesh::lawsonflip3d(int flipflag)
         // }
       } else {
         // A 3-to-2 or 4-to-4 may possible.
-        /*if (checksubfaces) {
-          // Do not flip a subsegment.
-          tsspivot(fliptet, checkseg);
-          bflag = (checkseg.sh == NULL);
-        } else {
-          bflag = true;
-        }*/
+        // if (flipflag == 3) {
+        //   // Do not flip a subsegment.
+        //   tsspivot(fliptet, checkseg);
+        //   bflag = (checkseg.sh == NULL);
+        // } else {
+        //   bflag = true;
+        // }
         // if (bflag) {
           enext0fnext(fliptet, fliptets[0]);
           esymself(fliptets[0]); // tet badc, d is the new vertex.

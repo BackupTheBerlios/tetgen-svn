@@ -1145,7 +1145,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     b->verbose = 2;  // DEBUG ONLY
     // Recover Delaunay faces.
     //   Set 'flipflag' = 2, s.t. all faces are checked for flipping.
-    lawsonflip3d(2); 
+    lawsonflip3d(2);
     b->verbose = bakverbose; // DEBUG ONLY
   }
 
