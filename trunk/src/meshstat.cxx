@@ -298,10 +298,10 @@ int tetgenmesh::checkshells(int sub2tet)
           }
         }
       } else {
-        printf("  !! A dangling subface.\n");
-        printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
-          pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
-        horrors++;
+        // printf("  !! A dangling subface.\n");
+        // printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+        //   pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
+        // horrors++;
       }
     }
     shloop.sh = shellfacetraverse(subfacepool);

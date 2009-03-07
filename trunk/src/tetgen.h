@@ -864,11 +864,11 @@ static int mi1mo3[3];
 // encode() -- to compress a triface 't' into a single pointer. 
 //   't.ver' is in [0, 5], first we map it to [0, 2], this is equal to
 //   divide it by 2 (>> 1), next we shift it to the second last two bits
-//   of the pointer, this is equal to multiply it by 4 (<< 2). Combining
-//   the two operations, we only need to multiply it by 2 (<< 1). 
+//   of the pointer, this is equal to multiply it by 4 (<< 2). 
+// Note: Do not combine the bit options for (t).ver.
 
 #define encode(t) (tetrahedron) ((unsigned long) (t).tet | \
-    ((unsigned long) ((t).ver << 1)) | (unsigned long) (t).loc)
+  ((unsigned long) (((t).ver >> 1) << 2)) | (unsigned long) (t).loc)
 
 // decode() -- to decompose a pointer 'ptr' into a triface 't'. 
 //   For obtaining t.ver, we first extract it (& 12l), then shift it to
@@ -1664,10 +1664,10 @@ void recoversubfacebyflips(face* pssub, triface* crossface, arraypool*);
 void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
 void formedgecavity(point, point, arraypool*, arraypool*, arraypool*);
-bool delaunizecavity(arraypool*, arraypool*, arraypool*, arraypool*);
+bool delaunizecavity(arraypool*, arraypool*, arraypool*);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
-void restorecavity(arraypool*, arraypool*, arraypool*);
+void restorecavity(arraypool*, arraypool*, arraypool*, arraypool*, arraypool*);
 void splitsubedge(point, face*, arraypool*, arraypool*);
 void constrainedfacets();
 
