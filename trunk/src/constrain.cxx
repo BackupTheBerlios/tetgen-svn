@@ -1844,7 +1844,7 @@ void tetgenmesh::formedgecavity(point pa, point pb, arraypool* crosstets,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces, 
-  arraypool *newtets, arraypool *crosstets)
+  arraypool *cavshells, arraypool *newtets, arraypool *crosstets)
 {
   triface *parytet, searchtet, neightet, spintet, *parytet1;
   face checksh, tmpsh, *parysh;
@@ -1862,10 +1862,6 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
   if (b->verbose > 1) {
     printf("    Delaunizing cavity: %ld points, %ld faces.\n", 
       cavpoints->objects, cavfaces->objects);
-  }
-
-  if (cavfaces->objects > maxcavsize) {
-    maxcavsize = cavfaces->objects;
   }
 
   // Get four non-coplanar points (no dummypoint).
@@ -1967,6 +1963,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
         printf("  p:draw_subface(%d, %d, %d) -- %d is missing\n",
           pointmark(pt[0]), pointmark(pt[1]), pointmark(pt[2]), i);
       // }
+      shellfacedealloc(subfacepool, tmpsh.sh);
       // Enlarge the cavity at this face.
       infect(*parytet);
       crosstets->newindex((void **) &parytet1);
@@ -2029,7 +2026,11 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       continue;
     }
     // Remember tmpsh (use the adjacent tet slot). 
-    parytet->tet[parytet->loc] = (tetrahedron) sencode(tmpsh);
+    // parytet->tet[parytet->loc] = (tetrahedron) sencode(tmpsh);
+    tmpsh.sh[0] = (shellface) encode(*parytet);
+    // Save this subface.
+    cavshells->newindex((void **) &parysh);
+    *parysh = tmpsh;
   }
 
   // Collect all tets of the DT.
@@ -2055,6 +2056,11 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
   }
   cavpoints->restart();
   // Comment: Now no vertex is marked.
+  cavfaces->restart();
+
+  if (cavshells->objects > maxcavsize) {
+    maxcavsize = cavshells->objects;
+  }
 
   return true;
 }
@@ -2069,12 +2075,12 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
+bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
   arraypool* midfaces, arraypool* facpoints)
 {
-  arraypool *cavfaces;
-  triface *parytet, toptet, bottet, neightet, midface;
-  face checksh, tmpsh;
+  arraypool *cavshells;
+  triface *parytet, bdrytet, toptet, bottet, neightet, midface;
+  face checksh, *parysh;
   face checkseg;
   point pa, pb, pc, pf, pg;
   REAL ori, len, n[3];
@@ -2086,26 +2092,25 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
 
   // Connect newtets to tets outside the cavity.
   for (k = 0; k < 2; k++) {
-    cavfaces = (k == 0 ? topfaces : botfaces);
-    for (i = 0; i < cavfaces->objects; i++) {
-      parytet = (triface *) fastlookup(cavfaces, i);
-      // Skip a non-cavity face (due to the enlargement).
-      if (infected(*parytet)) continue;
-      pa = org(*parytet);
-      pb = dest(*parytet);
-      pc = apex(*parytet);
-      // Get the saved temp subface.
-      sdecode(parytet->tet[parytet->loc], tmpsh);
+    cavshells = (k == 0 ? topshells : botshells);
+    for (i = 0; i < cavshells->objects; i++) {
+      // Get a temp subface.
+      parysh = (face *) fastlookup(cavshells, i);
+      // Get the boundary tet outsode the cavity.
+      decode(parysh->sh[0], bdrytet);
+      pa = org(bdrytet);
+      pb = dest(bdrytet);
+      pc = apex(bdrytet);
       // Get the adjacent new tet.
-      stpivot(tmpsh, neightet);
+      stpivot(*parysh, neightet);
       assert(org(neightet) == pb); // SELF_CHECK
       assert(dest(neightet) == pa); // SELF_CHECK
-      if (oppo(*parytet) != NULL) {
+      if (oppo(bdrytet) != NULL) {
         // Bond the two tets.
-        bond(*parytet, neightet); // Also cleared the pointer to tmpsh.
+        bond(bdrytet, neightet); // Also cleared the pointer to tmpsh.
       }
       // Bond a subface (if it exists).
-      tspivot(*parytet, checksh);
+      tspivot(bdrytet, checksh);
       if (checksh.sh != NULL) {
         tsbond(neightet, checksh); // Also cleared the pointer to tmpsh.
       } else {
@@ -2116,10 +2121,10 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       point2tet(pb) = encode(neightet);
       point2tet(pc) = encode(neightet);
       // Delete the temp subface.
-      shellfacedealloc(subfacepool, tmpsh.sh);
-      if (oppo(*parytet) == NULL) {
+      // shellfacedealloc(subfacepool, parysh->sh);
+      if (oppo(bdrytet) == NULL) {
         // Delete a faked tet.
-        tetrahedrondealloc(parytet->tet);
+        tetrahedrondealloc(bdrytet.tet);
       }
     }
   }
@@ -2254,14 +2259,15 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     }
     // Bond subsegments to new tets.
     for (k = 0; k < 2; k++) {
-      cavfaces = (k == 0 ? topfaces : botfaces);
-      for (i = 0; i < cavfaces->objects; i++) {
-        parytet = (triface *) fastlookup(cavfaces, i);
+      cavshells = (k == 0 ? topshells : botshells);
+      for (i = 0; i < cavshells->objects; i++) {
+        parysh = (face *) fastlookup(cavshells, i);
+        decode(parysh->sh[0], bdrytet);
         // Bond a subsegment (if it exists).
         for (j = 0; j < 3; j++) {
-          tsspivot(*parytet, checkseg);
+          tsspivot(bdrytet, checkseg);
           if (checkseg.sh != NULL) {
-            symedge(*parytet, neightet);
+            symedge(bdrytet, neightet);
             assert(marktested(neightet)); // SELF_CHECK
             while (1) {
               tssbond1(neightet, checkseg);
@@ -2269,7 +2275,7 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
               if (!marktested(neightet)) break;
             }
           }
-          enextself(*parytet);
+          enextself(bdrytet);
         }
       }
     }
@@ -2331,8 +2337,7 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
       dummypoint[i] = 0.5 * (pf[i] + pg[i]);
     }
     // Set a tet for searching the new point.
-    parytet = (triface *) fastlookup(topfaces, 0);
-    recenttet = *parytet;
+    recenttet = firsttopface;
     // dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
   }
   // Unmark all facet vertices.
@@ -2340,8 +2345,16 @@ bool tetgenmesh::fillcavity(arraypool* topfaces, arraypool* botfaces,
     pf = * (point *) fastlookup(facpoints, i);
     puninfect(pf);
   }
-  topfaces->restart();
-  botfaces->restart();
+  // Delete the temp subfaces.
+  for (k = 0; k < 2; k++) {
+    cavshells = (k == 0 ? topshells : botshells);
+    for (i = 0; i < cavshells->objects; i++) {
+      parysh = (face *) fastlookup(cavshells, i);
+      shellfacedealloc(subfacepool, parysh->sh);
+    }
+  }
+  topshells->restart();
+  botshells->restart();
   midfaces->restart();
   // Comment: Now no vertex is marked.
 
@@ -2423,31 +2436,13 @@ void tetgenmesh::carvecavity(arraypool *crosstets, arraypool *topnewtets,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::restorecavity(arraypool *crosstets, arraypool *topfaces,
-  arraypool *botfaces, arraypool *topnewtets, arraypool *botnewtets)
+void tetgenmesh::restorecavity(arraypool *crosstets, arraypool *topnewtets,
+  arraypool *botnewtets)
 {
-  arraypool *cavfaces;
   triface *parytet, neightet;
-  face checksh, tmpsh;
+  face checksh;
   point *ppt;
   int i, j;
-
-  // Delete temp subfaces and faked tets (if there are).
-  for (i = 0; i < 2; i++) {
-    cavfaces = (i == 0 ? topfaces : botfaces);
-    for (j = 0; j < cavfaces->objects; j++) {
-      parytet = (triface *) fastlookup(cavfaces, j);
-      // Delete a temporary subface.
-      sdecode(parytet->tet[parytet->loc], tmpsh);
-      shellfacedealloc(subfacepool, tmpsh.sh);
-      parytet->tet[parytet->loc] = NULL;
-      if (oppo(*parytet) == NULL) {
-        // Delete a faked tet.
-        tetrahedrondealloc(parytet->tet);
-      }
-    }
-    cavfaces->restart();
-  }
 
   // Reconnect crossing tets to cavity boundary.
   for (i = 0; i < crosstets->objects; i++) {
@@ -2566,8 +2561,8 @@ void tetgenmesh::constrainedfacets()
 {
   arraypool *crosstets, *topnewtets, *botnewtets;
   arraypool *topfaces, *botfaces, *midfaces;
-  arraypool *toppoints, *botpoints;
-  arraypool *facfaces, *facpoints;
+  arraypool *topshells, *botshells, *facfaces;
+  arraypool *toppoints, *botpoints, *facpoints;
   triface *parytet, searchtet, neightet;
   face *pssub, ssub, neighsh;
   face checkseg;
@@ -2595,6 +2590,8 @@ void tetgenmesh::constrainedfacets()
   botpoints = new arraypool(sizeof(point), 8);
   facpoints = new arraypool(sizeof(point), 8);
   facfaces = new arraypool(sizeof(face), 10);
+  topshells = new arraypool(sizeof(face), 10);
+  botshells = new arraypool(sizeof(face), 10);
 
   bakflip22count = flip22count;
   cavitycount = 0;
@@ -2695,13 +2692,15 @@ void tetgenmesh::constrainedfacets()
             botpoints, facpoints);
           delaunayflag = true;
           // Tetrahedralize the top part.
-          success = delaunizecavity(toppoints,topfaces,topnewtets,crosstets);
+          success = delaunizecavity(toppoints, topfaces, topshells,
+            topnewtets, crosstets);
           if (success) {
             // Tetrahedralize the bottom part.
-            success = delaunizecavity(botpoints,botfaces,botnewtets,crosstets);
+            success = delaunizecavity(botpoints, botfaces, botshells, 
+              botnewtets, crosstets);
             if (success) {
               // Fill the cavity with new tets.
-              success = fillcavity(topfaces, botfaces, midfaces, facpoints);
+              success = fillcavity(topshells, botshells, midfaces, facpoints);
               if (success) {
                 // Delete old tets and outer new tets.
                 carvecavity(crosstets, topnewtets, botnewtets);
@@ -2710,13 +2709,11 @@ void tetgenmesh::constrainedfacets()
               delaunayflag = false;
             }
           } else {
-            botfaces->restart();
-            botpoints->restart();
             delaunayflag = false;
           }
           if (!success) {
             // Restore old tets and delete new tets.
-            restorecavity(crosstets,topfaces,botfaces,topnewtets,botnewtets);
+            restorecavity(crosstets, topnewtets, botnewtets);
           }
           /*if (!delaunayflag) {
             dump_facetof(&ssub, "facet1.lua");
@@ -2784,6 +2781,8 @@ void tetgenmesh::constrainedfacets()
   delete botpoints;
   delete facpoints;
   delete facfaces;
+  delete topshells;
+  delete botshells;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

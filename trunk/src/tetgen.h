@@ -1664,10 +1664,10 @@ void recoversubfacebyflips(face* pssub, triface* crossface, arraypool*);
 void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
 void formedgecavity(point, point, arraypool*, arraypool*, arraypool*);
-bool delaunizecavity(arraypool*, arraypool*, arraypool*, arraypool*);
+bool delaunizecavity(arraypool*,arraypool*,arraypool*,arraypool*,arraypool*);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
-void restorecavity(arraypool*, arraypool*, arraypool*, arraypool*, arraypool*);
+void restorecavity(arraypool*, arraypool*, arraypool*);
 void splitsubedge(point, face*, arraypool*, arraypool*);
 void constrainedfacets();
 
