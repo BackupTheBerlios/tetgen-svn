@@ -524,7 +524,8 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 ///////////////////////////////////////////////////////////////////////////////
 
 enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt, 
-  triface *searchtet, bool bwflag, bool visflag, bool noencflag)
+  triface *searchtet, bool bwflag, bool visflag, bool noencsegflag,
+  bool noencsubflag)
 {
   triface *cavetet, *parytet, spintet, neightet, newtet, neineitet;
   face *pssub, checksh;
@@ -762,7 +763,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     maxbowatcavsize = cavebdrylist->objects;
   }
 
-  if (checksubsegs || noencflag) {
+  if (checksubsegs || noencsegflag) {
     // Check if some (sub)segments are inside the cavity.
     for (i = 0; i < caveoldtetlist->objects; i++) {
       cavetet = (triface *) fastlookup(caveoldtetlist, i);
@@ -796,7 +797,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     }
   }
 
-  if (noencflag && (subsegstack->objects > 0)) {
+  if (noencsegflag && (subsegstack->objects > 0)) {
     // Found encroached subsegments! Do not insert this point.
     for (i = 0; i < caveoldtetlist->objects; i++) {
       cavetet = (triface *) fastlookup(caveoldtetlist, i);
@@ -817,7 +818,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     return ENCSEGMENT;
   }
 
-  if (checksubfaces) {
+  if (checksubfaces || noencsubflag) {
     // Check if some subfaces are inside the cavity.
     for (i = 0; i < caveoldtetlist->objects; i++) {
       cavetet = (triface *) fastlookup(caveoldtetlist, i);
@@ -841,6 +842,27 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         }
       }
     }
+  }
+
+  if (noencsubflag && (subfacstack->objects > 0)) {
+    // Found encroached subfaces! Do not insert this point.
+    for (i = 0; i < caveoldtetlist->objects; i++) {
+      cavetet = (triface *) fastlookup(caveoldtetlist, i);
+      uninfect(*cavetet);
+      unmarktest(*cavetet);
+    }
+    for (i = 0; i < cavebdrylist->objects; i++) {
+      cavetet = (triface *) fastlookup(cavebdrylist, i);
+      unmarktest(*cavetet); // Unmark it.
+    }
+    if (bwflag && (futureflip != NULL)) {
+      flippool->restart();
+      futureflip = NULL;
+    }
+    cavetetlist->restart();
+    cavebdrylist->restart();
+    caveoldtetlist->restart();
+    return ENCFACE;
   }
 
   if (visflag) {
@@ -1361,7 +1383,7 @@ void tetgenmesh::incrementaldelaunay()
     for (i = 4; i < in->numberofpoints; i++) {
       if (b->verbose > 1) printf("    #%d", i);
       searchtet.tet = NULL;  // Randomly sample tetrahedra.
-      insertvertex(permutarray[i], &searchtet, true, false, false);    
+      insertvertex(permutarray[i], &searchtet, true, false, false, false);
     }
   } else {
     // Use incremental flip algorithm.

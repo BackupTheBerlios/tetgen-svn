@@ -1624,7 +1624,7 @@ enum location locate(point searchpt, triface* searchtet);
 ///////////////////////////////////////////////////////////////////////////////
 
 void initialDT(point pa, point pb, point pc, point pd);
-enum location insertvertex(point, triface*, bool, bool, bool);
+enum location insertvertex(point, triface*, bool, bool, bool, bool);
 void flipinsertvertex(point, triface*, int);
 void incrementaldelaunay();
 
@@ -1664,7 +1664,7 @@ void recoversubfacebyflips(face* pssub, triface* crossface, arraypool*);
 void formcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*, 
                 arraypool*, arraypool*);
 void formedgecavity(point, point, arraypool*, arraypool*, arraypool*);
-bool delaunizecavity(arraypool*, arraypool*, arraypool*);
+bool delaunizecavity(arraypool*, arraypool*, arraypool*, arraypool*);
 bool fillcavity(arraypool*, arraypool*, arraypool*, arraypool*);
 void carvecavity(arraypool*, arraypool*, arraypool*);
 void restorecavity(arraypool*, arraypool*, arraypool*, arraypool*, arraypool*);
