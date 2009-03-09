@@ -2015,11 +2015,11 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       // Check for a missing subface.
       tspivot(*parytet, checksh);
       if (checksh.sh != NULL) {
-        // if (b->verbose > 1) {
+        if (b->verbose > 1) {
           printf("    Queue a subface x%lx (%d, %d, %d).\n", 
             (unsigned long) checksh.sh, pointmark(sorg(checksh)),
             pointmark(sdest(checksh)), pointmark(sapex(checksh)));
-        // }
+        }
         stdissolve(checksh);
         subfacstack->newindex((void **) &parysh);
         *parysh = checksh;
@@ -2032,9 +2032,9 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
         // Insert the opposite point if it is not in DT.
         pd = oppo(*parytet);
         if (!pinfected(pd)) {
-          // if (b->verbose > 1) {
+          if (b->verbose > 1) {
             printf("    Insert the opposite point %d.\n", pointmark(pd));
-          // }
+          }
           pinfect(pd);
           cavpoints->newindex((void **) &parypt);
           *parypt = pd;
@@ -2047,7 +2047,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
           symself(neightet);
           if (!infected(neightet)) {
             if (b->verbose > 1) {
-              printf("    p:draw_subface(%d, %d, %d) -- Add a cavface.\n",
+              printf("    Add a cavface (%d, %d, %d).\n",
                 pointmark(org(neightet)), pointmark(dest(neightet)),
                 pointmark(apex(neightet)));
             }
@@ -2057,11 +2057,11 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
             // Check if a subface is missing again.
             tspivot(neightet, checksh);
             if (checksh.sh != NULL) {
-              // if (b->verbose > 1) {
+              if (b->verbose > 1) {
                 printf("    Queue a subface x%lx (%d, %d, %d).\n", 
                   (unsigned long) checksh.sh, pointmark(sorg(checksh)),
                   pointmark(sdest(checksh)), pointmark(sapex(checksh)));
-              // }
+              }
               stdissolve(checksh);
               subfacstack->newindex((void **) &parysh);
               *parysh = checksh;
@@ -2072,6 +2072,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       }
     }
     misfaces->restart();
+    cavityexpcount++;
     continue;
   }
 

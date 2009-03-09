@@ -535,6 +535,7 @@ void tetgenmesh::algorithmstatistics()
     printf("  Number of rule-3 points: %ld\n", r3count);
     printf("  Maximal size of a missing region: %ld\n", maxregionsize);
     printf("  Maximal size of a recovered cavity: %ld\n", maxcavsize);
+    printf("  Number of cavity expansions: %ld\n", cavityexpcount);
   }
   
   // printf("  Total point location time (millisec):  %g\n", tloctime * 1e+3);
