@@ -827,6 +827,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         tspivot(neightet, checksh);
         if (checksh.sh != NULL) {
           sym(neightet, neineitet);
+          // Do not check it if it is a hull tet.
           if (infected(neineitet)) {
             if (b->verbose > 1) {
               printf("      Queue a missing subface (%d, %d, %d).\n",

@@ -1844,14 +1844,14 @@ void tetgenmesh::formedgecavity(point pa, point pb, arraypool* crosstets,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces, 
-  arraypool *cavshells, arraypool *newtets, arraypool *crosstets)
+  arraypool *cavshells, arraypool *newtets, arraypool *crosstets,
+  arraypool *misfaces)
 {
   triface *parytet, searchtet, neightet, spintet, *parytet1;
   face checksh, tmpsh, *parysh;
   point pa, pb, pc, pd, pt[3], *parypt;
   // badface *newflipface;
   enum intersection dir;
-  enum location loc;
   REAL ori;
   // int miscount;
   int i, j;
@@ -1913,7 +1913,9 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
   }
   // Comment: All vertices of the cavity are marked.
 
-  // Indentify boundary faces. Mark interior tets.
+  while (1) {
+
+  // Indentify boundary faces. Mark interior tets. Save missing faces.
   for (i = 0; i < cavfaces->objects; i++) {
     parytet = (triface *) fastlookup(cavfaces, i);
     // Skip an interior face (due to the enlargement of the cavity).
@@ -1964,48 +1966,9 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
           pointmark(pt[0]), pointmark(pt[1]), pointmark(pt[2]), i);
       // }
       shellfacedealloc(subfacepool, tmpsh.sh);
-      // Enlarge the cavity at this face.
-      infect(*parytet);
-      crosstets->newindex((void **) &parytet1);
+      // Save this face in list.
+      misfaces->newindex((void **) &parytet1);
       *parytet1 = *parytet;
-      // Check for a missing subface.
-      tspivot(*parytet, checksh);
-      if (checksh.sh != NULL) {
-        // if (b->verbose > 1) {
-          printf("    Queue a subface x%lx.\n", (unsigned long) checksh.sh);
-        // }
-        subfacstack->newindex((void **) &parysh);
-        *parysh = checksh;
-      }
-      // Insert the opposite point if it is not in DT.
-      pd = oppo(*parytet);
-      if (!pinfected(pd)) {
-        // if (b->verbose > 1) {
-          printf("    Insert the opposite point %d.\n", pointmark(pd));
-        // }
-        pinfect(pd);
-        cavpoints->newindex((void **) &parypt);
-        *parypt = pd;
-        // Insert point, check encroached subfaces ('noencsubflag = true').
-        searchtet = recenttet;
-        loc = insertvertex(pd, &searchtet, true, false, false, true);
-        assert(loc != ENCFACE); // SELF_CHECK
-      }
-      // Add three opposite faces into the boundary list.
-      for (j = 0; j < 3; j++) {
-        enext0fnext(*parytet, neightet);
-        symself(neightet);
-        if (!infected(neightet)) {
-          // if (b->verbose > 1) {
-            printf("    p:draw_subface(%d, %d, %d) -- Add a cavface.\n",
-              pointmark(org(neightet)), pointmark(dest(neightet)),
-              pointmark(apex(neightet)));
-          // }
-          cavfaces->newindex((void **) &parytet1);
-          *parytet1 = neightet;
-        }
-        enextself(*parytet);
-      }
       /*if (dir == EDGETRIINT) {
         assert(0); // Face unmatched. Not process yet.
       }
@@ -2032,6 +1995,89 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
     cavshells->newindex((void **) &parysh);
     *parysh = tmpsh;
   }
+
+  if (misfaces->objects > 0) {
+    // Removing tempoaray subfaces.
+    for (i = 0; i < cavshells->objects; i++) {
+      parysh = (face *) fastlookup(cavshells, i);
+      stpivot(*parysh, neightet);
+      uninfect(neightet);
+      tsdissolve(neightet); // Detach it from adj. tets.
+      symself(neightet);
+      tsdissolve(neightet);
+      shellfacedealloc(subfacepool, parysh->sh);
+    }
+    cavshells->restart();
+    // Enlarge the cavity.
+    for (i = 0; i < misfaces->objects; i++) {
+      // Get a missing face.
+      parytet = (triface *) fastlookup(misfaces, i);
+      // Check for a missing subface.
+      tspivot(*parytet, checksh);
+      if (checksh.sh != NULL) {
+        // if (b->verbose > 1) {
+          printf("    Queue a subface x%lx (%d, %d, %d).\n", 
+            (unsigned long) checksh.sh, pointmark(sorg(checksh)),
+            pointmark(sdest(checksh)), pointmark(sapex(checksh)));
+        // }
+        stdissolve(checksh);
+        subfacstack->newindex((void **) &parysh);
+        *parysh = checksh;
+      }
+      if (!infected(*parytet)) {
+        // Put it into crossing tet list.
+        infect(*parytet);
+        crosstets->newindex((void **) &parytet1);
+        *parytet1 = *parytet;
+        // Insert the opposite point if it is not in DT.
+        pd = oppo(*parytet);
+        if (!pinfected(pd)) {
+          // if (b->verbose > 1) {
+            printf("    Insert the opposite point %d.\n", pointmark(pd));
+          // }
+          pinfect(pd);
+          cavpoints->newindex((void **) &parypt);
+          *parypt = pd;
+          searchtet = recenttet;
+          insertvertex(pd, &searchtet, true, false, false, false);
+        }
+        // Add three opposite faces into the boundary list.
+        for (j = 0; j < 3; j++) {
+          enext0fnext(*parytet, neightet);
+          symself(neightet);
+          if (!infected(neightet)) {
+            if (b->verbose > 1) {
+              printf("    p:draw_subface(%d, %d, %d) -- Add a cavface.\n",
+                pointmark(org(neightet)), pointmark(dest(neightet)),
+                pointmark(apex(neightet)));
+            }
+            cavfaces->newindex((void **) &parytet1);
+            *parytet1 = neightet;
+          } else {
+            // Check if a subface is missing again.
+            tspivot(neightet, checksh);
+            if (checksh.sh != NULL) {
+              // if (b->verbose > 1) {
+                printf("    Queue a subface x%lx (%d, %d, %d).\n", 
+                  (unsigned long) checksh.sh, pointmark(sorg(checksh)),
+                  pointmark(sdest(checksh)), pointmark(sapex(checksh)));
+              // }
+              stdissolve(checksh);
+              subfacstack->newindex((void **) &parysh);
+              *parysh = checksh;
+            }
+          }
+          enextself(*parytet);
+        } // if (!infected(parytet))
+      }
+    }
+    misfaces->restart();
+    continue;
+  }
+
+  break;
+
+  } // while (1)
 
   // Collect all tets of the DT.
   marktest(recenttet);
@@ -2139,7 +2185,18 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
 
   // The first pair of top and bottom tets share the same edge [a, b].
   // toptet = * (triface *) fastlookup(topfaces, 0);
-  assert(!infected(firsttopface)); // SELF_CHECK (TRUE if no enlargement).
+  if (infected(firsttopface)) {
+    // The cavity was enlarged. This tet is included in the interior
+    //   (as those of a crossing tet). Find the updated top boundary face
+    //   by rotating the faces around this edge (until an uninfect tet).
+    assert((firsttopface.ver & 01) == 0); // SELF_CHECK
+    pa = apex(firsttopface);
+    while (1) {
+      fnextself(firsttopface);
+      if (!infected(firsttopface)) break;
+      assert(apex(firsttopface) != pa); // SELF_CHECK
+    }
+  }
   toptet = firsttopface;
   symedgeself(toptet);
   // Search a subface from the top mesh.
@@ -2151,7 +2208,15 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
   }
   // Search the subface [a,b,c] in the bottom mesh.
   // bottet = * (triface *) fastlookup(botfaces, 0);
-  assert(!infected(firstbotface)); // SELF_CHECK (TRUE if no enlargement).
+  if (infected(firstbotface)) {
+    assert((firstbotface.ver & 01) == 0); // SELF_CHECK
+    pa = apex(firstbotface);
+    while (1) {
+      fnextself(firstbotface);
+      if (!infected(firstbotface)) break;
+      assert(apex(firstbotface) != pa); // SELF_CHECK
+    }
+  }
   bottet = firstbotface;
   symedgeself(bottet);
   while (1) {
@@ -2691,13 +2756,13 @@ void tetgenmesh::constrainedfacets()
           formcavity(&ssub, crosstets, topfaces, botfaces, toppoints,
             botpoints, facpoints);
           delaunayflag = true;
-          // Tetrahedralize the top part.
+          // Tetrahedralize the top part. Re-use 'midfaces'.
           success = delaunizecavity(toppoints, topfaces, topshells,
-            topnewtets, crosstets);
+            topnewtets, crosstets, midfaces);
           if (success) {
-            // Tetrahedralize the bottom part.
+            // Tetrahedralize the bottom part. Re-use 'midfaces'.
             success = delaunizecavity(botpoints, botfaces, botshells, 
-              botnewtets, crosstets);
+              botnewtets, crosstets, midfaces);
             if (success) {
               // Fill the cavity with new tets.
               success = fillcavity(topshells, botshells, midfaces, facpoints);

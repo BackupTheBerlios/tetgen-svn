@@ -276,24 +276,24 @@ int tetgenmesh::checkshells(int sub2tet)
         tspivot(neightet, spinsh);
         if (spinsh.sh != shloop.sh) {
           printf("  !! !! Wrong connection betwee tet and subface.\n");
+          printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+            pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
           printf("    Tet: x%lx (%d, %d, %d, %d).\n", 
             (unsigned long) neightet.tet, pmark(org(neightet)), 
             pmark(dest(neightet)), pmark(apex(neightet)), 
             pmark(oppo(neightet)));
-          printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
-            pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
           horrors++;
         } else {
           symself(neightet);
           tspivot(neightet, spinsh);
           if (spinsh.sh != shloop.sh) {
             printf("  !! !! Wrong connection betwee tet and subface.\n");
+            printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
+              pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
             printf("    Tet: x%lx (%d, %d, %d, %d).\n", 
               (unsigned long) neightet.tet, pmark(org(neightet)), 
               pmark(dest(neightet)), pmark(apex(neightet)), 
               pmark(oppo(neightet)));
-            printf("    Sub: x%lx (%d, %d, %d).\n", (unsigned long) shloop.sh,
-              pmark(sorg(shloop)), pmark(sdest(shloop)), pmark(sapex(shloop)));
             horrors++;
           }
         }
