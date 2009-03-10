@@ -2068,8 +2068,8 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
             }
           }
           enextself(*parytet);
-        } // if (!infected(parytet))
-      }
+        } // j
+      } // if (!infected(parytet))
     }
     misfaces->restart();
     cavityexpcount++;
@@ -2080,7 +2080,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
 
   } // while (1)
 
-  // Collect all tets of the DT.
+  // Collect all tets of the DT. All new tets are marktested.
   marktest(recenttet);
   newtets->newindex((void **) &parytet);
   *parytet = recenttet;
@@ -2190,7 +2190,6 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
     // The cavity was enlarged. This tet is included in the interior
     //   (as those of a crossing tet). Find the updated top boundary face
     //   by rotating the faces around this edge (until an uninfect tet).
-    assert((firsttopface.ver & 01) == 0); // SELF_CHECK
     pa = apex(firsttopface);
     while (1) {
       fnextself(firsttopface);
@@ -2210,7 +2209,6 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
   // Search the subface [a,b,c] in the bottom mesh.
   // bottet = * (triface *) fastlookup(botfaces, 0);
   if (infected(firstbotface)) {
-    assert((firstbotface.ver & 01) == 0); // SELF_CHECK
     pa = apex(firstbotface);
     while (1) {
       fnextself(firstbotface);
@@ -2271,7 +2269,6 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
         // Go to the same face in the adjacent tet.
         symedgeself(toptet);
         // Do we walk outside the cavity? 
-        // (The following code does not always work, 2009-01-19).
         if (!marktested(toptet)) {
           // Yes, the adjacent face is not a middle face.
           bflag = true; break; 
@@ -2291,17 +2288,29 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
             symedgeself(bottet);
           }
           if (mflag) {
-            assert(marktested(bottet)); // SELF_CHECK
-            // Connect two tets together.
-            bond(toptet, bottet);
-            // Both are interior tets.
-            infect(toptet);
-            infect(bottet);
-            // Add this face into list.
-            esymself(toptet);
-            markface(toptet);
-            midfaces->newindex((void **) &parytet);
-            *parytet = toptet;
+            if (marktested(bottet)) {
+              // Connect two tets together.
+              bond(toptet, bottet);
+              // Both are interior tets.
+              infect(toptet);
+              infect(bottet);
+              // Add this face into list.
+              esymself(toptet);
+              markface(toptet);
+              midfaces->newindex((void **) &parytet);
+              *parytet = toptet;
+            } else {
+              // The 'bottet' is not inside the cavity! 
+              // This case can happen when the cavity was enlarged, and the
+              //   'toptet' is a co-facet (sub)face adjacent to the missing
+              //   region, and it is a boundary face of the top cavity.
+              // So the toptet and bottet should be bonded already through
+              //   a temp subface. See fig/dump-cavity-case18. Check it.
+              symedge(toptet, neightet);
+              assert(neightet.tet == bottet.tet); // SELF_CHECK
+              assert(neightet.loc == bottet.loc); // SELF_CHECK
+              // Do not add this face into 'midfaces'.
+            }
           }
         }
       }
