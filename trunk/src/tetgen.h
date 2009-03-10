@@ -1505,7 +1505,7 @@ long triedgcount, triedgcopcount, trivercopcount;
 long across_face_count, across_edge_count, across_max_count;
 long r1count, r2count, r3count;
 long maxcavsize, maxregionsize;
-long cavityexpcount;
+long ndelaunayedgecount, cavityexpcount;
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1755,7 +1755,7 @@ void initialize()
   across_face_count = across_edge_count = across_max_count = 0l;
   r1count = r2count = r3count = 0l;
   maxcavsize = maxregionsize = 0l;
-  cavityexpcount = 0l;
+  ndelaunayedgecount = cavityexpcount = 0l;
 }
 
 void deinitialize()

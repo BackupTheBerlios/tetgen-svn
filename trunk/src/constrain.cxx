@@ -1961,10 +1961,10 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       assert(dest(searchtet) == pt[0]); // SELF_CHECK
       tmpsh.sh[9] = (shellface) encode(searchtet);
     } else {
-      // if (b->verbose > 1) {
+      if (b->verbose > 1) {
         printf("  p:draw_subface(%d, %d, %d) -- %d is missing\n",
           pointmark(pt[0]), pointmark(pt[1]), pointmark(pt[2]), i);
-      // }
+      }
       shellfacedealloc(subfacepool, tmpsh.sh);
       // Save this face in list.
       misfaces->newindex((void **) &parytet1);
@@ -2361,13 +2361,13 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
     pb = dest(toptet);
     pc = apex(toptet);
     pf = apex(bottet);
-    // if (b->verbose > 1) {
+    if (b->verbose > 1) {
       printf("  p:draw_tet(%d, %d, %d, %d) -- top tet.\n", pointmark(pa), 
         pointmark(pb), pointmark(pc), pointmark(oppo(toptet)));
       printf("  p:draw_tet(%d, %d, %d, %d) -- bot tet.\n", 
         pointmark(org(bottet)), pointmark(dest(bottet)), 
         pointmark(apex(bottet)), pointmark(oppo(bottet)));
-    // }
+    }
     // Calculate a point above the faces.
     facenormal(pa, pb, pc, n, 1);
     len = sqrt(DOT(n, n));
@@ -2403,10 +2403,10 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
       pf = org(bottet);
       pg = dest(bottet);
     }
-    // if (b->verbose > 1) {
+    if (b->verbose > 1) {
       printf("  Found a non-Delaunay edge (%d, %d)\n", pointmark(pf), 
         pointmark(pg));
-    // }
+    }
     // Create the midpoint of the non-Delaunay edge.
     for (i = 0; i < 3; i++) {
       dummypoint[i] = 0.5 * (pf[i] + pg[i]);
@@ -2414,6 +2414,7 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
     // Set a tet for searching the new point.
     recenttet = firsttopface;
     // dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
+    ndelaunayedgecount++;
   }
   // Unmark all facet vertices.
   for (i = 0; i < facpoints->objects; i++) {
@@ -2830,7 +2831,9 @@ void tetgenmesh::constrainedfacets()
         splitsubedge(newpt, &ssub, facfaces, facpoints);
         // Some subsegments may be queued, recover them.
         if (subsegstack->objects > 0l) {
+          b->verbose--; // Suppress the message output.
           delaunizesegments();
+          b->verbose++;
         }
         facfaces->restart();
       }

@@ -891,10 +891,10 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
           cavetetlist->newindex((void **) &parytet);
           *parytet = *cavetet; 
         } else {
-          // if (b->verbose > 1) {
+          if (b->verbose > 1) {
             printf("    Cut tet (%d, %d, %d, %d)\n", pointmark(pb), 
               pointmark(pa), pointmark(pc), pointmark(oppo(neightet)));
-          // }
+          }
           uninfect(neightet);
           unmarktest(neightet);
           updatecount++;
@@ -1164,12 +1164,9 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
       pa = oppo(*parytet);
       futureflip = flippush(futureflip, parytet, pa);
     }
-    int bakverbose = b->verbose; // DEBUG ONLY
-    b->verbose = 2;  // DEBUG ONLY
     // Recover Delaunay faces.
     //   Set 'flipflag' = 2, s.t. all faces are checked for flipping.
     lawsonflip3d(2);
-    b->verbose = bakverbose; // DEBUG ONLY
   }
 
   // Set the point type.
