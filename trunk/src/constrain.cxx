@@ -2947,15 +2947,17 @@ void tetgenmesh::formskeleton()
 void tetgenmesh::carveholes()
 {
   arraypool *tetarray;
-  triface tetloop, neightet, hulltet, *parytet;
+  triface tetloop, neightet, hulltet, *parytet, *parytet1, fliptets[3];
   triface openface, casface;
   triface *regiontets;
-  face checksh;
+  face checksh, neighsh, flipshs[2];
+  face checkseg;
   point *ppt, pa, pb, pc;
   enum location loc;
   REAL volume;
   int attrnum, attr, maxattr;
-  int i, j;
+  int flatcount;
+  int i, j, k;
 
   tetrahedron ptr;
   int *iptr, tver;
@@ -3151,6 +3153,164 @@ void tetgenmesh::carveholes()
       enextself(hulltet);
     }
   }
+
+  //////////////////////////////////////////////////////////////////////
+  // Peel off "flat" tetrahedra at boundary. 
+
+  tetarray->restart(); // Re-use this array.
+  flatcount = 0;
+
+  // Queue flat tets.
+  tetrahedronpool->traversalinit();
+  tetloop.ver = 0;
+  tetloop.tet = tetrahedrontraverse();
+  while (tetloop.tet != (tetrahedron *) NULL) {
+    // Does this tet contain subfaces?
+    if (tetloop.tet[9] != NULL) {
+      // Look at shared subface at its 6 edges.
+      for (i = 0; i < 6; i++) {
+        tetloop.loc = edge2locver[i][0];
+        tetloop.ver = edge2locver[i][1];
+        // Is this edge a segment?
+        tsspivot(tetloop, checkseg);
+        if (checkseg.sh == NULL) {
+          // No segment. Is this edge shared by two subfaces?
+          tspivot(tetloop, checksh);
+          if (checksh.sh != NULL) {
+            enext0fnext(tetloop, neightet);
+            tspivot(neightet, neighsh);
+            if (neighsh.sh != NULL) {
+              if (b->verbose > 1) {
+                ppt = (point *) &tetloop.tet[4];
+                printf("    p:draw_tet(%d, %d, %d, %d) -- flat\n",
+                  pointmark(ppt[0]), pointmark(ppt[1]), pointmark(ppt[2]),
+                  pointmark(ppt[3]));
+              }
+              tetarray->newindex((void **) &parytet);
+              *parytet = tetloop;
+              break;
+            } // neighsh.sh != NULL
+          } // checksh.sh != NULL
+        } // checkseg.sh != NULL
+      } // i
+    }
+    tetloop.tet = tetrahedrontraverse();
+  }
+
+  if (tetarray->objects > 0) {
+    if (b->verbose) {
+      printf("  Removing flat boundary tetrahedra.\n");
+    }
+  }
+
+  // Remove flat tets, new flat tets are queued.
+  for (i = 0; i < tetarray->objects; i++) {
+    parytet = (triface *) fastlookup(tetarray, i);
+    assert(parytet->tet[4] != NULL); // SELF_CHECK
+    sym(*parytet, neightet);
+    if ((point) neightet.tet[7] != dummypoint) {
+      continue; // An internal face. Can't be peeled off.
+    }
+
+    if (b->verbose > 1) {
+      printf("    i = %d.\n", i);
+    }
+
+    enext0fnext(*parytet, neightet);
+    pa = org(*parytet);
+    pb = dest(*parytet);
+    tspivot(*parytet, flipshs[0]); // [0] abc
+    for (j = 0; j < 3; j++) {
+      if (sorg(flipshs[0]) == pa) break;
+      senextself(flipshs[0]);
+    }
+    assert(j < 3); // SELF_CHECK
+    if (sdest(flipshs[0]) != pb) {
+      senext2self(flipshs[0]);
+      sesymself(flipshs[0]);
+    }
+    assert(sdest(flipshs[0]) == pb); // SELF_CHECK
+    tspivot(neightet, flipshs[1]); // [1] bda
+    for (j = 0; j < 3; j++) {
+      if (sorg(flipshs[1]) == pb) break;
+      senextself(flipshs[1]);
+    }
+    assert(j < 3); // SELF_CHECK
+    if (sdest(flipshs[1]) != pa) {
+      senext2self(flipshs[1]);
+      sesymself(flipshs[1]);
+    }
+    assert(sdest(flipshs[1]) == pa); // SELF_CHECK
+
+    // Detach abc and bad.
+    sym(*parytet, casface);
+    tsdissolve(*parytet);
+    tsdissolve(casface);
+    sym(neightet, casface);
+    tsdissolve(neightet);
+    tsdissolve(casface);
+
+    // flip [0]abc,[1]bad to [0]cdb, [1]dca
+    flip22(flipshs, 0);
+
+    for (k = 0; k < 2; k++) {
+      if (k == 0) {
+        // Insert flipshs[0] [c,d,b] to adjacent tets.
+        enextfnext(*parytet, neightet); // face [b,c,d].
+        enextself(neightet); // edge [c,d] in face [c,d,b].
+      } else {
+        // Insert flipshs[1] [d,c,a] to adjacent tets.
+        enext2fnext(*parytet, neightet); // face [c,a,d].
+        enext2self(neightet); // edge [d,c] in face [d,c,a].
+      }
+      symedge(neightet, casface);
+      assert((point) casface.tet[7] != dummypoint); // SELF_CHECK
+      tspivot(neightet, checksh); // SELF_CHECK
+      assert(checksh.sh == NULL); // SELF_CHECK
+      tsbond(neightet, flipshs[k]);
+      tsbond(casface, flipshs[k]);
+      // Check for new invalid tet(s) (at edge [d,b] and [b,c]).
+      for (j = 0; j < 2; j++) {
+        enextself(casface); // edges [d,b], [b,c].
+        tsspivot(casface, checkseg);
+        if (checkseg.sh == NULL) {
+          enext0fnext(casface, openface);
+          tspivot(openface, checksh);
+          if (checksh.sh != NULL) {
+            if (b->verbose > 1) {
+               ppt = (point *) &casface.tet[4];
+               printf("    p:draw_tet(%d, %d, %d, %d) -- flat\n",
+                 pointmark(ppt[0]), pointmark(ppt[1]), pointmark(ppt[2]),
+                 pointmark(ppt[3]));
+            }
+            tetarray->newindex((void **) &parytet1);
+            *parytet1 = casface;
+            break;
+          }
+        }
+      } // j
+    } // k
+
+    // Peel the flat boundary tet by a flip32.
+    fliptets[0] = *parytet;
+    fnext(fliptets[0], fliptets[1]);
+    fnext(fliptets[1], fliptets[2]);
+    assert(apex(fliptets[2]) == dummypoint); // SELF_CHECK
+    assert(oppo(fliptets[2]) == apex(fliptets[0])); // SELF_CHECK
+
+    // Flip the tets (with hull tets, do not propagate).
+    flip32(fliptets, 1, 0);
+    // Now the flat boundary tet is removed.
+    flatcount++;
+  } // i
+
+  if (tetarray->objects > 0) {
+    if (b->verbose) {
+      printf("  %d flat tets are removed.\n", flatcount);
+    }
+  }
+
+  /////////////////////////////////////////////////////////////////////////
 
   // Set region attributes (when has -A and -AA options).
   if (b->regionattrib) {
