@@ -397,7 +397,7 @@ int tetgenmesh::checkdelaunay(int constrained)
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::checksegments()
+int tetgenmesh::checksegments()
 {
   triface tetloop, neightet;
   shellface *segs;
@@ -467,6 +467,8 @@ void tetgenmesh::checksegments()
   } else {
     printf("  !! !! !! !! Found %d missing connections.\n", horrors);
   }
+
+  return horrors;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1003,6 +1005,8 @@ bool tetgenmesh::pedge(int i, int j)
           tsspivot(t1, sseg);
           if (sseg.sh != NULL) {
             printf(" (seg)");
+          } else {
+            assert(0); // DEBUG ONLY (14736, 14388)
           }
         }
         if (checksubfaces) {

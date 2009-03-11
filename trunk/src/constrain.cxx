@@ -2817,6 +2817,7 @@ void tetgenmesh::constrainedfacets()
           assert(0);
         }
         if (!success) break;
+        pedge(14736, 14388);
       } // while
 
       if (facfaces->objects > 0l) {
