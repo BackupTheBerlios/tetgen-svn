@@ -435,12 +435,17 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
     if (pd == endpt) {
       // Found! Insert the segment.
       tsspivot(*searchtet, checkseg);  // SELF_CHECK
-      assert(checkseg.sh == NULL);  // SELF_CHECK
-      neightet = *searchtet;
-      do {
-        tssbond1(neightet, *sseg);
-        fnextself(neightet);
-      } while (neightet.tet != searchtet->tet);
+      if (checkseg.sh == NULL) {
+        neightet = *searchtet;
+        do {
+          tssbond1(neightet, *sseg);
+          fnextself(neightet);
+        } while (neightet.tet != searchtet->tet);
+      } else {
+        // Collision! This can happy during facet recovery.
+        // See fig/dump-cavity-case19, -case20.
+        assert(checkseg.sh == sseg->sh); // SELF_CHECK
+      }
       // The job is done. 
       return SHAREVERT;
     } else {
@@ -2332,25 +2337,64 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
       assert(facemarked(midface)); // SELF_CHECK
       unmarkface(midface);
     }
-    // Bond subsegments to new tets.
+    // Bond subsegments to new tets. 
+    // Comment: *** The following code does redundant job. Should be
+    //   re-placed in the future.
     for (k = 0; k < 2; k++) {
       cavshells = (k == 0 ? topshells : botshells);
       for (i = 0; i < cavshells->objects; i++) {
         parysh = (face *) fastlookup(cavshells, i);
         decode(parysh->sh[0], bdrytet);
-        // Bond a subsegment (if it exists).
-        for (j = 0; j < 3; j++) {
-          tsspivot(bdrytet, checkseg);
-          if (checkseg.sh != NULL) {
-            symedge(bdrytet, neightet);
-            assert(marktested(neightet)); // SELF_CHECK
-            while (1) {
-              tssbond1(neightet, checkseg);
-              fnextself(neightet);
-              if (!marktested(neightet)) break;
+        if (bdrytet.tet[4] != NULL) {
+          // Not a faked tet. Bond a subsegment (if it exists).
+          for (j = 0; j < 3; j++) {
+            tsspivot(bdrytet, checkseg);
+            if (checkseg.sh != NULL) {
+              symedge(bdrytet, neightet);
+              assert(marktested(neightet)); // SELF_CHECK
+              while (1) {
+                tssbond1(neightet, checkseg);
+                fnextself(neightet);
+                if (!marktested(neightet)) break;
+              }
             }
+            enextself(bdrytet);
           }
-          enextself(bdrytet);
+        } else {
+          // A faked tet. There is an interior subface. Use it.
+          // See fig/dump-cavity-case19.
+          stpivot(*parysh, neightet);
+          assert(marktested(neightet)); // SELF_CHECK
+          tspivot(neightet, checksh);
+          assert(checksh.sh != NULL); // SELF_CHECK
+          assert(checksh.sh != parysh->sh); // // SELF_CHECK
+          // Align them at the same directed edge.
+          pa = org(neightet);
+          pb = dest(neightet);
+          for (j = 0; j < 3; j++) {
+            if (sorg(checksh) == pa) break;
+            senextself(checksh);
+          }
+          assert(j < 3); // SELF_CHECK
+          if (sdest(checksh) != pb) {
+            senext2self(checksh);
+            sesymself(checksh);
+          }
+          assert(sdest(checksh) == pb); // SELF_CHECK
+          // Bond a subsegment (if it exists).
+          for (j = 0; j < 3; j++) {
+            sspivot(checksh, checkseg);
+            if (checkseg.sh != NULL) {
+              toptet = neightet;
+              while (1) {
+                tssbond1(toptet, checkseg);
+                fnextself(toptet);
+                if (apex(toptet) == apex(neightet)) break;
+              }
+            }
+            senextself(checksh);
+            enextself(neightet);
+          }
         }
       }
     }
@@ -2448,7 +2492,42 @@ void tetgenmesh::carvecavity(arraypool *crosstets, arraypool *topnewtets,
 {
   arraypool *newtets;
   triface *parytet, *pnewtet, neightet;
+  face checkseg, *parysh;
   int i, j, k;
+
+  // NOTE: Some subsegments may contained inside the cavity. They must be
+  //   queued for recovery. See fig/dump-cavity-case20.
+  for (i = 0; i < crosstets->objects; i++) {
+    parytet = (triface *) fastlookup(crosstets, i);
+    assert(infected(*parytet)); // SELF_CHECK
+    if (parytet->tet[8] != NULL) {
+      for (j = 0; j < 6; j++) {
+        parytet->loc = edge2locver[j][0];
+        parytet->ver = edge2locver[j][1];
+        tsspivot(*parytet, checkseg);
+        if (checkseg.sh != NULL) {
+          if (!sinfected(checkseg)) {
+            // It is not queued yet.
+            neightet = *parytet;
+            while (1) {
+              fnextself(neightet);
+              if (!infected(neightet)) break;
+              if (apex(neightet) == apex(*parytet)) break;
+            }
+            if (infected(neightet)) {
+              if (b->verbose > 1) {
+                printf("    Queue a missing segment (%d, %d).\n",
+                  pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
+              }
+              sinfect(checkseg);
+              subsegstack->newindex((void **) &parysh);
+              *parysh = checkseg;
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Delete the old tets in cavity.
   for (i = 0; i < crosstets->objects; i++) {
@@ -2817,7 +2896,6 @@ void tetgenmesh::constrainedfacets()
           assert(0);
         }
         if (!success) break;
-        pedge(14736, 14388);
       } // while
 
       if (facfaces->objects > 0l) {
@@ -2830,16 +2908,17 @@ void tetgenmesh::constrainedfacets()
         dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
         // Insert the new point. Starting search it from 'ssub'.
         splitsubedge(newpt, &ssub, facfaces, facpoints);
-        // Some subsegments may be queued, recover them.
-        if (subsegstack->objects > 0l) {
-          b->verbose--; // Suppress the message output.
-          delaunizesegments();
-          b->verbose++;
-        }
         facfaces->restart();
       }
       // Clear the list of facet vertices.
       facpoints->restart();
+
+      // Some subsegments may be queued, recover them.
+      if (subsegstack->objects > 0l) {
+        b->verbose--; // Suppress the message output.
+        delaunizesegments();
+        b->verbose++;
+      }
       // Now the mesh should be constrained Delaunay.
     } // if (neightet.tet == NULL) 
   }

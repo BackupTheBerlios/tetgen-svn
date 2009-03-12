@@ -1005,8 +1005,6 @@ bool tetgenmesh::pedge(int i, int j)
           tsspivot(t1, sseg);
           if (sseg.sh != NULL) {
             printf(" (seg)");
-          } else {
-            assert(0); // DEBUG ONLY (14736, 14388)
           }
         }
         if (checksubfaces) {
