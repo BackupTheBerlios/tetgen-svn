@@ -1433,11 +1433,12 @@ void tetgenmesh::unifysegments()
 
 void tetgenmesh::mergefacets()
 {
+  arraypool *ptlist;
   face parentsh, neighsh, neineighsh;
   face segloop;
-  point eorg, edest;
-  REAL ori;
-  bool mergeflag;
+  point eorg, edest, *parypt;
+  REAL ori, ori1, ori2;
+  bool mergeflag, aboveflag;
   int* segspernodelist;
   int fidx1, fidx2;
   int i, j;
@@ -1449,6 +1450,9 @@ void tetgenmesh::mergefacets()
   // Initialize 'segspernodelist'.
   segspernodelist = new int[pointpool->items + 1];
   for (i = 0; i < pointpool->items + 1; i++) segspernodelist[i] = 0;
+
+  // Allocate a list for calculate an above point.
+  ptlist = new arraypool(sizeof(point *), 4);
 
   // Loop all segments, counter the number of segments sharing each vertex.
   subsegpool->traversalinit();
@@ -1483,29 +1487,49 @@ void tetgenmesh::mergefacets()
           if ((ori == 0) || iscoplanar(eorg, edest, sapex(parentsh),
             sapex(neighsh), ori)) {
             // Found two adjacent coplanar facets.
-            mergeflag = ((in->facetmarkerlist == NULL) || 
-              (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));
-            if (mergeflag) {
-              if (b->verbose > 1) {
-                printf("  Removing segment (%d, %d).\n", pointmark(eorg),
-                       pointmark(edest));
-              }
-              ssdissolve(parentsh);
-              ssdissolve(neighsh);
-              shellfacedealloc(subsegpool, segloop.sh);
-              j = pointmark(eorg);
-              segspernodelist[j]--;
-              if (segspernodelist[j] == 0) {
-                setpointtype(eorg, FACETVERTEX);
-              }
-              j = pointmark(edest);
-              segspernodelist[j]--;
-              if (segspernodelist[j] == 0) {
-                setpointtype(edest, FACETVERTEX);
-              }
-              // Add the edge to flip stack.
-              futureflip = flipshpush(futureflip, &parentsh);
+            // Only can remove the segment if both apexes are on the 
+            //   different sides of the edge [eorg, edest].
+            ptlist->newindex((void **) &parypt);
+            *parypt = eorg;
+            ptlist->newindex((void **) &parypt);
+            *parypt = edest;
+            ptlist->newindex((void **) &parypt);
+            *parypt = sapex(parentsh);
+            ptlist->newindex((void **) &parypt);
+            *parypt = sapex(neighsh);
+            aboveflag = calculateabovepoint(ptlist, NULL, NULL, NULL);
+            if (aboveflag) {
+              ori1 = orient3d(eorg, edest, dummypoint, sapex(parentsh));
+              ori2 = orient3d(eorg, edest, dummypoint, sapex(neighsh));
+            } else {
+              ori1 = ori2 = 1.0; // Bad data.
             }
+            if (ori1 * ori2 < 0) {
+              mergeflag = ((in->facetmarkerlist == NULL) || 
+                (in->facetmarkerlist[fidx1] == in->facetmarkerlist[fidx2]));
+              if (mergeflag) {
+                if (b->verbose > 1) {
+                  printf("  Removing segment (%d, %d).\n", pointmark(eorg),
+                         pointmark(edest));
+                }
+                ssdissolve(parentsh);
+                ssdissolve(neighsh);
+                shellfacedealloc(subsegpool, segloop.sh);
+                j = pointmark(eorg);
+                segspernodelist[j]--;
+                if (segspernodelist[j] == 0) {
+                  setpointtype(eorg, FACETVERTEX);
+                }
+                j = pointmark(edest);
+                segspernodelist[j]--;
+                if (segspernodelist[j] == 0) {
+                  setpointtype(edest, FACETVERTEX);
+                }
+                // Add the edge to flip stack.
+                futureflip = flipshpush(futureflip, &parentsh);
+              }
+            }
+            ptlist->restart(); // For the next test.
           }
         }
       }
@@ -1518,6 +1542,7 @@ void tetgenmesh::mergefacets()
     lawsonflip();
   }
 
+  delete ptlist;
   delete [] segspernodelist;
 }
 
