@@ -75,7 +75,7 @@ void tetgenmesh::randomsample(point searchpt, triface *searchtet)
     }
     dist = NORM2(searchpt[0] - torg[0], searchpt[1] - torg[1],
                  searchpt[2] - torg[2]);
-    if (dist < searchdist) {
+    if (dist <= searchdist) {
       *searchtet = recenttet;
       searchdist = dist;
     }
@@ -1345,8 +1345,8 @@ void tetgenmesh::incrementaldelaunay()
                  permutarray[i]);
   while ((fabs(ori) / bboxsize3) < b->epsilon) {
     i++;
-    if (i == in->numberofpoints - 1) {
-      printf("Exception:  All vertices are (nearly) coplanar (Tol = %g).\n",
+    if (i == in->numberofpoints) {
+      printf("Exception:  All vertices are coplanar (Tol = %g).\n",
              b->epsilon);
       terminatetetgen(1);
     }
