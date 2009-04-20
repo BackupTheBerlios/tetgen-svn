@@ -1873,7 +1873,7 @@ void tetgenmesh::lawsonflip3d(int flipflag)
   point *pt, pd, pe;
   REAL sign, ori;
   long flipcount;
-  // bool bflag; // for flipflag = 3.
+  bool bflag; // for flipflag = 3.
   int n, i;
 
   int *iptr;
@@ -1963,29 +1963,29 @@ void tetgenmesh::lawsonflip3d(int flipflag)
       }
       if (i == 3) {
         // A 2-to-3 flip is found.
-        // if (flipflag == 3) {
-        //   // Do not flip a subface.
-        //   tspivot(fliptet, checksh);
-        //   bflag = (checksh.sh == NULL);
-        // } else {
-        //   bflag = true;
-        // }
-        // if (bflag) {
+        if (flipflag == 3) {
+          // Do not flip a subface.
+          tspivot(fliptet, checksh);
+          bflag = (checksh.sh == NULL);
+        } else {
+          bflag = true;
+        }
+        if (bflag) {
           fliptets[0] = fliptet; // tet abcd, d is the new vertex.
           symedge(fliptets[0], fliptets[1]); // tet bace.
           flip23(fliptets, 0, flipflag);
           recenttet = fliptets[0]; // for point location.
-        // }
+        }
       } else {
         // A 3-to-2 or 4-to-4 may possible.
-        // if (flipflag == 3) {
-        //   // Do not flip a subsegment.
-        //   tsspivot(fliptet, checkseg);
-        //   bflag = (checkseg.sh == NULL);
-        // } else {
-        //   bflag = true;
-        // }
-        // if (bflag) {
+        if (flipflag == 3) {
+          // Do not flip a subsegment.
+          tsspivot(fliptet, checkseg);
+          bflag = (checkseg.sh == NULL);
+        } else {
+          bflag = true;
+        }
+        if (bflag) {
           enext0fnext(fliptet, fliptets[0]);
           esymself(fliptets[0]); // tet badc, d is the new vertex.
           n = 0;
@@ -2015,7 +2015,7 @@ void tetgenmesh::lawsonflip3d(int flipflag)
             recenttet = fliptets[0]; // for point location.
           } else {
             // An unflipable face. Will be flipped later.
-            if (flipflag > 1) {
+            if (flipflag == 2) { // if (flipflag > 1) {
               // Queue all other faces at the edge for flipping.
               pe = apex(fliptets[0]);
               fliptets[1] = fliptets[0];
@@ -2027,7 +2027,7 @@ void tetgenmesh::lawsonflip3d(int flipflag)
               }
             }
           }
-        // } // bflag
+        } // bflag
       } // if (i == 3)
     } // if (sign < 0)
   }
