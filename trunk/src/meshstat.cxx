@@ -1571,4 +1571,50 @@ void tetgenmesh::dump_facetof(face *pssub, char *filename)
   delete tmpfaces;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Dump the new tets of a cavity (in draw_tet() lua commands)
+
+void tetgenmesh::dump_cavitynewtets()
+{
+  arraypool *newtets;
+  triface searchtet, neightet, *parytet;
+  point *ppt;
+  int i;
+
+  newtets = new arraypool(sizeof(triface), 8);
+
+  // Collect all tets of the DT.
+  marktest(recenttet);
+  newtets->newindex((void **) &parytet);
+  *parytet = recenttet;
+  for (i = 0; i < newtets->objects; i++) {
+    searchtet = * (triface *) fastlookup(newtets, i);
+    for (searchtet.loc = 0; searchtet.loc < 4; searchtet.loc++) {
+      sym(searchtet, neightet);
+      if (!marktested(neightet)) {
+        marktest(neightet);
+        newtets->newindex((void **) &parytet);
+        *parytet = neightet;
+      }
+    }
+  }
+  // Comment: All new tets are marktested.
+
+  // Output the new tets.
+  for (i = 0; i < newtets->objects; i++) {
+    parytet = (triface *) fastlookup(newtets, i);
+    ppt = (point *) parytet->tet;
+    if (ppt[7] != dummypoint) {
+      printf("p:draw_tet(%d, %d, %d, %d) -- %i\n", pointmark(ppt[4]),
+        pointmark(ppt[5]), pointmark(ppt[6]), pointmark(ppt[7]), i);
+    } else {
+      printf("-- p:draw_tet(%d, %d, %d, -1) -- %i\n", pointmark(ppt[4]),
+        pointmark(ppt[5]), pointmark(ppt[6]), i);
+    }
+    unmarktest(*parytet); // Unmarktest it.
+  }
+
+  delete newtets;
+}
+
 #endif // #ifndef meshstatCXX

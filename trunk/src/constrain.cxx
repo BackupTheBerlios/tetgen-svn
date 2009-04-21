@@ -2231,19 +2231,26 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
     // dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
     ndelaunayedgecount++;
   }
-  // Unmark all facet vertices.
-  for (i = 0; i < facpoints->objects; i++) {
-    pf = * (point *) fastlookup(facpoints, i);
-    puninfect(pf);
+
+  if (facpoints != NULL) {
+    // Unmark all facet vertices.
+    for (i = 0; i < facpoints->objects; i++) {
+      pf = * (point *) fastlookup(facpoints, i);
+      puninfect(pf);
+    }
   }
+  
   // Delete the temp subfaces.
   for (k = 0; k < 2; k++) {
     cavshells = (k == 0 ? topshells : botshells);
-    for (i = 0; i < cavshells->objects; i++) {
-      parysh = (face *) fastlookup(cavshells, i);
-      shellfacedealloc(subfacepool, parysh->sh);
+    if (cavshells != NULL) {
+      for (i = 0; i < cavshells->objects; i++) {
+        parysh = (face *) fastlookup(cavshells, i);
+        shellfacedealloc(subfacepool, parysh->sh);
+      }
     }
   }
+
   topshells->restart();
   if (botshells != NULL) {
     botshells->restart();
@@ -3006,6 +3013,7 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
   enum intersection dir;
   REAL ori;
   bool success;
+  int enlcount;
   int i, j;
 
   tetrahedron ptr;
@@ -3141,6 +3149,8 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
       }
       cavshells->restart();
 
+      enlcount = 0; // Count the number of enlraged missing faces.
+
       // Enlarge the cavity.  The enlargment of the cavity is valid if:  
       //   No segment is contained in the interior of this cavity.
       for (i = 0; i < misfaces->objects; i++) {
@@ -3164,15 +3174,14 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
                     printf("    p:draw_subseg(%d, %d) -- is inside.\n",
                       pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
                   }
-                  success = false;
                   break; // Inside!
                 }
               }
-              if (!success) break;
+              if (apex(spintet) == apex(*parytet)) break;
             }
             enextself(*parytet);
           }
-          if (success) {
+          if (j == 3) {
             // No segment is inside the cavity, enlarge it.
             crosstets->newindex((void **) &parytet1);
             *parytet1 = *parytet;
@@ -3206,21 +3215,25 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
               }
               enextself(*parytet); 
             } // j
+            enlcount++;
           } else {
             // Do not enlarge it due to an existing segment.
             uninfect(*parytet);
           }
         } // if (!infected(*parytet))
-        if (!success) break;
       } // i
+
       misfaces->restart();
 
-      if (success) {
-        // Cavity is enlarged. Continue to recover the segment.
+      if (enlcount > 0) {
+        // Cavity has enlarged. Continue to recover the segment.
         cavityexpcount++;
         continue;
+      } else {
+        // No missing face is enlargable. Can't recover the segment.
+        success = false;
       }
-    }
+    } // if (misfaces->objects > 0)
 
     break; // Leave the loop.
 
@@ -3274,6 +3287,7 @@ void tetgenmesh::constrainedsegments()
   point newpt, pa, pb;
   enum intersection dir;
   bool success;
+  long bakhullsize;
   long cavitycount;
   long steinptcount;
   int i;
@@ -3307,35 +3321,67 @@ void tetgenmesh::constrainedsegments()
     searchtet.tet = NULL;
     dir = scoutsegment2(&sseg, &searchtet, crosstets, cavfaces, cavpoints);
 
-    if (dir == ACROSSTET) {
-      // The segment is missing, recover it.
-      success = tetrasegcavity(&sseg, cavpoints, cavfaces, cavshells, newtets,
-                               crosstets, misfaces);
-      if (success) {
-        // The segment is recovered.
-        fillcavity(cavshells, NULL, NULL, NULL);
-        carvecavity(crosstets, newtets, NULL);
-        cavitycount++;
-      } else {
-        // Unable to recover the segment.
-        restorecavity(crosstets, newtets, NULL);
-        // Split the segment at its middle.
-        makepoint(&newpt);
-        pa = sorg(sseg);
-        pb = sdest(sseg);
-        for (i = 0; i < 3; i++) {
-          newpt[i] = 0.5 * (pa[i] + pb[i]);
+    if (dir != SHAREEDGE) {
+      // The segment is missing.
+      if (dir == ACROSSTET) {
+        // Recover the segment by local re-meshing.
+        bakhullsize = hullsize;
+        success = tetrasegcavity(&sseg, cavpoints, cavfaces, cavshells, 
+                                 newtets, crosstets, misfaces);
+        hullsize = bakhullsize;
+        if (success) {
+          // The segment is recovered.
+          fillcavity(cavshells, NULL, NULL, NULL);
+          carvecavity(crosstets, newtets, NULL);
+          cavitycount++;
+        } else {
+          // Unable to recover the segment.
+          restorecavity(crosstets, newtets, NULL);
+          // Split the segment at its middle.
+          makepoint(&newpt);
+          pa = sorg(sseg);
+          pb = sdest(sseg);
+          for (i = 0; i < 3; i++) {
+            newpt[i] = 0.5 * (pa[i] + pb[i]);
+          }
+          setpointtype(newpt, STEINERVERTEX);
+          // Insert the point into the surface mesh.
+          spivot(sseg, splitsh);
+          // Two subsegments are queued in 'subsegstack' for recovery.
+          sinsertvertex(newpt, &splitsh, &sseg, true, false);
+          // Insert the point into the CT. 
+          point2tetorg(pa, searchtet);
+          // Set 'flipflag' = 3, do not flip a segment.
+          flipinsertvertex(newpt, &searchtet, 3);
+          steinptcount++;
         }
-        setpointtype(newpt, STEINERVERTEX);
-        // Insert the point into the surface mesh.
-        spivot(sseg, splitsh);
-        // Two subsegments are queued in 'subsegstack' for recovery.
-        sinsertvertex(newpt, &splitsh, &sseg, true, false);
-        // Insert the point into the CT. 
-        point2tetorg(pa, searchtet);
-        // Set 'flipflag' = 3, do not flip a segment.
-        flipinsertvertex(newpt, &searchtet, 3);
-        steinptcount++;
+      } else if (dir == ACROSSVERT) {
+        printf("Error:  Invalid PLC! A point and a segment intersect.\n");
+        pa = farsorg(sseg);
+        pb = farsdest(sseg);
+        printf("  Point: %d. Segment: (%d, %d).\n", pointmark(org(searchtet)),
+          pointmark(pa), pointmark(pb));
+        terminatetetgen(1);
+      } else if (dir == ACROSSSUBSEG) {
+        printf("Error:  Invalid PLC! Two segments intersect.\n");
+        pa = farsorg(sseg);
+        pb = farsdest(sseg);
+        printf("  1st: (%d, %d)", pointmark(pa), pointmark(pb));
+        tsspivot(searchtet, sseg);
+        assert(sseg.sh != NULL);
+        pa = farsorg(sseg);
+        pb = farsdest(sseg);
+        printf("  2nd: (%d, %d).\n", pointmark(pa), pointmark(pb));
+        terminatetetgen(1);
+      } else if (dir == ACROSSSUBFACE) {
+        printf("Error:  Invalid PLC! A segment and a subface intersect.\n");
+        pa = farsorg(sseg);
+        pb = farsdest(sseg);
+        printf("  Segment: (%d, %d)", pointmark(pa), pointmark(pb));
+        tspivot(searchtet, splitsh);
+        printf("  Subface: (%d, %d, %d)", pointmark(sorg(splitsh)),
+          pointmark(sdest(splitsh)), pointmark(sapex(splitsh)));
+        terminatetetgen(1);
       }
     }
   }
@@ -3403,8 +3449,14 @@ void tetgenmesh::formskeleton()
 
   // Segments will be introduced.
   checksubsegs = 1;
+
   // Recover segments.
-  delaunizesegments();
+  if (b->nobisect == 0) {
+    delaunizesegments();
+  } else {
+    // -c option, constrained recover.
+    constrainedsegments();
+  }
 
   // Randomly order the subfaces.
   subfacepool->traversalinit();

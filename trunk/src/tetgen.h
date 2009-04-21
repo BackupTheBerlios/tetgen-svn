@@ -1851,6 +1851,7 @@ void print_facearray(arraypool* facearray);
 void print_subfacearray(arraypool* subfacearray);
 void dump_cavity(arraypool *topfaces, arraypool *botfaces);
 void dump_facetof(face* pssub, char* filename);
+void dump_cavitynewtets();
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;
