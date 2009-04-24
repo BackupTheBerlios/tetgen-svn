@@ -1700,7 +1700,8 @@ enum intersection scoutsegment2(face*, triface*, arraypool*, arraypool*,
                                 arraypool*);
 bool tetrasegcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*,
                     arraypool*, arraypool*, arraypool*, arraypool*);
-bool recoversegments(arraypool*, arraypool*);
+bool recoversegments(arraypool*, arraypool*, arraypool*, arraypool*, 
+                     arraypool*, arraypool*, arraypool*);
 void constrainedsegments();
 
 void formskeleton();

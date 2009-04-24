@@ -3197,13 +3197,18 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
           } // j
           if (success) {
             // We can enlarge the cavity.
+            if (b->verbose > 1) {
+               printf("    Add a crosstet (%d, %d, %d, %d).\n",
+                 pointmark(org(*parytet)), pointmark(dest(*parytet)),
+                 pointmark(apex(*parytet)), pointmark(oppo(*parytet)));
+            }
             crosstets->newindex((void **) &parytet1);
             *parytet1 = *parytet;
             // Insert the opposite point if it is not in CT.
             pt[0] = oppo(*parytet);
             if (!pinfected(pt[0])) {
               if (b->verbose > 1) {
-                printf("    Insert oppo point %d.\n", pointmark(pt[0]));
+                printf("    Insert oppo-point %d.\n", pointmark(pt[0]));
               }
               pinfect(pt[0]);
               cavpoints->newindex((void **) &parypt);
@@ -3211,7 +3216,7 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
               searchtet = recenttet;
               flipinsertvertex(pt[0], &searchtet, 3);
             }
-            // Add three opposite faces into the boundary list.
+            /*// Add three opposite faces into the boundary list.
             for (j = 0; j < 3; j++) {
               enext0fnext(*parytet, neightet);
               symself(neightet);
@@ -3228,7 +3233,7 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
                 //   for this routine.
               }
               enextself(*parytet); 
-            } // j
+            } // j */
           } else {
             // Do not enlarge it due to an existing segment.
             uninfect(*parytet);
@@ -3237,20 +3242,52 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
         if (!success) break;
       } // i
       misfaces->restart();
+      cavfaces->restart();
 
       if (success && (missegs->objects > 0l)) {
         // The cavity has been enlarged, but some segments are enclosed.
-        //    Try to recover these segments in the enlarged cavity.
         if (!smarktested(*sseg)) {
           smarktest(*sseg);
           fixedseglist->newindex((void **) &paryseg);
           *paryseg = *sseg;
         }
-        success = recoversegments(missegs, fixedseglist);
+        // Uninfect the cavity points (re-used in the following routine).
+        for (i = 0; i < cavpoints->objects; i++) {
+          parypt = (point *) fastlookup(cavpoints, i);
+          puninfect(*parypt);
+        }
+        cavpoints->restart();
+        // Recover the missing segments inside the enlarged cavity.
+        success = recoversegments(fixedseglist, missegs, cavpoints, cavfaces,
+                                  cavshells, misfaces, newtets);
       }
 
       if (success) {
-        // Cavity has enlarged. Continue to recover the segment.
+        // Cavity has enlarged.  Re-form the lists of boundary faces, points.
+        for (i = 0; i < crosstets->objects; i++) {
+          parytet = (triface *) fastlookup(crosstets, i);
+          searchtet = *parytet;
+          for (searchtet.loc = 0; searchtet.loc < 4; searchtet.loc++) {
+            sym(searchtet, neightet);
+            if (!infected(neightet)) {
+              // A cavity bounday face.
+              cavfaces->newindex((void **) &parytet);
+              *parytet = neightet;
+            }
+          }
+        }
+        for (i = 0; i < crosstets->objects; i++) {
+          parytet = (triface *) fastlookup(crosstets, i);
+          for (i = 0; i < 4; i++) {
+            pt[0] = (point) parytet->tet[4 + i];
+            if (!pinfected(pt[0])) {
+              pinfect(pt[0]);
+              cavpoints->newindex((void **) &parypt);
+              *parypt = pt[0];
+            }
+          }
+        }
+        // Continue to recover the segment.
         cavityexpcount++;
         continue;
       }
@@ -3261,9 +3298,11 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
   } // while (1)
 
   // Collect all tets of the DT.
-  marktest(recenttet);
+  pt[0] = * (point *) fastlookup(cavpoints, 0);
+  decode(point2tet(pt[0]), searchtet);
+  marktest(searchtet);
   newtets->newindex((void **) &parytet);
-  *parytet = recenttet;
+  *parytet = searchtet;
   for (i = 0; i < newtets->objects; i++) {
     searchtet = * (triface *) fastlookup(newtets, i);
     for (searchtet.loc = 0; searchtet.loc < 4; searchtet.loc++) {
@@ -3295,13 +3334,11 @@ bool tetgenmesh::tetrasegcavity(face* sseg, arraypool* cavpoints,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-bool tetgenmesh::recoversegments(arraypool *recoverseglist, 
-  arraypool *fixedseglist)
+bool tetgenmesh::recoversegments(arraypool* fixedseglist, arraypool *recosegs,
+  arraypool* cavpoints, arraypool* cavfaces, arraypool* cavshells, 
+  arraypool* misfaces, arraypool* newtets)
 {
-  arraypool *crosstets, *newtets, *misfaces;
-  arraypool *cavfaces;
-  arraypool *cavshells;
-  arraypool *cavpoints;
+  arraypool *crosstets;
   arraypool *missegs;
   triface searchtet;
   face *psseg, sseg;
@@ -3309,30 +3346,22 @@ bool tetgenmesh::recoversegments(arraypool *recoverseglist,
   bool success;
   long bakhullsize;
   long cavitycount;
-  // long steinptcount;
   int i;
 
   if (b->verbose > 1) {
     printf("  Recovering %ld segments (%ld fixed segments).\n",
-      recoverseglist->objects, fixedseglist->objects);
+      recosegs->objects, fixedseglist->objects);
   }
 
   // Initialize arrays.
   crosstets = new arraypool(sizeof(triface), 10);
-  newtets = new arraypool(sizeof(triface), 10);
-  misfaces = new arraypool(sizeof(triface), 10);
-  cavfaces = new arraypool(sizeof(triface), 10);
-  cavshells = new arraypool(sizeof(face), 10);
-  cavpoints = new arraypool(sizeof(point), 8);
   missegs = new arraypool(sizeof(face), 8);
 
-  cavitycount = 0l;
-
-  // Loop until 'recoverseglist' is empty.
-  while (recoverseglist->objects > 0l) {
+  // Loop until 'recosegs' is empty.
+  while (recosegs->objects > 0l) {
     // seglist is used as a stack.
-    recoverseglist->objects--;
-    psseg = (face *) fastlookup(recoverseglist, recoverseglist->objects);
+    recosegs->objects--;
+    psseg = (face *) fastlookup(recosegs, recosegs->objects);
     sseg = *psseg;
 
     // It is not a global missing segment.
@@ -3342,45 +3371,36 @@ bool tetgenmesh::recoversegments(arraypool *recoverseglist,
     searchtet.tet = NULL;
     dir = scoutsegment2(&sseg, &searchtet, crosstets, cavfaces, cavpoints);
 
-    if (dir != SHAREEDGE) {
-      // The segment is missing.
-      if (dir == ACROSSTET) {
-        // Recover the segment by local re-meshing.
-        bakhullsize = hullsize;
-        success = tetrasegcavity(&sseg, cavpoints, cavfaces, cavshells, 
-          newtets, crosstets, misfaces, missegs, fixedseglist);
-        hullsize = bakhullsize;
-        if (success) {
-          // The segment is recovered.
-          fillcavity(cavshells, NULL, NULL, NULL);
-          carvecavity(crosstets, newtets, NULL);
-          cavitycount++;
-        } else {
-          // Unable to recover the segment.
-          restorecavity(crosstets, newtets, NULL);
-          break;
-        }
+    // The segment is missing.
+    assert(dir != SHAREEDGE); // SELF_CHECK
+
+    if (dir == ACROSSTET) {
+      // Recover the segment by local re-meshing.
+      bakhullsize = hullsize;
+      success = tetrasegcavity(&sseg, cavpoints, cavfaces, cavshells, 
+        newtets, crosstets, misfaces, missegs, fixedseglist);
+      // Do not clean 'fixedseglist'.
+      hullsize = bakhullsize;
+      if (success) {
+        // The segment is recovered.
+        fillcavity(cavshells, NULL, NULL, NULL);
+        carvecavity(crosstets, newtets, NULL);
       } else {
-        // Unexpected return type.
-        assert(0); // Not handled yet.
+        // Unable to recover the segment.
+        restorecavity(crosstets, newtets, NULL);
+        break;
       }
+    } else {
+      // Unexpected return type.
+      assert(0); // Not handled yet.
     }
   }
 
-  if (b->verbose > 1) {
-    printf("  %ld cavities remeshed.\n", cavitycount);
-  }
-
   delete crosstets;
-  delete newtets;
-  delete misfaces;
-  delete cavfaces;
-  delete cavshells;
-  delete cavpoints;
   delete missegs;
 
-  if (recoverseglist->objects > 0l) {
-    recoverseglist->restart();
+  if (recosegs->objects > 0l) {
+    recosegs->restart();
     return false; 
   }
 
