@@ -1696,12 +1696,11 @@ void restorecavity(arraypool*, arraypool*, arraypool*);
 void splitsubedge(point, face*, arraypool*, arraypool*);
 void constrainedfacets();
 
-enum intersection scoutsegment2(face*, triface*, arraypool*, arraypool*,
-                                arraypool*);
+enum intersection scoutsegment2(face*, triface*, arraypool*);
 bool tetrasegcavity(face*, arraypool*, arraypool*, arraypool*, arraypool*,
                     arraypool*, arraypool*, arraypool*, arraypool*);
 bool recoversegments(arraypool*, arraypool*, arraypool*, arraypool*, 
-                     arraypool*, arraypool*, arraypool*);
+                     arraypool*, arraypool*);
 void constrainedsegments();
 
 void formskeleton();

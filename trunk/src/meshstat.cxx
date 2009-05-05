@@ -592,8 +592,8 @@ void tetgenmesh::statistics()
   if (b->verbose > 0) {
     printf("  Euler characteristic of mesh domain: %ld\n", pointpool->items 
       - meshedges + facenumber - tetnumber);
-    printf("  Euler characteristic of boundary: %ld\n", pointpool->items 
-      - meshsubedges + subfacepool->items);
+    //printf("  Euler characteristic of boundary: %ld\n", pointpool->items 
+    //  - meshsubedges + subfacepool->items);
     printf("\n");
   }
 
