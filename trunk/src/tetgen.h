@@ -442,11 +442,11 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
   int nomerge;                                                       // -M
   int nobisect;                                                      // -Y
   int nojettison;                                                    // -J
-  int steiner;                                         // -S with a number
   int docheck;                                                       // -C
   int quiet;                                                         // -Q
   int verbose;                                                       // -V
   int useshelles;                                 // -p, -r, -q, -d, or -R
+  long steinerleft;                                    // -S with a number
   REAL minratio;                                        // number after -q
   REAL goodratio;                     // number calculated from 'minratio' 
   REAL minangle;                                    // minimum angle bound
@@ -1473,6 +1473,7 @@ memorypool *subsegpool, *subfacepool;
 memorypool *tet2segpool, *tet2subpool;
 memorypool *pointpool;
 memorypool *flippool;
+memorypool *badsegpool, *badsubpool, *badtetpool;
 
 // A dummy point at infinity (see [Guibas & Stolfi 85]).  All the hull
 //   tetrahedra having this point as a vertex.
@@ -1681,6 +1682,7 @@ void meshsurface();
 enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
+void getsegmentsplitpoint2(face* sseg, point refpt, REAL* vt);
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);
@@ -1705,6 +1707,15 @@ void constrainedsegments();
 
 void formskeleton();
 void carveholes();
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// Mesh refinement functions.                                                //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+bool checkedge4encroach(face& seg, point testpt, int enqflag);
+void repairencsegs();
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -1758,6 +1769,7 @@ void initialize()
   tet2segpool = tet2subpool = (memorypool *) NULL;
   pointpool = (memorypool *) NULL;
   flippool = (memorypool *) NULL;
+  badsegpool = badsubpool = badtetpool = (memorypool *) NULL;
   dummypoint = (point) NULL;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = caveoldtetlist = (arraypool *) NULL;

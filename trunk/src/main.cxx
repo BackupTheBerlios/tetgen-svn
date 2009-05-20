@@ -348,7 +348,7 @@ void tetrahedralize(char *switches, tetgenio *in, tetgenio *out,
   }
 
   // FOR DEBUG -S1 option.
-  if (b.steiner > 0) {
+  if (b.steinerleft > 0) {
     test_tri_tri(&b, &in);
     terminatetetgen(0);
   }

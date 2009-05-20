@@ -771,6 +771,61 @@ void tetgenmesh::getsegmentsplitpoint(face* sseg, point refpt, REAL* vt)
   }
 }
 
+// This function only use Rule-1 to split the segment. refpt may be NULL.
+// Added 2009-05-20.
+
+void tetgenmesh::getsegmentsplitpoint2(face* sseg, point refpt, REAL* vt)
+{
+  point ei, ej;
+  REAL split, L, d, d1, d2;
+  int i;
+
+  ei = sorg(*sseg);
+  ej = sdest(*sseg);
+
+  if (b->verbose > 1) {
+    printf("    Split seg(%d, %d) ref(%d).\n", pointmark(ei), pointmark(ej), 
+      refpt ? pointmark(refpt) : -1);
+  }
+
+  if (refpt != NULL) {
+    L = DIST(ei, ej);
+    d1 = DIST(ei, refpt);
+    d2 = DIST(ej, refpt);
+    if (d1 < d2) {
+      // Choose ei as center.
+      if (d1 < 0.5 * L) {
+        split = d1 / L;
+        // Adjust split if it is close to middle. (2009-02-01)
+        if ((split > 0.4) || (split < 0.6)) split = 0.5;
+      } else {
+        split = 0.5;
+      }
+      for (i = 0; i < 3; i++) {
+        vt[i] = ei[i] + split * (ej[i] - ei[i]);
+      }
+    } else {
+      // Choose ej as center.
+      if (d2 < 0.5 * L) {
+        split = d2 / L;
+        // Adjust split if it is close to middle. (2009-02-01)
+        if ((split > 0.4) || (split < 0.6)) split = 0.5;
+      } else {
+        split = 0.5;
+      }
+      for (i = 0; i < 3; i++) {
+        vt[i] = ej[i] + split * (ei[i] - ej[i]);
+      }
+    }
+  } else {
+    split = 0.5;
+    for (i = 0; i < 3; i++) {
+      vt[i] = ei[i] + split * (ej[i] - ei[i]);
+    }
+  }
+  r1count++;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // delaunizesegments()    Recover segments in a Delaunay tetrahedralization. //
