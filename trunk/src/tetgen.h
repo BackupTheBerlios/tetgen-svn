@@ -1734,7 +1734,7 @@ void outvoronoi(tetgenio* out);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void checkmesh();
+int checkmesh();
 int checkshells(int);
 int checkdelaunay(int);
 int checksegments();
