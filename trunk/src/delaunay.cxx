@@ -517,9 +517,9 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
 // If 'visflag' is TRUE, force to check the visibility of the boundary faces //
 // of cavity. This is needed when T is not Delaunay.                         //
 //                                                                           //
-// If 'noencflag' is TRUE, only insert the new point p if it does not cause  //
-// any existing (sub)segment be non-Delaunay. This option only is checked    //
-// when the global variable 'checksubsegs' is set.                           //
+// If 'noencsegflag' is TRUE, only insert the point if it does not encroach  //
+// on any existing segment of the mesh. Otherwise, do not insert the point,  //
+// and all encroaching segments are returned in subsegstack.                 //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -764,7 +764,8 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
   }
 
   if (checksubsegs || noencsegflag) {
-    // Check if some (sub)segments are inside the cavity.
+    // Check if some (sub)segments are inside the cavity. Such segments
+    //   are queued in 'subsegstack'. 
     for (i = 0; i < caveoldtetlist->objects; i++) {
       cavetet = (triface *) fastlookup(caveoldtetlist, i);
       for (j = 0; j < 6; j++) {
@@ -792,6 +793,32 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
             subsegstack->newindex((void **) &psseg);
             *psseg = sseg;
           }
+        }
+      }
+    }
+    if (noencsegflag && (subsegstack->objects == 0)) {
+      // Check for encroaching segment on the boundary of the cavity.
+      //   Encroached segments are queued in 'subsegstack'.
+      for (i = 0; i < cavebdrylist->objects; i++) {
+        cavetet = (triface *) fastlookup(cavebdrylist, i);
+        // 'cavetet' is an exterior tet adjacent to the cavity.
+        assert(cavetet->ver == 4); // SELF_CHECK
+        for (j = 0; j < 3; j++) {
+          tsspivot(*cavetet, sseg);
+          if (sseg.sh != NULL) {
+            // Found a segment. It must be not queued in stack.
+            assert(!sinfected(sseg)); // SELF_CHECK
+            if (checkedge4encroach(sseg, insertpt, 0)) {
+              if (b->verbose > 1) {
+                printf("      Queue an encroaching segment (%d, %d).\n",
+                  pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+              }
+              sinfect(sseg);  // Only save it once.
+              subsegstack->newindex((void **) &psseg);
+              *psseg = sseg;
+            }
+          }
+          enextself(*cavetet);
         }
       }
     }
@@ -840,6 +867,19 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
             subfacstack->newindex((void **) &pssub);
             *pssub = checksh;
           }
+        }
+      }
+    }
+    if (noencsubflag && (subfacstack->objects == 0)) {
+      // Check for encroaching subface on the boundary of the cavity.
+      //   Encroached subfaces are queued in 'subfacstack'.
+      for (i = 0; i < cavebdrylist->objects; i++) {
+        cavetet = (triface *) fastlookup(cavebdrylist, i);
+        // 'cavetet' is an exterior tet adjacent to the cavity.
+        assert(cavetet->ver == 4); // SELF_CHECK
+        tspivot(*cavetet, checksh);
+        if (checksh.sh != NULL) {
+          // Do check ...
         }
       }
     }
@@ -996,6 +1036,11 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
             suninfect(sseg); // Dequeue a non-missing segment.
           }
           tssbond1(newtet, sseg);
+          // Do we need to care about encroached segments?
+          if ((badsegpool != NULL) && !smarktested(sseg)) {
+            // Queue the subsegment if it is encroached by the new point.
+            checkedge4encroach(sseg, insertpt, 1);
+          }
         }
         enextself(neightet);
         enext2self(newtet);
@@ -1005,6 +1050,11 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
       tspivot(neightet, checksh);
       if (checksh.sh != NULL) {
         tsbond(newtet, checksh); // Also disconnect the old bond.
+        // Do we need to care about encroached segments?
+        if ((badsubpool != NULL) && !smarktested(checksh)) {
+          // Queue the subface if it is encroached by the new point.
+          // checkface4encroach(checksh, insertpt, 1);
+        }
       }
     }
     if (updatecount > 0l) {
@@ -1165,7 +1215,13 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
       futureflip = flippush(futureflip, parytet, pa);
     }
     // Recover Delaunay faces.
-    //   Set 'flipflag' = 2, s.t. all faces are checked for flipping.
+    //   Set 'flipflag' = 2, s.t. all non-flippable faces are not ignoring, 
+    //   they are queued in the flip queue for the future flips.  One key
+    //   is that we also flip non-Delaunay segments and subfaces. This way
+    //   we are able to recover all non-Delaunay edges/faces (no proof yet),
+    //   i.e., the flip will terminate. 
+    // The flipped segments and subfaces are queued in 'subsegstack' and 
+    //   'subfacstack' for recovery.
     lawsonflip3d(2);
   }
 
