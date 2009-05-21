@@ -1373,15 +1373,22 @@ void tssbond1(triface& t, face& s) {
   }
   // Bond the segment.
   ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = sencode((s));
-} 
+}
 
-// tssdissolve() -- dissolve a tet-seg bond at the tet edge.
+// sstbond() -- bond a tet edge to a segment (only at the segment side).
+
+#define sstbond(s, t) (s).sh[9] = (shellface) encode(t)
+
+// tssdissolve() -- dissolve a tet-seg bond at the tet edge side.
 
 void tssdissolve(triface& t) {
   if ((t).tet[8] != NULL) {
     ((shellface *) (t).tet[8])[locver2edge[(t).loc][(t).ver]] = NULL;
   }
 }
+
+// sstdissolve() -- dissolve a tet-seg bond at the segment side.
+//   Use stdissolve().
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

@@ -1040,6 +1040,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
             suninfect(sseg); // Dequeue a non-missing segment.
           }
           tssbond1(newtet, sseg);
+          sstbond(sseg, newtet);
           // Do we need to care about encroached segments?
           if ((badsegpool != NULL) && !smarktested(sseg)) {
             // Queue the subsegment if it is encroached by the new point.

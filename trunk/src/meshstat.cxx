@@ -505,7 +505,7 @@ int tetgenmesh::checksegments()
             do {
               tsspivot(neightet, checkseg);
               if (checkseg.sh != sseg.sh) {
-                printf("  !! Wrong tet-seg connection.\n");
+                printf("  !! Wrong tet->seg connection.\n");
                 printf("    Tet: x%lx (%d, %d, %d, %d) - ", 
                   (unsigned long) tetloop.tet, pointmark(org(tetloop)),
                   pointmark(dest(tetloop)), pointmark(apex(tetloop)),
@@ -520,6 +520,23 @@ int tetgenmesh::checksegments()
               }
               fnextself(neightet);
             } while (neightet.tet != tetloop.tet);
+          }
+          // Check the seg->tet pointer.
+          stpivot(sseg, neightet);
+          if (neightet.tet == NULL) {
+            printf("  !! Wrong seg->tet connection (A NULL tet).\n");
+            horrors++;
+          } else {
+            if (!(((org(neightet) == pa) && (dest(neightet) == pb)) ||
+                ((org(neightet) == pb) && (dest(neightet) == pa)))) {
+              printf("  !! Wrong seg->tet connection (Wrong edge).\n");
+              printf("    Tet: x%lx (%d, %d, %d, %d) - Seg: x%lx (%d, %d).\n", 
+                (unsigned long) neightet.tet, pointmark(org(neightet)),
+                pointmark(dest(neightet)), pointmark(apex(neightet)),
+                pointmark(oppo(neightet)), (unsigned long) sseg.sh,
+                pointmark(pa), pointmark(pb));
+              horrors++;
+            }
           }
         }
       }

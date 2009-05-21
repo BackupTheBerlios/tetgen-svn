@@ -573,18 +573,22 @@ void tetgenmesh::flip14(point newpt, triface* splittet, int flipflag)
       if (checkseg.sh != NULL) {
         tssbond1(*splittet, checkseg);
         tssbond1(newface, checkseg);
+        // Let the segment remember an adjacent tet.
+        sstbond(checkseg, *splittet);
       }
       enextself(newface); // [b,d], [c,d], [a,d]
       enext(castets[i], casface);
       tsspivot(casface, checkseg); 
       if (checkseg.sh != NULL) {
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
       enextself(newface); // [d,a], [d,b], [d,c]
       enext2(castets[i], casface);
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
       enextself(*splittet);
     }
@@ -769,6 +773,7 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
         tsspivot(casface, checkseg);
         if (checkseg.sh != NULL) {
           tssbond1(newface, checkseg);
+          sstbond(checkseg, newface);
         }
         enextself(casface);
         enextself(newface);
@@ -786,6 +791,7 @@ void tetgenmesh::flip26(point newpt, triface* splitface, int flipflag)
         tsspivot(casface, checkseg);
         if (checkseg.sh != NULL) {
           tssbond1(newface, checkseg);
+          sstbond(checkseg, newface);
         }
         enextself(casface);
         enextself(newface);
@@ -993,6 +999,7 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
         tsspivot(casface, checkseg);
         if (checkseg.sh != NULL) {
           tssbond1(newface, checkseg);
+          sstbond(checkseg, newface);
         }
         enextself(casface);
         enextself(newface);
@@ -1005,6 +1012,7 @@ void tetgenmesh::flipn2n(point newpt, triface* splitedge, int flipflag)
         tsspivot(casface, checkseg);
         if (checkseg.sh != NULL) {
           tssbond1(newface, checkseg);
+          sstbond(checkseg, newface);
         }
         enextself(casface);
         enextself(newface);
@@ -1257,6 +1265,7 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
         enextfnext(fliptets[i], newface);
         enextself(newface);
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
     }
     // The top three: da, db, dc. Each edge belongs to two tets.
@@ -1266,9 +1275,11 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
       if (checkseg.sh != NULL) {
         enext(fliptets[i], newface);
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
         enext0fnext(fliptets[(i + 2) % 3], newface);
         enextself(newface);
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
     }
     // The bot three: ae, be, ce. Each edge belongs to two tets.
@@ -1278,9 +1289,11 @@ void tetgenmesh::flip23(triface* fliptets, int hullflag, int flipflag)
       if (checkseg.sh != NULL) {
         enext2(fliptets[i], newface);
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
         enext0fnext(fliptets[(i + 2) % 3], newface);
         enext2self(newface);
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
     }
   }
@@ -1566,6 +1579,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
       tsspivot(topcastets[i], checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(fliptets[0], checkseg);
+        sstbond(checkseg, fliptets[0]);
       }
       enextself(fliptets[0]);
     }
@@ -1577,6 +1591,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
       enextself(fliptets[0]);
     }
@@ -1585,6 +1600,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
       tsspivot(botcastets[i], checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(fliptets[1], checkseg);
+        sstbond(checkseg, fliptets[1]);
       }
       enext2self(fliptets[1]);
     }
@@ -1596,6 +1612,7 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
       tsspivot(casface, checkseg);
       if (checkseg.sh != NULL) {
         tssbond1(newface, checkseg);
+        sstbond(checkseg, newface);
       }
       enext2self(fliptets[1]);
     }

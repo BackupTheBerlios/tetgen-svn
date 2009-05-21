@@ -383,44 +383,22 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
   enum intersection dir;
   REAL angmax, ang;
   long facecount;
-  bool orgflag;
   int types[2], poss[4];
-  int shver, pos, i;
+  int pos, i;
 
   tetrahedron ptr;
   shellface sptr;
   int *iptr, tver;
 
+  startpt = sorg(*sseg);
+  endpt = sdest(*sseg);
+
   // Is 'searchtet' a valid handle?
   if (searchtet->tet == NULL) {
-    orgflag = false;
-    // Search a tet whose origin is one of the endpoints of 'sseg'.
-    for (shver = 0; shver < 2 && !orgflag; shver++) {
-      startpt = (point) sseg->sh[shver + 3];
-      decode(point2tet(startpt), *searchtet);
-      if ((searchtet->tet != NULL) && (searchtet->tet[4] != NULL)) {
-        // Check if this tet contains pa.
-        for (i = 4; i < 8 && !orgflag; i++) {
-          if ((point) searchtet->tet[i] == startpt) {
-            // Found. Set pa as its origin.
-            switch (i) {
-              case 4: searchtet->loc = 0; searchtet->ver = 0; break;
-              case 5: searchtet->loc = 0; searchtet->ver = 2; break;
-              case 6: searchtet->loc = 0; searchtet->ver = 4; break;
-              case 7: searchtet->loc = 1; searchtet->ver = 2; break;
-            }
-            sseg->shver = shver;
-            orgflag = true;
-          }
-        }
-      }
-    }
-    assert(orgflag); // SELF_CHECK
+    point2tetorg(startpt, *searchtet);
   } else {
-    startpt = sorg(*sseg);
     assert(org(*searchtet) == startpt); // SELF_CHECK
   }
-  endpt = sdest(*sseg);
 
   if (b->verbose > 1) {
     printf("    Scout seg (%d, %d).\n", pointmark(startpt), pointmark(endpt));
@@ -434,6 +412,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment(face* sseg,
       // Found! Insert the segment.
       tsspivot(*searchtet, checkseg);  // SELF_CHECK
       if (checkseg.sh == NULL) {
+        // Let the segment remember an adjacent tet.
+        sstbond(*sseg, *searchtet);
         neightet = *searchtet;
         do {
           tssbond1(neightet, *sseg);
@@ -2185,6 +2165,8 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
               if (checkseg.sh != NULL) {
                 symedge(bdrytet, neightet);
                 assert(marktested(neightet)); // SELF_CHECK
+                // Let the segment remember an adjacent tet.
+                sstbond(checkseg, neightet);
                 while (1) {
                   tssbond1(neightet, checkseg);
                   fnextself(neightet);
@@ -2218,6 +2200,8 @@ bool tetgenmesh::fillcavity(arraypool* topshells, arraypool* botshells,
             for (j = 0; j < 3; j++) {
               sspivot(checksh, checkseg);
               if (checkseg.sh != NULL) {
+                // Let the segment remember an adjacent tet.
+                sstbond(checkseg, neightet);
                 toptet = neightet;
                 while (1) {
                   tssbond1(toptet, checkseg);
@@ -2848,6 +2832,8 @@ enum tetgenmesh::intersection tetgenmesh::scoutsegment2(face* sseg,
       // Found! Insert the segment.
       tsspivot(*searchtet, checkseg);  // SELF_CHECK
       if (checkseg.sh == NULL) {
+        // Let the segment remember an adjacent tet.
+        sstbond(*sseg, *searchtet);
         neightet = *searchtet;
         do {
           tssbond1(neightet, *sseg);
