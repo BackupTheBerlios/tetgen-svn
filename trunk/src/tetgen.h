@@ -1489,6 +1489,12 @@ arraypool *caveshlist, *caveshbdlist;
 // Stacks used by the boundary recovery algorithm.
 arraypool *subsegstack, *subfacstack;
 
+// Arrays used for facet recovery.
+arraypool *tg_crosstets, *tg_topnewtets, *tg_botnewtets;
+arraypool *tg_topfaces, *tg_botfaces, *tg_midfaces;
+arraypool *tg_topshells, *tg_botshells, *tg_facfaces;
+arraypool *tg_toppoints, *tg_botpoints, *tg_facpoints;
+
 // Variables for accessing data fields (initialized in initializepools()).
 int point2tetindex, pointmarkindex;
 int elemmarkerindex;
@@ -1775,6 +1781,10 @@ void initialize()
   cavetetlist = cavebdrylist = caveoldtetlist = (arraypool *) NULL;
   caveshlist = caveshbdlist = (arraypool *) NULL;
   subsegstack = subfacstack = (arraypool *) NULL;
+  arraypool *tg_crosstets, *tg_topnewtets, *tg_botnewtets;
+  tg_topfaces = tg_botfaces = tg_midfaces = NULL;
+  tg_topshells = tg_botshells = tg_facfaces = NULL;
+  tg_toppoints = tg_botpoints = tg_facpoints = NULL;
   point2tetindex = pointmarkindex = 0;
   elemmarkerindex = 0;
   elemattribindex = volumeboundindex = highorderindex = 0;

@@ -2577,10 +2577,12 @@ void tetgenmesh::splitsubedge(point newpt, face *searchsh, arraypool *facfaces,
 
 void tetgenmesh::constrainedfacets()
 {
+  /*
   arraypool *crosstets, *topnewtets, *botnewtets;
   arraypool *topfaces, *botfaces, *midfaces;
   arraypool *topshells, *botshells, *facfaces;
   arraypool *toppoints, *botpoints, *facpoints;
+  */
   triface *parytet, searchtet, neightet;
   face *pssub, ssub, neighsh;
   face checkseg;
@@ -2591,7 +2593,7 @@ void tetgenmesh::constrainedfacets()
   int bakhullsize;
   int s, i, j;
 
-  // Initialize arrays.
+  /* // Initialize arrays.
   crosstets = new arraypool(sizeof(triface), 10);
   topnewtets = new arraypool(sizeof(triface), 10);
   botnewtets = new arraypool(sizeof(triface), 10);
@@ -2604,6 +2606,7 @@ void tetgenmesh::constrainedfacets()
   facfaces = new arraypool(sizeof(face), 10);
   topshells = new arraypool(sizeof(face), 10);
   botshells = new arraypool(sizeof(face), 10);
+  */
 
   facetcount = 0;
 
@@ -2619,11 +2622,11 @@ void tetgenmesh::constrainedfacets()
     if (neightet.tet == NULL) {
       // Find an unrecovered subface.
       smarktest(ssub);
-      facfaces->newindex((void **) &pssub);
+      tg_facfaces->newindex((void **) &pssub);
       *pssub = ssub;
       // Get all subfaces and vertices of the same facet.
-      for (i = 0; i < facfaces->objects; i++) {
-        ssub = * (face *) fastlookup(facfaces, i);
+      for (i = 0; i < tg_facfaces->objects; i++) {
+        ssub = * (face *) fastlookup(tg_facfaces, i);
         for (j = 0; j < 3; j++) {
           sspivot(ssub, checkseg);
           if (checkseg.sh == NULL) {
@@ -2634,7 +2637,7 @@ void tetgenmesh::constrainedfacets()
               stpivot(neighsh, neightet);
               if (neightet.tet == NULL) {
                 smarktest(neighsh);
-                facfaces->newindex((void **) &pssub);
+                tg_facfaces->newindex((void **) &pssub);
                 *pssub = neighsh;
               }
             }
@@ -2642,32 +2645,32 @@ void tetgenmesh::constrainedfacets()
           pt = sorg(ssub);
           if (!pinfected(pt)) {
             pinfect(pt);
-            facpoints->newindex((void **) &ppt);
+            tg_facpoints->newindex((void **) &ppt);
             *ppt = pt;
           }
           senextself(ssub);
         } // j
       } // i
       // Have found all facet subfaces (vertices). Uninfect them.
-      for (i = 0; i < facfaces->objects; i++) {
-        pssub = (face *) fastlookup(facfaces, i);
+      for (i = 0; i < tg_facfaces->objects; i++) {
+        pssub = (face *) fastlookup(tg_facfaces, i);
         sunmarktest(*pssub);
       }
-      for (i = 0; i < facpoints->objects; i++) {
-        ppt = (point *) fastlookup(facpoints, i);
+      for (i = 0; i < tg_facpoints->objects; i++) {
+        ppt = (point *) fastlookup(tg_facpoints, i);
         puninfect(*ppt);
       }
       if (b->verbose > 1) {
         printf("  Recover facet #%d: %ld subfaces, %ld vertices.\n", 
-          facetcount + 1, facfaces->objects, facpoints->objects);
+          facetcount + 1, tg_facfaces->objects, tg_facpoints->objects);
       }
       facetcount++;
 
-      // Loop until 'facfaces' is empty.
-      while (facfaces->objects > 0l) {
+      // Loop until 'tg_facfaces' is empty.
+      while (tg_facfaces->objects > 0l) {
         // Get the last subface of this array.
-        facfaces->objects--;
-        pssub = (face *) fastlookup(facfaces, facfaces->objects);
+        tg_facfaces->objects--;
+        pssub = (face *) fastlookup(tg_facfaces, tg_facfaces->objects);
         ssub = *pssub;
 
         stpivot(ssub, neightet);
@@ -2680,40 +2683,41 @@ void tetgenmesh::constrainedfacets()
         assert(dir != COLLISIONFACE); // SELF_CHECK
 
         // Not exist. Push the subface back into stack.
-        s = randomnation(facfaces->objects + 1);
-        facfaces->newindex((void **) &pssub);
-        *pssub = * (face *) fastlookup(facfaces, s);
-        * (face *) fastlookup(facfaces, s) = ssub;
+        s = randomnation(tg_facfaces->objects + 1);
+        tg_facfaces->newindex((void **) &pssub);
+        *pssub = * (face *) fastlookup(tg_facfaces, s);
+        * (face *) fastlookup(tg_facfaces, s) = ssub;
 
         if (dir == EDGETRIINT) continue; // All three edges are missing.
 
         // Search for a crossing tet.
-        dir = scoutcrosstet(&ssub, &searchtet, facpoints);
+        dir = scoutcrosstet(&ssub, &searchtet, tg_facpoints);
 
         if (dir == ACROSSTET) {
           // Recover subfaces by local retetrahedralization.
           cavitycount++;
           bakhullsize = hullsize;
           checksubsegs = checksubfaces = 0;
-          crosstets->newindex((void **) &parytet);
+          tg_crosstets->newindex((void **) &parytet);
           *parytet = searchtet;
           // Form a cavity of crossing tets.
-          formcavity(&ssub, crosstets, topfaces, botfaces, toppoints,
-            botpoints, facpoints);
+          formcavity(&ssub, tg_crosstets, tg_topfaces, tg_botfaces, 
+            tg_toppoints, tg_botpoints, tg_facpoints);
           delaunayflag = true;
-          // Tetrahedralize the top part. Re-use 'midfaces'.
-          success = delaunizecavity(toppoints, topfaces, topshells,
-            topnewtets, crosstets, midfaces);
+          // Tetrahedralize the top part. Re-use 'tg_midfaces'.
+          success = delaunizecavity(tg_toppoints, tg_topfaces, tg_topshells,
+            tg_topnewtets, tg_crosstets, tg_midfaces);
           if (success) {
-            // Tetrahedralize the bottom part. Re-use 'midfaces'.
-            success = delaunizecavity(botpoints, botfaces, botshells, 
-              botnewtets, crosstets, midfaces);
+            // Tetrahedralize the bottom part. Re-use 'tg_midfaces'.
+            success = delaunizecavity(tg_botpoints, tg_botfaces, tg_botshells,
+              tg_botnewtets, tg_crosstets, tg_midfaces);
             if (success) {
               // Fill the cavity with new tets.
-              success = fillcavity(topshells, botshells, midfaces, facpoints);
+              success = fillcavity(tg_topshells, tg_botshells, tg_midfaces,
+                tg_facpoints);
               if (success) {
                 // Delete old tets and outer new tets.
-                carvecavity(crosstets, topnewtets, botnewtets);
+                carvecavity(tg_crosstets, tg_topnewtets, tg_botnewtets);
               }
             } else {
               delaunayflag = false;
@@ -2723,16 +2727,16 @@ void tetgenmesh::constrainedfacets()
           }
           if (!success) {
             // Restore old tets and delete new tets.
-            restorecavity(crosstets, topnewtets, botnewtets);
+            restorecavity(tg_crosstets, tg_topnewtets, tg_botnewtets);
           }
           /*if (!delaunayflag) {
             dump_facetof(&ssub, "facet1.lua");
             while (futureflip != NULL) {
-              formedgecavity(futureflip->forg, futureflip->fdest, crosstets, 
-                topfaces, toppoints);
-              crosstets->restart();
-              topfaces->restart();
-              toppoints->restart();
+              formedgecavity(futureflip->forg, futureflip->fdest, tg_crosstets,
+                tg_topfaces, tg_toppoints);
+              tg_crosstets->restart();
+              tg_topfaces->restart();
+              tg_toppoints->restart();
               futureflip = futureflip->nextitem;
             }
             flippool->restart();
@@ -2745,7 +2749,7 @@ void tetgenmesh::constrainedfacets()
           checksubsegs = checksubfaces = 1;
         } else if (dir == ACROSSFACE) {
           // Recover subfaces by flipping edges in surface mesh.
-          recoversubfacebyflips(&ssub, &searchtet, facfaces);
+          recoversubfacebyflips(&ssub, &searchtet, tg_facfaces);
           success = true;
         } else { // dir == TOUCHFACE
           assert(0);
@@ -2753,7 +2757,7 @@ void tetgenmesh::constrainedfacets()
         if (!success) break;
       } // while
 
-      if (facfaces->objects > 0l) {
+      if (tg_facfaces->objects > 0l) {
         // Found a non-Delaunay edge, split it (or a segment close to it).
         // Create a new point at the middle of this edge, its coordinates
         //   were saved in dummypoint in 'fillcavity()'.
@@ -2762,11 +2766,11 @@ void tetgenmesh::constrainedfacets()
         setpointtype(newpt, STEINERVERTEX);
         dummypoint[0] = dummypoint[1] = dummypoint[2] = 0;
         // Insert the new point. Starting search it from 'ssub'.
-        splitsubedge(newpt, &ssub, facfaces, facpoints);
-        facfaces->restart();
+        splitsubedge(newpt, &ssub, tg_facfaces, tg_facpoints);
+        tg_facfaces->restart();
       }
       // Clear the list of facet vertices.
-      facpoints->restart();
+      tg_facpoints->restart();
 
       // Some subsegments may be queued, recover them.
       if (subsegstack->objects > 0l) {
@@ -2776,7 +2780,7 @@ void tetgenmesh::constrainedfacets()
     } // if (neightet.tet == NULL) 
   }
 
-  // Delete arrays.
+  /* // Delete arrays.
   delete crosstets;
   delete topnewtets;
   delete botnewtets;
@@ -2789,6 +2793,7 @@ void tetgenmesh::constrainedfacets()
   delete facfaces;
   delete topshells;
   delete botshells;
+  */
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3711,8 +3716,36 @@ void tetgenmesh::formskeleton()
     printf("  Constraining facets.\n");
   }
 
+  // Initialize arrays.
+  tg_crosstets = new arraypool(sizeof(triface), 10);
+  tg_topnewtets = new arraypool(sizeof(triface), 10);
+  tg_botnewtets = new arraypool(sizeof(triface), 10);
+  tg_topfaces = new arraypool(sizeof(triface), 10);
+  tg_botfaces = new arraypool(sizeof(triface), 10);
+  tg_midfaces = new arraypool(sizeof(triface), 10);
+  tg_toppoints = new arraypool(sizeof(point), 8);
+  tg_botpoints = new arraypool(sizeof(point), 8);
+  tg_facpoints = new arraypool(sizeof(point), 8);
+  tg_facfaces = new arraypool(sizeof(face), 10);
+  tg_topshells = new arraypool(sizeof(face), 10);
+  tg_botshells = new arraypool(sizeof(face), 10);
+
   // Recover facets.
   constrainedfacets();
+
+  // Delete arrays.
+  delete tg_crosstets;
+  delete tg_topnewtets;
+  delete tg_botnewtets;
+  delete tg_topfaces;
+  delete tg_botfaces;
+  delete tg_midfaces;
+  delete tg_toppoints;
+  delete tg_botpoints;
+  delete tg_facpoints;
+  delete tg_facfaces;
+  delete tg_topshells;
+  delete tg_botshells;
 
   if (b->verbose) {
     printf("  %ld subedge flips.\n", flip22count - bakflip22count);
