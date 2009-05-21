@@ -205,6 +205,18 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     }
   }
 
+  if (b->quality) {
+    m.enforcequality();
+  }
+
+  tv[6] = clock();
+
+  if (!b->quiet) {
+    if (b->quality) {
+      printf("Quality seconds:  %g\n", (tv[6] - tv[5])/(REAL) CLOCKS_PER_SEC);
+    }
+  }
+
   printf("\n");
 
   if (out != (tetgenio *) NULL) {

@@ -538,6 +538,42 @@ int tetgenmesh::checksegments()
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// checkconforming()    Check if the mesh is boundary conforming Delaunay.   //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+int tetgenmesh::checkconforming()
+{
+  face shloop;
+  int horrors;
+
+  horrors = 0;
+
+  // Find all encroached segments.
+  subsegpool->traversalinit();
+  shloop.shver = 0;
+  shloop.sh = shellfacetraverse(subsegpool);
+  while (shloop.sh != NULL) {
+    if (checkedge4encroach(shloop, NULL, 0)) {
+      printf("  !! Segment x%lx (%d, %d) is encroached.\n", 
+        (unsigned long) shloop.sh, pointmark(sorg(shloop)),
+        pointmark(sdest(shloop)));
+      horrors++;
+    }
+    shloop.sh = shellfacetraverse(subsegpool);
+  }
+
+  if (horrors == 0) {
+    printf("  Segments are boundary conforming Delaunay.\n");
+  } else {
+    printf("  !! !! !! !! Found %d encroached segments.\n", horrors);
+  }
+
+  return horrors;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // algorithmstatistics()    Report algorithmic performances.                 //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

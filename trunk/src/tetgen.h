@@ -1757,7 +1757,7 @@ int checkmesh();
 int checkshells(int);
 int checkdelaunay(int);
 int checksegments();
-void checkconforming();
+int checkconforming();
 void algorithmstatistics();
 void qualitystatistics();
 void statistics();

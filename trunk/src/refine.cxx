@@ -206,8 +206,8 @@ void tetgenmesh::enforcequality()
   if (b->verbose && (badsegpool->items > 0)) {
     printf("  Splitting encroached segments.\n");
   }
-
   bakptcount = pointpool->items;
+
   // Fix encroached segments.
   repairencsegs();
   // At this point, no segments should be encroached.
