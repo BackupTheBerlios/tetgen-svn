@@ -163,4 +163,74 @@ void tetgenmesh::repairencsegs()
   } // while (badsegpool->items > 0)
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// enforcequality()    Create quality conforming Delaunay mesh.              //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::enforcequality()
+{
+  face shloop;
+  long bakptcount;
+
+  if (!b->quiet) {
+    printf("Conforming Delaunay meshing.\n");
+  }
+
+  // Initialize the pool for storing encroched segments.
+  badsegpool = new memorypool(sizeof(badface), SUBPERBLOCK, POINTER, 0);
+
+  // Initialize arrays.
+  tg_crosstets = new arraypool(sizeof(triface), 10);
+  tg_topnewtets = new arraypool(sizeof(triface), 10);
+  tg_botnewtets = new arraypool(sizeof(triface), 10);
+  tg_topfaces = new arraypool(sizeof(triface), 10);
+  tg_botfaces = new arraypool(sizeof(triface), 10);
+  tg_midfaces = new arraypool(sizeof(triface), 10);
+  tg_toppoints = new arraypool(sizeof(point), 8);
+  tg_botpoints = new arraypool(sizeof(point), 8);
+  tg_facpoints = new arraypool(sizeof(point), 8);
+  tg_facfaces = new arraypool(sizeof(face), 10);
+  tg_topshells = new arraypool(sizeof(face), 10);
+  tg_botshells = new arraypool(sizeof(face), 10);
+
+  // Find all encroached segments.
+  subsegpool->traversalinit();
+  shloop.sh = shellfacetraverse(subsegpool);
+  while (shloop.sh != NULL) {
+    checkedge4encroach(shloop, NULL, 1);
+    shloop.sh = shellfacetraverse(subsegpool);
+  }
+
+  if (b->verbose && (badsegpool->items > 0)) {
+    printf("  Splitting encroached segments.\n");
+  }
+
+  bakptcount = pointpool->items;
+  // Fix encroached segments.
+  repairencsegs();
+  // At this point, no segments should be encroached.
+
+  if (b->verbose && ((pointpool->items - bakptcount) > 0)) {
+    printf("  %ld Steiner points.\n", pointpool->items - bakptcount);
+  }
+
+  // Delete arrays.
+  delete tg_crosstets;
+  delete tg_topnewtets;
+  delete tg_botnewtets;
+  delete tg_topfaces;
+  delete tg_botfaces;
+  delete tg_midfaces;
+  delete tg_toppoints;
+  delete tg_botpoints;
+  delete tg_facpoints;
+  delete tg_facfaces;
+  delete tg_topshells;
+  delete tg_botshells;
+
+  delete badsegpool;
+}
+
 #endif // #ifndef refineCXX

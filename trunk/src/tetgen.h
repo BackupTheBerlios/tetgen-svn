@@ -1723,6 +1723,8 @@ void carveholes();
 bool checkedge4encroach(face& seg, point testpt, int enqflag);
 void repairencsegs();
 
+void enforcequality();
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 // Mesh input & output functions.                                            //
