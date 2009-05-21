@@ -314,6 +314,7 @@ int tetgenmesh::checkshells(int sub2tet)
         for (i = 0; i < 4; i++) {
           if (pinfected(ppt[4 + i])) count++; 
         }
+        ppt = (point *) shloop.sh;
         for (i = 0; i < 3; i++) {
           puninfect(ppt[3 + i]); // Uninfect the subface vertices.
         }

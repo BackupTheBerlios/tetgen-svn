@@ -106,13 +106,6 @@ void tetgenmesh::repairencsegs()
   face splitsh;
   point newpt, refpt;
   point pa, pb;
-  long ptcount;
-
-  if (b->verbose) {
-    printf("  Repair encroching segments.\n");
-  }
-
-  ptcount = pointpool->items;
 
   while (badsegpool->items > 0) {
 
@@ -161,14 +154,13 @@ void tetgenmesh::repairencsegs()
         constrainedfacets();
       }
 
+      // Deallocate the badface.
+      badfacedealloc(badsegpool, encloop);
+      // Get the next badface.
       encloop = badfacetraverse(badsegpool);
     } // while (encloop != NULL)
 
   } // while (badsegpool->items > 0)
-
-  if (b->verbose) {
-    printf("  %ld steiner points.\n", pointpool->items - ptcount);
-  }
 }
 
 #endif // #ifndef refineCXX

@@ -763,7 +763,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     maxbowatcavsize = cavebdrylist->objects;
   }
 
-  if (checksubsegs || noencsegflag) {
+  if (checksubsegs) {
     // Check if some (sub)segments are inside the cavity. Such segments
     //   are queued in 'subsegstack'. 
     for (i = 0; i < caveoldtetlist->objects; i++) {
@@ -796,7 +796,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         }
       }
     }
-    if (noencsegflag && (subsegstack->objects == 0)) {
+    if (noencsegflag) {
       // Check for encroaching segment on the boundary of the cavity.
       //   Encroached segments are queued in 'subsegstack'.
       for (i = 0; i < cavebdrylist->objects; i++) {
@@ -806,16 +806,17 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         for (j = 0; j < 3; j++) {
           tsspivot(*cavetet, sseg);
           if (sseg.sh != NULL) {
-            // Found a segment. It must be not queued in stack.
-            assert(!sinfected(sseg)); // SELF_CHECK
-            if (checkedge4encroach(sseg, insertpt, 0)) {
-              if (b->verbose > 1) {
-                printf("      Queue an encroaching segment (%d, %d).\n",
-                  pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+            // Found a segment. Check it if it is not queued yet.
+            if (!sinfected(sseg)) {
+              if (checkedge4encroach(sseg, insertpt, 0)) {
+                if (b->verbose > 1) {
+                  printf("      Queue an encroaching segment (%d, %d).\n",
+                    pointmark(sorg(sseg)), pointmark(sdest(sseg)));
+                }
+                sinfect(sseg);  // Only save it once.
+                subsegstack->newindex((void **) &psseg);
+                *psseg = sseg;
               }
-              sinfect(sseg);  // Only save it once.
-              subsegstack->newindex((void **) &psseg);
-              *psseg = sseg;
             }
           }
           enextself(*cavetet);
@@ -845,8 +846,9 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     return ENCSEGMENT;
   }
 
-  if (checksubfaces || noencsubflag) {
-    // Check if some subfaces are inside the cavity.
+  if (checksubfaces) {
+    // Check if some subfaces are inside the cavity. Such subfaces
+    //   are queued in 'subfacstack'. 
     for (i = 0; i < caveoldtetlist->objects; i++) {
       cavetet = (triface *) fastlookup(caveoldtetlist, i);
       neightet.tet = cavetet->tet;
@@ -870,7 +872,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         }
       }
     }
-    if (noencsubflag && (subfacstack->objects == 0)) {
+    if (noencsubflag) {
       // Check for encroaching subface on the boundary of the cavity.
       //   Encroached subfaces are queued in 'subfacstack'.
       for (i = 0; i < cavebdrylist->objects; i++) {
@@ -879,7 +881,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
         assert(cavetet->ver == 4); // SELF_CHECK
         tspivot(*cavetet, checksh);
         if (checksh.sh != NULL) {
-          // Do check ...
+          // checkface4encroach();
         }
       }
     }
@@ -909,6 +911,8 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
   if (visflag) {
     // If T is not a Delaunay triangulation, the formed cavity may not be
     //   star-shaped (fig/dump-cavity-case8). Validation is needed.
+    // Comment: The validation is done by removing tets from the cavity
+    //   until the cavity is star-shaped.
     cavetetlist->restart(); // Re-use it.
     for (i = 0; i < cavebdrylist->objects; i++) {
       cavetet = (triface *) fastlookup(cavebdrylist, i);

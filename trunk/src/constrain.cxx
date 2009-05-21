@@ -841,10 +841,6 @@ void tetgenmesh::delaunizesegments()
   enum intersection dir;
   bool visflag;
 
-  if (b->verbose) {
-    printf("  Delaunizing segments.\n");
-  }
-
   // Loop until 'subsegstack' is empty.
   while (subsegstack->objects > 0l) {
     // seglist is used as a stack.
@@ -888,10 +884,6 @@ void tetgenmesh::delaunizesegments()
         terminatetetgen(1);
       }
     }
-  }
-
-  if (b->verbose) {
-    printf("  %d protecting points.\n", r1count + r2count + r3count);
   }
 }
 
@@ -2595,15 +2587,9 @@ void tetgenmesh::constrainedfacets()
   point *ppt, pt, newpt;
   enum intersection dir;
   bool success, delaunayflag;
-  long bakflip22count;
-  long cavitycount;
   int facetcount;
   int bakhullsize;
   int s, i, j;
-
-  if (b->verbose) {
-    printf("  Constraining facets.\n");
-  }
 
   // Initialize arrays.
   crosstets = new arraypool(sizeof(triface), 10);
@@ -2619,8 +2605,6 @@ void tetgenmesh::constrainedfacets()
   topshells = new arraypool(sizeof(face), 10);
   botshells = new arraypool(sizeof(face), 10);
 
-  bakflip22count = flip22count;
-  cavitycount = 0;
   facetcount = 0;
 
   // Loop until 'subfacstack' is empty.
@@ -2786,17 +2770,10 @@ void tetgenmesh::constrainedfacets()
 
       // Some subsegments may be queued, recover them.
       if (subsegstack->objects > 0l) {
-        b->verbose--; // Suppress the message output.
         delaunizesegments();
-        b->verbose++;
       }
       // Now the mesh should be constrained Delaunay.
     } // if (neightet.tet == NULL) 
-  }
-
-  if (b->verbose) {
-    printf("  %ld subedge flips.\n", flip22count - bakflip22count);
-    printf("  %ld cavities remeshed.\n", cavitycount);
   }
 
   // Delete arrays.
@@ -3655,6 +3632,8 @@ void tetgenmesh::formskeleton()
 {
   face *pssub, ssub;
   REAL bakeps;
+  long bakflip22count;
+  long bakcavitycount;
   int s, i;
 
   if (!b->quiet) {
@@ -3696,7 +3675,15 @@ void tetgenmesh::formskeleton()
 
   // Recover segments.
   if (b->nobisect == 0) {
+    if (b->verbose) {
+      printf("  Delaunizing segments.\n");
+    }
+
     delaunizesegments();
+
+    if (b->verbose) {
+      printf("  %d protecting points.\n", r1count + r2count + r3count);
+    }
   } else {
     // -Y option, constrained recover.
     constrainedsegments();
@@ -3717,8 +3704,20 @@ void tetgenmesh::formskeleton()
 
   // Subfaces will be introduced.
   checksubfaces = 1;
+  bakflip22count = flip22count;
+  bakcavitycount = cavitycount;
+
+  if (b->verbose) {
+    printf("  Constraining facets.\n");
+  }
+
   // Recover facets.
   constrainedfacets();
+
+  if (b->verbose) {
+    printf("  %ld subedge flips.\n", flip22count - bakflip22count);
+    printf("  %ld cavities remeshed.\n", cavitycount - bakcavitycount);
+  }
 
   // checksubsegs = 0;
   b->epsilon = bakeps;
