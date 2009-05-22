@@ -3834,7 +3834,7 @@ void tetgenmesh::carveholes()
     }
   }
 
-  // Find and infect all exterior tets.
+  // Find and infect all exterior tets (in concave place and in holes).
   for (i = 0; i < tetarray->objects; i++) {
     parytet = (triface *) fastlookup(tetarray, i);
     tetloop = *parytet;
@@ -3903,7 +3903,8 @@ void tetgenmesh::carveholes()
 
   tetarray->restart(); // Re-use it for new hull tets.
 
-  // Create new hull faces and update the point-to-tet map.
+  // Create new hull tets. 
+  // Update point-to-tet map, segment-to-tet map, and subface-to-tet map.
   tetrahedronpool->traversalinit();
   tetloop.ver = 0;
   tetloop.tet = tetrahedrontraverse();
@@ -3919,7 +3920,18 @@ void tetgenmesh::carveholes()
         pc = apex(tetloop);
         setvertices(hulltet, pb, pa, pc, dummypoint);
         bond(tetloop, hulltet);
+        // Update subface-to-tet map.
         tsbond(hulltet, checksh);
+        // Update segment-to-tet map.
+        for (i = 0; i < 3; i++) {
+          tsspivot(tetloop, checkseg);
+          if (checkseg.sh != NULL) {
+            tssbond1(hulltet, checkseg);
+            sstbond(checkseg, hulltet);
+          }
+          enextself(tetloop);
+          enext2self(hulltet);
+        }
         // Save this hull tet in list.
         tetarray->newindex((void **) &parytet);
         *parytet = hulltet;
@@ -3960,6 +3972,10 @@ void tetgenmesh::carveholes()
 
   //////////////////////////////////////////////////////////////////////
   // Peel off "flat" tetrahedra at boundary. 
+  //
+  // A tet is flat if it contains two subfaces of the same facet. 
+  // Flat tets are possible when a facet is defined by non-exactly 
+  // coplanar vertices.
 
   tetarray->restart(); // Re-use this array.
   flatcount = 0;

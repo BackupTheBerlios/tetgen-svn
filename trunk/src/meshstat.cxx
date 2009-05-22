@@ -507,9 +507,9 @@ int tetgenmesh::checksegments()
               if (checkseg.sh != sseg.sh) {
                 printf("  !! Wrong tet->seg connection.\n");
                 printf("    Tet: x%lx (%d, %d, %d, %d) - ", 
-                  (unsigned long) tetloop.tet, pointmark(org(tetloop)),
-                  pointmark(dest(tetloop)), pointmark(apex(tetloop)),
-                  pointmark(oppo(tetloop)));
+                  (unsigned long) neightet.tet, pointmark(org(neightet)),
+                  pointmark(dest(neightet)), pointmark(apex(neightet)),
+                  pointmark(oppo(neightet)));
                 if (checkseg.sh != NULL) {
                   printf("Seg x%lx (%d, %d).\n", (unsigned long) checkseg.sh,
                   pointmark(sorg(checkseg)), pointmark(sdest(checkseg))); 
