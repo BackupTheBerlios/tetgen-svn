@@ -1468,17 +1468,19 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
   if (checksubsegs) {
     // Check if the flip edge is subsegment.
     tsspivot(fliptets[0], checkseg);
-    if ((checkseg.sh != NULL) && !sinfected(checkseg)) {
-      // This subsegment will be flipped. Queue it.
-      if (b->verbose > 1) {
-        printf("      Queue a flipped segment (%d, %d).\n",
-          pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
+    if ((checkseg.sh != NULL)) {
+      if (!sinfected(checkseg)) {
+        // This subsegment will be flipped. Queue it.
+        if (b->verbose > 1) {
+          printf("      Queue a flipped segment (%d, %d).\n",
+            pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
+        }
+        sinfect(checkseg);  // Only save it once.
+        subsegstack->newindex((void **) &pssub);
+        *pssub = checkseg;
       }
       // Clean the seg-to-tet pointer.
       stdissolve(checkseg);
-      sinfect(checkseg);  // Only save it once.
-      subsegstack->newindex((void **) &pssub);
-      *pssub = checkseg;
     }
   }
 

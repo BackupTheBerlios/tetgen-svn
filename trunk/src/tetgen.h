@@ -1870,7 +1870,7 @@ void pteti(int i, int j, int k, int l);
 void pface(int i, int j, int k);
 bool pedge(int i, int j);
 void psubface(int i, int j, int k);
-void psubseg(int i, int j);
+int psubseg(int i, int j);
 int pmark(point p);
 void pvert(point p);
 int pverti(int i);

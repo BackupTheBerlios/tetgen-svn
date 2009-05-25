@@ -1250,9 +1250,11 @@ void tetgenmesh::psubface(int i, int j, int k)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Print the information of the subsegment (i, j).
+// Return 1 if seg-to-tet pointer is broken.
 
-void tetgenmesh::psubseg(int i, int j)
+int tetgenmesh::psubseg(int i, int j)
 {
+  triface t;
   face s; //, s1;
   point forg, fdest;
   bool bflag;
@@ -1278,6 +1280,26 @@ void tetgenmesh::psubseg(int i, int j)
       fdest = farsdest(s);
       printf("  seg x%lx (%d, %d) < (%d, %d)\n", (unsigned long) s.sh, i, j,
         pointmark(forg), pointmark(fdest));
+      // Chekc seg-to-tet pointer
+      stpivot(s, t);
+      if (t.tet != NULL) {
+        if (t.tet[4] != NULL) {
+          forg = org(t);
+          fdest = dest(t);
+          if (((pointmark(forg) == i) && (pointmark(fdest) == j)) || 
+              ((pointmark(forg) == j) && (pointmark(fdest) == i))) {
+            printf("  adj tet x%lx (%d, %d, %d, %d)\n", (unsigned long) t.tet,
+              pointmark(forg), pointmark(fdest), pointmark(apex(t)), 
+              pointmark(oppo(t)));
+          } else {
+            printf("  !! Wrong seg-to-tet pointer.\n");
+            return 1;
+          }
+        } else {
+          printf("  !! A DEAD seg-to-tet pointer.\n");
+          return 1;
+        }
+      }
       /*// Print the adjacent subsegments at i and j.
       senext2(s, s1);
       spivotself(s1);
@@ -1305,6 +1327,7 @@ void tetgenmesh::psubseg(int i, int j)
   if (!bflag) {
     printf("  !! Not exist.\n");
   }
+  return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
