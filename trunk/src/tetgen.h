@@ -1696,6 +1696,7 @@ enum intersection finddirection(triface* searchtet, point endpt);
 enum intersection scoutsegment(face* sseg, triface* searchtet, point* refpt);
 void getsegmentsplitpoint(face* sseg, point refpt, REAL* vt);
 void getsegmentsplitpoint2(face* sseg, point refpt, REAL* vt);
+void getsegmentsplitpoint3(face* sseg, point refpt, REAL* vt);
 void delaunizesegments();
 
 enum intersection scoutsubface(face* ssub, triface* searchtet);

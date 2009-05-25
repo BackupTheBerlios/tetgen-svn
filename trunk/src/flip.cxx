@@ -1474,6 +1474,8 @@ void tetgenmesh::flip32(triface* fliptets, int hullflag, int flipflag)
         printf("      Queue a flipped segment (%d, %d).\n",
           pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
       }
+      // Clean the seg-to-tet pointer.
+      stdissolve(checkseg);
       sinfect(checkseg);  // Only save it once.
       subsegstack->newindex((void **) &pssub);
       *pssub = checkseg;

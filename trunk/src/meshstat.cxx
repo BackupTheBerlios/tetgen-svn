@@ -989,13 +989,16 @@ void tetgenmesh::psh(face *s)
     } else {
       printf("      [8] = x%lx  %d\n", (unsigned long) prtsh.sh, prtsh.shver);
     }
+  }
 
-    decode(s->sh[9], prttet);
-    if (prttet.tet == NULL) {
+  // Print the adjacent tet of this subface or segment.
+  decode(s->sh[9], prttet);
+  if (prttet.tet == NULL) {
       printf("      [9] = Outer space\n");
-    } else {
-      printf("      [9] = x%lx  %d\n",(unsigned long) prttet.tet, prttet.loc);
-    }
+  } else {
+    printf("      [9] = x%lx  (%d, %d, %d, %d)\n",(unsigned long) prttet.tet, 
+      pointmark(org(prttet)), pointmark(dest(prttet)), 
+      pointmark(apex(prttet)), pointmark(oppo(prttet)));
   }
 }
 

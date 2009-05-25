@@ -777,6 +777,138 @@ void tetgenmesh::getsegmentsplitpoint2(face* sseg, point refpt, REAL* vt)
       if (d1 < 0.5 * L) {
         split = d1 / L;
         // Adjust split if it is close to middle. (2009-02-01)
+        // if ((split > 0.4) || (split < 0.6)) split = 0.5;
+      } else {
+        split = 0.5;
+      }
+      for (i = 0; i < 3; i++) {
+        vt[i] = ei[i] + split * (ej[i] - ei[i]);
+      }
+    } else {
+      // Choose ej as center.
+      if (d2 < 0.5 * L) {
+        split = d2 / L;
+        // Adjust split if it is close to middle. (2009-02-01)
+        // if ((split > 0.4) || (split < 0.6)) split = 0.5;
+      } else {
+        split = 0.5;
+      }
+      for (i = 0; i < 3; i++) {
+        vt[i] = ej[i] + split * (ei[i] - ej[i]);
+      }
+    }
+  } else {
+    split = 0.5;
+    for (i = 0; i < 3; i++) {
+      vt[i] = ei[i] + split * (ej[i] - ei[i]);
+    }
+  }
+  r1count++;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// getsegmentsplitpoint3()    Calculate a split point in the given segment.
+// This routine does not check far origin and far dest.
+
+void tetgenmesh::getsegmentsplitpoint3(face* sseg, point refpt, REAL* vt)
+{
+  point ei, ej, ek;
+  REAL split, L, d, d1, d2, d3;
+  int stype, sign;
+  int i;
+
+  // Decide the type of this segment.
+  sign = 1;
+  ei = sorg(*sseg);
+  ej = sdest(*sseg);
+  ek = NULL;
+
+  // ei can be an ACUTEVERTEX, or a RIDGEVERTEX, or a STEINERVERTEX.
+  if (getpointtype(ei) == ACUTEVERTEX) {
+    if (getpointtype(ej) == ACUTEVERTEX) {
+      // ej is an ACUTEVERTEX.
+      stype = 0;
+    } else {
+      // ej is either a RIDGEVERTEX or a STEINERVERTEX.
+      stype = 1;
+      ek = ei;
+    }
+  } else {
+    if (getpointtype(ei) == RIDGEVERTEX) {
+      if (getpointtype(ej) == ACUTEVERTEX) {
+        // ej is an ACUTEVERTEX.
+        stype = 1; sign = -1;
+        ek = ej;
+      } else {
+        if (getpointtype(ej) == RIDGEVERTEX) {
+          // ej is a RIDGEVERTEX.
+          stype = 0;
+        } else {
+          // ej is a STEINERVETEX.
+          stype = 0;
+          /* ek = farsdest(*sseg);
+          if (getpointtype(ek) == ACUTEVERTEX) {
+            stype = 1; sign = -1;
+          } else {
+            stype = 0;
+          }*/
+        }
+      }
+    } else {
+      // ei is a STEINERVERTEX.
+      if (getpointtype(ej) == ACUTEVERTEX) {
+        stype = 1; sign = -1;
+        ek = ej;
+      } else {
+        // ej is either a RIDGEVERTEX or STEINERVERTEX.
+        stype = 0;
+        /*ek = farsorg(*sseg);
+        if (getpointtype(ej) == RIDGEVERTEX) {
+          if (getpointtype(ek) == ACUTEVERTEX) {
+            stype = 1;
+          } else {
+            stype = 0;
+          }
+        } else {
+          // Both ei and ej are STEINERVETEXs. ei has priority.
+          if (getpointtype(ek) == ACUTEVERTEX) {
+            stype = 1;
+          } else {
+            ek = farsdest(*sseg);
+            if (getpointtype(ek) == ACUTEVERTEX) {
+              stype = 1; sign = -1;
+            } else {
+              stype = 0;
+            }
+          }
+        }*/
+      }
+    }
+  }
+
+  // Adjust the endpoints: ei, ej.
+  if (sign == -1) {
+    sesymself(*sseg);
+    ei = sorg(*sseg);
+    ej = sdest(*sseg);
+  }
+
+  if (b->verbose > 1) {
+    printf("    Split a type-%d seg(%d, %d) ref(%d).\n", stype,
+      pointmark(ei), pointmark(ej), pointmark(refpt));
+  }
+
+  // Calculate the split point.
+  if (stype == 0) {
+    // Use rule-1.
+    L = DIST(ei, ej);
+    d1 = DIST(ei, refpt);
+    d2 = DIST(ej, refpt);
+    if (d1 < d2) {
+      // Choose ei as center.
+      if (d1 < 0.5 * L) {
+        split = d1 / L;
+        // Adjust split if it is close to middle. (2009-02-01)
         if ((split > 0.4) || (split < 0.6)) split = 0.5;
       } else {
         split = 0.5;
@@ -797,13 +929,36 @@ void tetgenmesh::getsegmentsplitpoint2(face* sseg, point refpt, REAL* vt)
         vt[i] = ej[i] + split * (ei[i] - ej[i]);
       }
     }
+    r1count++;
   } else {
-    split = 0.5;
+    // Use rule-2.
+    // ek = farsorg(*sseg);
+    L = DIST(ek, ej);
+    d = DIST(ek, refpt);
+    split = d / L;
     for (i = 0; i < 3; i++) {
-      vt[i] = ei[i] + split * (ej[i] - ei[i]);
+      vt[i] = ek[i] + split * (ej[i] - ek[i]);
     }
+    d1 = DIST(vt, refpt);
+    d2 = DIST(vt, ej);
+    if (d1 > d2) {
+      // Use rule-3.
+      d3 = DIST(ei, refpt);
+      if (d1 < 0.5 * d3) {
+        split = (d - d1) / L;
+      } else {
+        split = (d - 0.5 * d3) / L;
+      }
+      for (i = 0; i < 3; i++) {
+        vt[i] = ek[i] + split * (ej[i] - ek[i]);
+      }
+    }
+    d1 > d2 ? r3count++ : r2count++;
   }
-  r1count++;
+
+  if (b->verbose > 1) {
+    printf("    split (%g), vt (%g, %g, %g).\n", split, vt[0], vt[1], vt[2]);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

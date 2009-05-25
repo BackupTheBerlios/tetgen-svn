@@ -187,6 +187,18 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
       printf("seconds:  %g\n", (tv[4] - tv[3]) / (REAL) CLOCKS_PER_SEC);
     }
   }
+  
+  if (b->quality) {
+    m.enforcequality();
+  }
+
+  tv[5] = clock();
+
+  if (!b->quiet) {
+    if (b->quality) {
+      printf("Quality seconds:  %g\n", (tv[5] - tv[4])/(REAL) CLOCKS_PER_SEC);
+    }
+  }
 
   if (b->plc) {
     if (b->convexity == 0) { // if has no -c option.
@@ -194,26 +206,14 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
     }
   }
 
-  tv[5] = clock();
+  tv[6] = clock();
 
   if (!b->quiet) {
     if (b->plc) {
       if (b->convexity == 0) { // if has no -c option.
         printf("Holes and region seconds:  %g\n", 
-          (tv[5] - tv[4]) / (REAL) CLOCKS_PER_SEC);
+          (tv[6] - tv[5]) / (REAL) CLOCKS_PER_SEC);
       }
-    }
-  }
-
-  if (b->quality) {
-    m.enforcequality();
-  }
-
-  tv[6] = clock();
-
-  if (!b->quiet) {
-    if (b->quality) {
-      printf("Quality seconds:  %g\n", (tv[6] - tv[5])/(REAL) CLOCKS_PER_SEC);
     }
   }
 

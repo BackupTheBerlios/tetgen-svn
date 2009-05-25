@@ -789,6 +789,9 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
               printf("      Queue a missing segment (%d, %d).\n",
                 pointmark(sorg(sseg)), pointmark(sdest(sseg)));
             }
+            // All tets containing this segment will be dead, clean the
+            //   seg-to-tet pointer.
+            stdissolve(sseg);
             sinfect(sseg);  // Only save it once.
             subsegstack->newindex((void **) &psseg);
             *psseg = sseg;
@@ -813,6 +816,8 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
                   printf("      Queue an encroaching segment (%d, %d).\n",
                     pointmark(sorg(sseg)), pointmark(sdest(sseg)));
                 }
+                // This segment will still be connected to a tet after the
+                //   insertion.
                 sinfect(sseg);  // Only save it once.
                 subsegstack->newindex((void **) &psseg);
                 *psseg = sseg;

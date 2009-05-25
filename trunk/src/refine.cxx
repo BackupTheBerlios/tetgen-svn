@@ -127,8 +127,12 @@ void tetgenmesh::repairencsegs()
         }
         // Create a new point in the segment.
         makepoint(&newpt);
-        getsegmentsplitpoint2(&(encloop->ss), refpt, newpt);
+        // getsegmentsplitpoint2(&(encloop->ss), refpt, newpt);
+        getsegmentsplitpoint3(&(encloop->ss), refpt, newpt);
         setpointtype(newpt, STEINERVERTEX);
+
+        // Get a adjacent tet for point location.
+        stpivot(encloop->ss, searchtet);
 
         // Split the segment by newpt. Two new subsegments and new subfaces
         //   are queued in subsegstack and subfacstack for recovery.
@@ -142,8 +146,6 @@ void tetgenmesh::repairencsegs()
         //   recovery.
         // Newly encroached segments, subfaces, and badly-shaped tets are
         //   queued in badsegpool, badsubpool, and badtetpool, resp.
-        // Get a close point for point loction.
-        point2tetorg(pa, searchtet);
         insertvertex(newpt, &searchtet, true, true, false, false);
 
         // Recover missing subsegments.
