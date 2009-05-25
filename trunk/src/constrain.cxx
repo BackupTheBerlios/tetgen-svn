@@ -2505,6 +2505,8 @@ void tetgenmesh::carvecavity(arraypool *crosstets, arraypool *topnewtets,
                 printf("    Queue a missing segment (%d, %d).\n",
                   pointmark(sorg(checkseg)), pointmark(sdest(checkseg)));
               }
+              // Clean the seg-to-tet pointer.
+              stdissolve(checkseg);
               sinfect(checkseg);
               subsegstack->newindex((void **) &parysh);
               *parysh = checkseg;
