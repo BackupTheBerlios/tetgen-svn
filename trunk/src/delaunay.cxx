@@ -930,7 +930,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
           pb = dest(*cavetet);
           pc = apex(*cavetet);
           ori = orient3d(pa, pb, pc, insertpt); orient3dcount++;
-          assert(ori != 0.0); // SELF_CHECK
+          // assert(ori != 0.0); // SELF_CHECK
           enqflag = (ori > 0.0);
         } else {
           enqflag = true; // A hull face.

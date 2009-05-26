@@ -998,6 +998,10 @@ void tetgenmesh::delaunizesegments()
         makepoint(&newpt);
         getsegmentsplitpoint(&sseg, refpt, newpt);
         setpointtype(newpt, STEINERVERTEX);
+        // DEBUG
+        if (pointmark(newpt) == 4157) {
+          printf("debug point\n");
+        }
         // Split the segment by newpt.
         sinsertvertex(newpt, &splitsh, &sseg, true, false);
         // Insert newpt into the DT. If 'checksubfaces == 1' the current

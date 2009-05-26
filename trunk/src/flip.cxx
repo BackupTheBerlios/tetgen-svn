@@ -2038,13 +2038,23 @@ void tetgenmesh::lawsonflip3d(int flipflag)
             // An unflipable face. Will be flipped later.
             if (flipflag == 2) { // if (flipflag > 1) {
               // Queue all other faces at the edge for flipping.
+              if (b->verbose > 1) {
+                printf("    Queue an N32 edge (%d, %d)", 
+                  pointmark(org(fliptets[0])), pointmark(dest(fliptets[0])));
+              }
               pe = apex(fliptets[0]);
               fliptets[1] = fliptets[0];
               while (1) {
+                if (b->verbose > 1) {
+                  printf("  %d", pointmark(apex(fliptets[1])));
+                }
                 pd = oppo(fliptets[1]);
                 futureflip = flippush(futureflip, &fliptets[1], pd);
                 fnextself(fliptets[1]);
                 if (apex(fliptets[1]) == pe) break;
+              }
+              if (b->verbose > 1) {
+                printf("\n");
               }
             }
           }
