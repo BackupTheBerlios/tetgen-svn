@@ -107,11 +107,11 @@ void tetgenmesh::repairencsegs()
   point newpt, refpt;
   point pa, pb;
 
-  while (badsegpool->items > 0) {
+  while ((badsegpool->items > 0) && (b->steinerleft != 0)) {
 
     badsegpool->traversalinit();
     encloop = badfacetraverse(badsegpool);
-    while (encloop != NULL) {
+    while ((encloop != NULL) && (b->steinerleft != 0)) {
       // assert(smarktested(encloop->ss));
       sunmarktest(encloop->ss);
 
@@ -131,7 +131,12 @@ void tetgenmesh::repairencsegs()
         getsegmentsplitpoint3(&(encloop->ss), refpt, newpt);
         setpointtype(newpt, STEINERVERTEX);
 
-        // Get a adjacent tet for point location.
+        // Decrease the number of allocated Steiner points (-S option).
+        if (b->steinerleft != -1) {
+          b->steinerleft--;
+        }
+
+        // Get an adjacent tet for point location.
         stpivot(encloop->ss, searchtet);
 
         // Split the segment by newpt. Two new subsegments and new subfaces
