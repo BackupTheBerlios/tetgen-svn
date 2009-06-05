@@ -139,11 +139,6 @@ void tetgenmesh::repairencsegs()
         spivot(encloop->ss, splitsh);
         sinsertvertex(newpt, &splitsh, &(encloop->ss), true, false);
 
-        // DEBUG
-        if (pointmark(newpt) == 4157) {
-          printf("debug point\n");
-        }
-
         // Insert newpt into the DT. Since the mesh may be a CDT, always
         //   set visflag be true. Some existing egments and subfaces may be
         //   non-Delaunay due to this new vertex, they will be removed from
