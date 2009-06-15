@@ -2091,11 +2091,20 @@ void tetgenmesh::lawsonflip3d(int flipflag)
                 printf("p:draw_subseg(%d, %d)\n",pointmark(pa),pointmark(pb));
                 printf("p:draw_subface(%d, %d, %d)\n", pointmark(org(fliptet)),
                   pointmark(dest(fliptet)), pointmark(apex(fliptet)));
+                printf("p:draw_tet(%d, %d, %d, %d)\n", pointmark(org(fliptet)),
+                  pointmark(dest(fliptet)), pointmark(apex(fliptet)),
+                  pointmark(oppo(fliptet)));
+                symedge(fliptet, fliptets[1]);  
+                printf("p:draw_tet(%d, %d, %d, %d)\n", 
+                  pointmark(org(fliptets[1])),
+                  pointmark(dest(fliptets[1])), 
+                  pointmark(apex(fliptets[1])),
+                  pointmark(oppo(fliptets[1])));
                 pe = apex(fliptets[0]);
                 fliptets[1] = fliptets[0];
                 while (1) {
                   pd = oppo(fliptets[1]);
-                  printf("  p:draw_tet(%d, %d, %d, %d)\n", pointmark(pa),
+                  printf("  -- p:draw_tet(%d, %d, %d, %d)\n", pointmark(pa),
                     pointmark(pb),pointmark(apex(fliptets[1])),pointmark(pd));
                   fnextself(fliptets[1]);
                   if (apex(fliptets[1]) == pe) break;
