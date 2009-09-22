@@ -5,6 +5,408 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
+// unigrid_insert()    Insert a point into the unigrid.                      //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::unigrid_insert(point insertpt)
+{
+  point *ppt;
+  int indx, indy, indz;
+  int cellidx;
+
+  indx = (int) ((insertpt[0] - xmin) / ugstepx);
+  indy = (int) ((insertpt[1] - xmin) / ugstepy);
+  indz = (int) ((insertpt[2] - xmin) / ugstepz);
+
+  // Find the entry of insertpt.
+  cellidx = indx + 
+            indy * b->unigridsize +
+            indz * (b->unigridsize * b->unigridsize);
+  
+  if (cellidx > (ugridarraylen - 1)) {
+    return;
+  }
+
+  if (ugridarrays[cellidx] == NULL) {
+    ugridarrays[cellidx] = new arraypool(sizeof(point *), 8);
+  }
+  ugridarrays[cellidx]->newindex((void **) &ppt);
+  *ppt = insertpt;
+
+  if (b->verbose > 1) {
+    printf("    Insert %d into cell %d (size %d).\n", pointmark(insertpt), 
+      cellidx, ugridarrays[cellidx]->objects);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// unigrid_search()    Search a point in the unigrid.                        //
+//                                                                           //
+// On return, searchtet is the starting tet for line walk search.            //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::unigrid_search(point insertpt, triface* searchtet)
+{
+  point *ppt, candpt, nearpt;
+  REAL dist2, mindist2;
+  int indx, indy, indz;
+  int cellidx, ptidx;
+  int ptsamples;
+  int i;
+
+  indx = (int) ((insertpt[0] - xmin) / ugstepx);
+  indy = (int) ((insertpt[1] - xmin) / ugstepy);
+  indz = (int) ((insertpt[2] - xmin) / ugstepz);
+
+  // Find the entry of insertpt.
+  cellidx = indx + 
+            indy * b->unigridsize +
+            indz * (b->unigridsize * b->unigridsize);
+
+  if (cellidx > (ugridarraylen - 1)) {    
+    return;
+  }
+
+  if (ugridarrays[cellidx] == NULL) {
+    // This cell is empty.
+    searchtet->tet = NULL;
+    return;
+  }
+
+  if (ugridarrays[cellidx]->objects < 10l) {
+    ptsamples = (int) ugridarrays[cellidx]->objects;
+  } else {
+    ptsamples = 10; // Take at least 10 samples.
+    //   The number of random samples taken is proportional to the third root
+    //   of the number of points in the cell.
+    while (ptsamples * ptsamples * ptsamples < 
+      (int) ugridarrays[cellidx]->objects) {
+      ptsamples++;
+    }
+  }
+
+  // Select "good" candidate using k random samples, taking the closest one.
+  mindist2 = maxedgelen2;
+  nearpt = NULL;
+
+  for (i = 0; i < ptsamples; i++) {
+    ptidx = randomnation((unsigned long) ugridarrays[cellidx]->objects);
+    ppt = (point *) fastlookup(ugridarrays[cellidx], ptidx);
+    candpt = *ppt;
+    dist2 = (candpt[0] - insertpt[0]) * (candpt[0] - insertpt[0])
+          + (candpt[1] - insertpt[1]) * (candpt[1] - insertpt[1])
+          + (candpt[2] - insertpt[2]) * (candpt[2] - insertpt[2]);
+    if (dist2 < mindist2) {
+      mindist2 = dist2;
+      nearpt = candpt;
+    }
+  }
+
+  decode(point2tet(nearpt), *searchtet);
+  if (b->verbose > 1) {
+    printf("    Get point %d from cell %d (size %d).\n", pointmark(nearpt), 
+      cellidx, ugridarrays[cellidx]->objects);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// sortvertices()    Sort vertices by a binary tree.                         //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis, 
+  REAL bxmin, REAL bxmax, REAL bymin, REAL bymax, REAL bzmin, REAL bzmax, 
+  int depth)
+{
+  point *leftarray, *rightarray;
+  point **pptary, swapvert;
+  REAL split;
+  bool lflag, rflag;
+  int i, j, k;
+
+  if (b->verbose > 1) {
+    printf("  Depth %d, %d verts. Bbox (%g, %g, %g),(%g, %g, %g). %s-axis\n",
+           depth, arraysize, bxmin, bymin, bzmin, bxmax, bymax, bzmax,
+           axis == 0 ? "x" : (axis == 1 ? "y" : "z"));
+  }
+
+  if (axis == 0) {
+    // Split along x-axis.
+    split = 0.5 * (bxmin + bxmax);
+  } else if (axis == 1) {
+    // Split along y-axis.
+    split = 0.5 * (bymin + bymax);
+  } else {
+    // Split along z-axis.
+    split = 0.5 * (bzmin + bzmax);
+  }
+
+  // FOR DEBUG. // Draw the cut plane.
+  if (b->verbose > 1) {
+    if (axis == 0) {
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, ymin, zmin, split, ymin, zmax);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, ymin, zmax, split, ymax, zmax);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, ymax, zmax, split, ymax, zmin);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, ymax, zmin, split, ymin, zmin);
+    } else if (axis == 1) {
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmin, split, zmin, xmin, split, zmax);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmin, split, zmax, xmax, split, zmax);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n",
+             xmax, split, zmax, xmax, split, zmin);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmax, split, zmin, xmin, split, zmin);
+    } else {
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmin, ymin, split, xmin, ymax, split);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmin, ymax, split, xmax, ymax, split);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmax, ymax, split, xmax, ymin, split);
+      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
+             xmax, ymin, split, xmin, ymin, split);
+    }
+  }
+
+  i = 0;
+  j = arraysize - 1;
+
+  // Partition the vertices into left- and right-arraies.
+  do {
+    for (; i < arraysize; i++) {
+      if (vertexarray[i][axis] >= split) {
+        break;
+      }
+    }
+    for (; j >= 0; j--) {
+      if (vertexarray[j][axis] < split) {
+        break;
+      }
+    }
+    // Is the partition finished?
+    if (i == (j + 1)) {
+      break;
+    }
+    // Swap i-th and j-th vertices.
+    swapvert = vertexarray[i];
+    vertexarray[i] = vertexarray[j];
+    vertexarray[j] = swapvert;
+    // Continue patitioning the array;
+  } while (true);
+
+  if (b->verbose > 1) {
+    printf("    leftsize = %d, rightsize = %d\n", i, arraysize - i);
+  }
+  lflag = rflag = false;
+
+  if (depth < max_tree_depth) {
+    if (i > b->max_treenode_size) {
+      // Recursively partition the left array (length = i).
+      if (axis == 0) { // x
+        sortvertices(vertexarray, i, (axis + 1) % 3, bxmin, split, bymin, 
+                     bymax, bzmin, bzmax, depth + 1);
+      } else if (axis == 1) { // y
+        sortvertices(vertexarray, i, (axis + 1) % 3, bxmin, bxmax, bymin, 
+                     split, bzmin, bzmax, depth + 1);
+      } else { // z
+        sortvertices(vertexarray, i, (axis + 1) % 3, bxmin, bxmax, bymin, 
+                     bymax, bzmin, split, depth + 1);
+      }
+    } else {
+      lflag = true;
+    }
+    if ((arraysize - i) > b->max_treenode_size) {
+      // Recursively partition the right array (length = arraysize - i).
+      if (axis == 0) { // x
+        sortvertices(&(vertexarray[i]), arraysize - i, (axis + 1) % 3, split, 
+                     bxmax, bymin, bymax, bzmin, bzmax, depth + 1);
+      } else if (axis == 1) { // y
+        sortvertices(&(vertexarray[i]), arraysize - i, (axis + 1) % 3, bxmin, 
+                     bxmax, split, bymax, bzmin, bzmax, depth + 1);
+      } else { // z
+        sortvertices(&(vertexarray[i]), arraysize - i, (axis + 1) % 3, bxmin, 
+                     bxmax, bymin, bymax, split, bzmax, depth + 1);
+      }
+    } else {
+      rflag = true;
+    }
+  } else {
+    // Both left and right are done.
+    lflag = rflag = true;
+  }
+
+  if (lflag && (i > 0)) {
+    // Allocate space for the left array (use the first entry to save
+    //   the length of this array).
+    leftarray = new point[i + 1]; 
+    leftarray[0] = (point) i; // The array lenth.
+    // Put all points in this array.
+    for (k = 0; k < i; k++) {
+      leftarray[k + 1] = vertexarray[k];
+      point2ppt(leftarray[k + 1]) = (point) leftarray;
+    }
+    // Save this array in list.
+    treenode_list->newindex((void **) &pptary);
+    *pptary = leftarray;
+  }
+  if (rflag && (arraysize > i)) {
+    // Allocate space for the right array (use the first entry to save
+    //   the length of this array).
+    rightarray = new point[arraysize - i + 1];
+    rightarray[0] = (point) (arraysize - i); // The array lenth.
+    // Put all points in this array.
+    for (k = 0; k < arraysize - i; k++) {
+      rightarray[k + 1] = vertexarray[j];
+      point2ppt(rightarray[k + 1]) = (point) rightarray;
+    }
+    // Save this array in list.
+    treenode_list->newindex((void **) &pptary);
+    *pptary = rightarray;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// ordervertices()    Order the vertices for incremental inserting.          //
+//                                                                           //
+// We assume the vertices have been sorted by a binary tree.                 //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::ordervertices(point* vertexarray, int arraysize)
+{
+  point **ipptary, **jpptary, **swappptary; 
+  point *ptary;
+  int arylen;
+  int index, i, j;
+
+  // First pick one vertex from each tree node.
+  for (i = 0; i < (int) treenode_list->objects; i++) {
+    ipptary = (point **) fastlookup(treenode_list, i);
+    ptary = *ipptary;
+    vertexarray[i] = ptary[1]; // Skip the first entry.
+  }
+
+  index = i;
+  // Then put all other points in the array node by node.
+  for (i = (int) treenode_list->objects - 1; i >= 0; i--) {
+    // Randomly pick a tree node.
+    j = randomnation(i + 1);
+    // Save the i-th node.
+    ipptary = (point **) fastlookup(treenode_list, i);
+    // Get the j-th node.
+    jpptary = (point **) fastlookup(treenode_list, j);
+    // Order the points in the node.
+    ptary = *jpptary;
+    arylen = (int) ptary[0];
+    for (j = 2; j <= arylen; j++) { // Skip the first point.
+      vertexarray[index] = ptary[j];
+      index++;
+    }
+    // Clear this tree node.
+    ptary[0] = (point) 0;
+    // Swap i-th node to j-th node.
+    *swappptary = *ipptary;
+    *ipptary = *jpptary; // [i] <= [j]
+    *jpptary = *swappptary; // [j] <= [i]
+  }
+
+  // Make sure we've done correctly.
+  assert(index == arraysize);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// btree_insert()    Add a vertex into a tree node.                          //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::btree_insert(point insertpt)
+{
+  point *ptary;
+  int arylen;
+
+  // Get the tree node (save in this point).
+  ptary = (point *) point2ppt(insertpt);
+  assert(ptary != NULL);
+  // Get the current array length.
+  arylen = (int) ptary[0];
+  // Insert the point into the node.
+  ptary[arylen + 1] = insertpt;
+  // Increase the array length by 1.
+  ptary[0] = (point) (arylen + 1);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// btree_search()    Search a near point for an inserting point.             //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+void tetgenmesh::btree_search(point insertpt, triface* searchtet)
+{
+  point *ptary;
+  point nearpt, candpt;
+  REAL dist2, mindist2;
+  int ptsamples, ptidx;
+  int arylen, i;
+
+  // Get the tree node (save in this point).
+  ptary = (point *) point2ppt(insertpt);
+  assert(ptary != NULL);
+  // Get the current array length.
+  arylen = (int) ptary[0];
+
+  if (arylen == 0) {
+    searchtet->tet = NULL;
+    return;
+  }
+
+  if (arylen < 10) {
+    ptsamples = arylen;
+  } else {
+    ptsamples = 10; // Take at least 10 samples.
+    //   The number of random samples taken is proportional to the third root
+    //   of the number of points in the cell.
+    while (ptsamples * ptsamples * ptsamples < arylen) {
+      ptsamples++;
+    }
+  }
+
+  // Select "good" candidate using k random samples, taking the closest one.
+  mindist2 = maxedgelen2;
+  nearpt = NULL;
+
+  for (i = 0; i < ptsamples; i++) {
+    ptidx = randomnation((unsigned long) arylen);
+    candpt = ptary[ptidx + 1];
+    dist2 = (candpt[0] - insertpt[0]) * (candpt[0] - insertpt[0])
+          + (candpt[1] - insertpt[1]) * (candpt[1] - insertpt[1])
+          + (candpt[2] - insertpt[2]) * (candpt[2] - insertpt[2]);
+    if (dist2 < mindist2) {
+      mindist2 = dist2;
+      nearpt = candpt;
+    }
+  }
+
+  if (b->verbose > 1) {
+    printf("    Get point %d (cell size %d).\n", pointmark(nearpt), arylen);
+  }
+
+  decode(point2tet(nearpt), *searchtet);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
 // randomnation()    Generate a random number between 0 and 'choices' - 1.   //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
@@ -490,6 +892,21 @@ void tetgenmesh::initialDT(point pa, point pb, point pc, point pd)
     setpointtype(pd, VOLVERTEX);
   }
 
+  if (b->unigrid) {
+    // Update the unigrid.
+    unigrid_insert(pa);
+    unigrid_insert(pb);
+    unigrid_insert(pc);
+    unigrid_insert(pd);
+  }
+
+  if (b->btree) {
+    btree_insert(pa);
+    btree_insert(pb);
+    btree_insert(pc);
+    btree_insert(pd);
+  }
+
   // Update the point-to-tet map.
   // if (checksubsegs || checksubfaces) {
     point2tet(pa) = encode(firsttet);
@@ -557,6 +974,13 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
   tetcount = ptloc_count;
   updatecount = 0l;
   
+  if (b->unigrid) {
+    unigrid_search(insertpt, searchtet);
+  }
+  if (b->btree) {
+    btree_search(insertpt, searchtet);
+  }
+
   if (searchtet->tet == NULL) {
     randomsample(insertpt, searchtet);
   }
@@ -1078,6 +1502,15 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
   recenttet = newtet;
   point2tet(insertpt) = encode(newtet);
 
+  if (b->unigrid) {
+    // Update the unigrid.
+    unigrid_insert(insertpt);
+  }
+
+  if (b->btree) {
+    btree_insert(insertpt);
+  }
+
   /*// Connect the set of new tetrahedra together.
   for (i = 0; i < cavebdrylist->objects; i++) {
     cavetet = (triface *) fastlookup(cavebdrylist, i);
@@ -1342,13 +1775,43 @@ void tetgenmesh::incrementaldelaunay()
     printf("Delaunizing vertices.\n");
   }
 
+  if (b->unigrid > 0) {
+    ugridarraylen = b->unigridsize * b->unigridsize * b->unigridsize;
+    ugridarrays = new arraypool*[ugridarraylen];
+    for (i = 0; i < ugridarraylen; i++) {
+      ugridarrays[i] = NULL;
+    }
+    // Do some pre-calculations.
+    ugstepx = (xmax - xmin) / (REAL) b->unigridsize;
+    ugstepy = (ymax - ymin) / (REAL) b->unigridsize;
+    ugstepz = (zmax - zmin) / (REAL) b->unigridsize;
+    maxedgelen2 = (ugstepx * ugstepx + ugstepy * ugstepy +
+      ugstepz * ugstepz) * (REAL) (b->unigridsize * b->unigridsize);
+  }
+
+  if (b->btree > 0) {
+    treenode_list = new arraypool(sizeof(point*), 10);
+    max_tree_depth = (int) log10(in->numberofpoints);
+    if (max_tree_depth == 0) {
+      max_tree_depth = 1; // At least one layer.
+    }
+    maxedgelen2 = (xmax - xmin) * (xmax - xmin) +
+                  (ymax - ymin) * (ymax - ymin) +
+                  (zmax - zmin) * (zmax - zmin);
+  }
+
   // Form a random permuation (uniformly at random) of the set of vertices.
   permutarray = new point[in->numberofpoints];
   pointpool->traversalinit();
-  if (b->order == 3) { // '-o3' option (for debug)
+  if (b->btree > 0) { // -u option 
     for (i = 0; i < in->numberofpoints; i++) {
       permutarray[i] = (point) pointpool->traverse();
     }
+    // Sort the points using a binary tree recursively.
+    sortvertices(permutarray, in->numberofpoints, 0, xmin, xmax, ymin, ymax,
+                 zmin, zmax, 0);
+    // Order the sorted points.
+    ordervertices(permutarray, in->numberofpoints);
   } else {
     for (i = 0; i < in->numberofpoints; i++) {
       randindex = randomnation(i + 1);
@@ -1459,6 +1922,32 @@ void tetgenmesh::incrementaldelaunay()
   }
 
   delete [] permutarray;
+
+  if (b->unigrid) {
+    // Report the usage of the unigrid.
+    int nonemptycells, maxcellsize;
+    nonemptycells = maxcellsize = 0;
+    for (i = 0; i < ugridarraylen; i++) {
+      if (ugridarrays[i] != NULL) {
+        nonemptycells++;
+        if (ugridarrays[i]->objects > maxcellsize) {
+          maxcellsize = ugridarrays[i]->objects;
+        }
+      }
+    }
+    printf("    Total %d cells (%d cells are used).\n", ugridarraylen,
+      nonemptycells);
+    printf("    Maximum number of points in cell: %d.\n", maxcellsize);
+  }
+
+  if (b->btree > 0) {
+    point **pptary;
+    for (i = 0; i < (int) treenode_list->objects; i++) {
+      pptary = (point **) fastlookup(treenode_list, i);
+      delete [] *pptary;
+    }
+    delete treenode_list;
+  }
 }
 
 #endif // #ifndef delaunayCXX

@@ -30,6 +30,9 @@ tetgenbehavior::tetgenbehavior()
   maxvolume = -1.0;
   regionattrib = 0;
   bowyerwatson = 1;
+  unigrid = 0;
+  btree = 0;
+  max_treenode_size = 100;
   convexity = 0;
   insertaddpoints = 0;
   diagnose = 0;
@@ -294,7 +297,45 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
       } else if (argv[i][j] == 'A') {
         regionattrib++;
       } else if (argv[i][j] == 'b') {
-        bowyerwatson = 0;
+        bowyerwatson = 1;
+      } else if (argv[i][j] == 'U') {
+        unigrid = 1;
+        if (((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) ||
+            (argv[i][j + 1] == '.')) {
+          k = 0;
+          while (((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) ||
+                 (argv[i][j + 1] == '.') || (argv[i][j + 1] == 'e') ||
+                 (argv[i][j + 1] == '-') || (argv[i][j + 1] == '+')) {
+            j++;
+            workstring[k] = argv[i][j];
+            k++;
+          }
+          workstring[k] = '\0';
+          unigridsize = (int) strtol(workstring, (char **) NULL, 0);
+        } else {
+          unigridsize = 5; // Default
+        }
+        // Do not use unigrid and btree together.
+        btree = 0;
+      } else if (argv[i][j] == 'u') {
+        btree = 1;
+        if (((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) ||
+            (argv[i][j + 1] == '.')) {
+          k = 0;
+          while (((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) ||
+                 (argv[i][j + 1] == '.') || (argv[i][j + 1] == 'e') ||
+                 (argv[i][j + 1] == '-') || (argv[i][j + 1] == '+')) {
+            j++;
+            workstring[k] = argv[i][j];
+            k++;
+          }
+          workstring[k] = '\0';
+          max_treenode_size = (int) strtol(workstring, (char **) NULL, 0);
+        } else {
+          max_treenode_size = 100; // Default
+        }
+        // Do not use unigrid and btree together.
+        unigrid = 0;
       } else if (argv[i][j] == 'c') {
         convexity++;
       } else if (argv[i][j] == 'i') {

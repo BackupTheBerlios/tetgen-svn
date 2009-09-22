@@ -420,6 +420,10 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
   int varvolume;                                    // -a without a number
   int fixedvolume;                                     // -a with a number
   int bowyerwatson;                                                  // -b
+  int unigrid;                                                       // -U
+  int unigridsize;                                      // number after -U
+  int btree;                                                         // -u
+  int max_treenode_size;                                // number after -u
   int convexity;                                                     // -c
   int insertaddpoints;                                               // -i
   int regionattrib;                                                  // -A
@@ -510,6 +514,7 @@ class tetgenbehavior {    // Begin of class tetgenbehavior
 ///////////////////////////////////////////////////////////////////////////////
 
 REAL exactinit();
+REAL orient2d(REAL *pa, REAL *pb, REAL *pc);
 REAL orient3d(REAL *pa, REAL *pb, REAL *pc, REAL *pd);
 REAL insphere(REAL *pa, REAL *pb, REAL *pc, REAL *pd, REAL *pe);
 
@@ -1486,6 +1491,17 @@ memorypool *badsegpool, *badsubpool, *badtetpool;
 //   tetrahedra having this point as a vertex.
 point dummypoint;
 
+// Entry of the unique grid (-U option).
+arraypool** ugridarrays;
+int ugridarraylen;
+REAL ugstepx, ugstepy, ugstepz;
+REAL maxedgelen2;
+
+// Entry to find the binary tree nodes (-u option).
+arraypool *treenode_list;
+// The maximum tree depth (= log N).
+int max_tree_depth; 
+
 // Statck and queue (use flippool) for flips.
 badface *futureflip;
 
@@ -1662,6 +1678,16 @@ enum location locate(point searchpt, triface* searchtet);
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+void unigrid_insert(point insertpt);
+void unigrid_search(point searchpt, triface* searchtet);
+
+void sortvertices(point* vertexarray, int arraysize, int axis, REAL bxmin,
+                  REAL bxmax, REAL bymin, REAL bymax, REAL bzmin, REAL bzmax, 
+                  int depth);
+void ordervertices(point* vertexarray, int arraysize);
+void btree_insert(point insertpt);
+void btree_search(point searchpt, triface* searchtet);
+
 void initialDT(point pa, point pb, point pc, point pd);
 enum location insertvertex(point, triface*, bool, bool, bool, bool);
 void flipinsertvertex(point, triface*, int);
@@ -1787,6 +1813,10 @@ void initialize()
   flippool = (memorypool *) NULL;
   badsegpool = badsubpool = badtetpool = (memorypool *) NULL;
   dummypoint = (point) NULL;
+  ugridarrays = (arraypool **) NULL;
+  ugridarraylen = 0;
+  treenode_list = (arraypool *) NULL;
+  max_tree_depth = 0;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = caveoldtetlist = (arraypool *) NULL;
   caveshlist = caveshbdlist = (arraypool *) NULL;
@@ -1827,6 +1857,14 @@ void deinitialize()
   if (pointpool != (memorypool *) NULL) {
     delete pointpool;
     delete [] dummypoint;
+  }
+  if (ugridarrays != NULL) {
+    for (int i = 0; i < ugridarraylen; i++) {
+      if (ugridarrays[i] != NULL) {
+        delete ugridarrays[i];
+      }
+    }
+    delete [] ugridarrays;
   }
   if (tetrahedronpool != (memorypool *) NULL) {
     delete tetrahedronpool;
@@ -1885,6 +1923,7 @@ void print_subfacearray(arraypool* subfacearray);
 void dump_cavity(arraypool *topfaces, arraypool *botfaces);
 void dump_facetof(face* pssub, char* filename);
 void dump_cavitynewtets();
+void print_btree();
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;
