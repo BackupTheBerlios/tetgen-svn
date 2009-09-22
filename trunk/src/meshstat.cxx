@@ -1781,4 +1781,13 @@ void tetgenmesh::print_btree()
   } // i
 }
 
+void tetgenmesh::print_vertexarray(point* vertexarray, int arraylen)
+{
+  int i;
+
+  for (i = 0; i < arraylen; i++) {
+    printf("%4d: %4d\n", i, pointmark(vertexarray[i]));
+  }
+}
+
 #endif // #ifndef meshstatCXX

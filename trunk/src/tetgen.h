@@ -1501,6 +1501,8 @@ REAL maxedgelen2;
 arraypool *treenode_list;
 // The maximum tree depth (= log N).
 int max_tree_depth; 
+// The maximum arraysize of tree nodes.
+int max_treenode_size;
 
 // Statck and queue (use flippool) for flips.
 badface *futureflip;
@@ -1817,6 +1819,7 @@ void initialize()
   ugridarraylen = 0;
   treenode_list = (arraypool *) NULL;
   max_tree_depth = 0;
+  max_treenode_size = 0;
   futureflip = (badface *) NULL;
   cavetetlist = cavebdrylist = caveoldtetlist = (arraypool *) NULL;
   caveshlist = caveshbdlist = (arraypool *) NULL;
@@ -1924,6 +1927,7 @@ void dump_cavity(arraypool *topfaces, arraypool *botfaces);
 void dump_facetof(face* pssub, char* filename);
 void dump_cavitynewtets();
 void print_btree();
+void print_vertexarray(point* vertexarray, int arraylen);
 
 ///////////////////////////////////////////////////////////////////////////////
 };  // End of class tetgenmesh;

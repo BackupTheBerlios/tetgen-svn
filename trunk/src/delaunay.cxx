@@ -148,32 +148,32 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
   // FOR DEBUG. // Draw the cut plane.
   if (b->verbose > 1) {
     if (axis == 0) {
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             split, ymin, zmin, split, ymin, zmax);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             split, ymin, zmax, split, ymax, zmax);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             split, ymax, zmax, split, ymax, zmin);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             split, ymax, zmin, split, ymin, zmin);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, bymin, bzmin, split, bymin, bzmax);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, bymin, bzmax, split, bymax, bzmax);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, bymax, bzmax, split, bymax, bzmin);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             split, bymax, bzmin, split, bymin, bzmin);
     } else if (axis == 1) {
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmin, split, zmin, xmin, split, zmax);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmin, split, zmax, xmax, split, zmax);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n",
-             xmax, split, zmax, xmax, split, zmin);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmax, split, zmin, xmin, split, zmin);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmin, split, bzmin, bxmin, split, bzmax);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmin, split, bzmax, bxmax, split, bzmax);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n",
+             bxmax, split, bzmax, bxmax, split, bzmin);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmax, split, bzmin, bxmin, split, bzmin);
     } else {
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmin, ymin, split, xmin, ymax, split);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmin, ymax, split, xmax, ymax, split);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmax, ymax, split, xmax, ymin, split);
-      printf("p:draw_vector(%g, %g, %g, %g, %g, %g)\n", 
-             xmax, ymin, split, xmin, ymin, split);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmin, bymin, split, bxmin, bymax, split);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmin, bymax, split, bxmax, bymax, split);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmax, bymax, split, bxmax, bymin, split);
+      printf("p:show_vector(%g, %g, %g, %g, %g, %g)\n", 
+             bxmax, bymin, split, bxmin, bymin, split);
     }
   }
 
@@ -245,6 +245,10 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
   }
 
   if (lflag && (i > 0)) {
+    // Remember the maximal length of the partitions.
+    if (i > max_treenode_size) {
+      max_treenode_size = i;
+    }
     // Allocate space for the left array (use the first entry to save
     //   the length of this array).
     leftarray = new point[i + 1]; 
@@ -258,14 +262,20 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
     treenode_list->newindex((void **) &pptary);
     *pptary = leftarray;
   }
-  if (rflag && (arraysize > i)) {
+
+  // Get the length of the right array.
+  j = arraysize - i;
+  if (rflag && (j > 0)) {
+    if (j > max_treenode_size) {
+      max_treenode_size = j;
+    }
     // Allocate space for the right array (use the first entry to save
     //   the length of this array).
-    rightarray = new point[arraysize - i + 1];
-    rightarray[0] = (point) (arraysize - i); // The array lenth.
+    rightarray = new point[j + 1];
+    rightarray[0] = (point) j; // The array lenth.
     // Put all points in this array.
-    for (k = 0; k < arraysize - i; k++) {
-      rightarray[k + 1] = vertexarray[j];
+    for (k = 0; k < j; k++) {
+      rightarray[k + 1] = vertexarray[i + k];
       point2ppt(rightarray[k + 1]) = (point) rightarray;
     }
     // Save this array in list.
@@ -284,7 +294,7 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
 
 void tetgenmesh::ordervertices(point* vertexarray, int arraysize)
 {
-  point **ipptary, **jpptary, **swappptary; 
+  point **ipptary, **jpptary, *swappptary; 
   point *ptary;
   int arylen;
   int index, i, j;
@@ -315,9 +325,9 @@ void tetgenmesh::ordervertices(point* vertexarray, int arraysize)
     // Clear this tree node.
     ptary[0] = (point) 0;
     // Swap i-th node to j-th node.
-    *swappptary = *ipptary;
+    swappptary = *ipptary;
     *ipptary = *jpptary; // [i] <= [j]
-    *jpptary = *swappptary; // [j] <= [i]
+    *jpptary = swappptary; // [j] <= [i]
   }
 
   // Make sure we've done correctly.
@@ -1791,7 +1801,7 @@ void tetgenmesh::incrementaldelaunay()
 
   if (b->btree > 0) {
     treenode_list = new arraypool(sizeof(point*), 10);
-    max_tree_depth = (int) log10(in->numberofpoints);
+    max_tree_depth = (int) (log((REAL)in->numberofpoints)/log(2.0));
     if (max_tree_depth == 0) {
       max_tree_depth = 1; // At least one layer.
     }
@@ -1803,16 +1813,27 @@ void tetgenmesh::incrementaldelaunay()
   // Form a random permuation (uniformly at random) of the set of vertices.
   permutarray = new point[in->numberofpoints];
   pointpool->traversalinit();
-  if (b->btree > 0) { // -u option 
+  if (b->btree > 0) { // -u option
     for (i = 0; i < in->numberofpoints; i++) {
       permutarray[i] = (point) pointpool->traverse();
+    }
+    if (b->verbose) {
+      printf("  Sorting vertices by a b-tree. depth (%d).\n", 
+        max_tree_depth);
     }
     // Sort the points using a binary tree recursively.
     sortvertices(permutarray, in->numberofpoints, 0, xmin, xmax, ymin, ymax,
                  zmin, zmax, 0);
+    if (b->verbose) {
+      printf("    Number of tree nodes: %ld.\n", treenode_list->objects);
+      printf("    Maximum tree node size: %d.\n", max_treenode_size);
+    }
     // Order the sorted points.
     ordervertices(permutarray, in->numberofpoints);
   } else {
+    if (b->verbose) {
+      printf("  Permuting vertices.\n"); 
+    }
     for (i = 0; i < in->numberofpoints; i++) {
       randindex = randomnation(i + 1);
       permutarray[i] = permutarray[randindex];
