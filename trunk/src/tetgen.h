@@ -1693,7 +1693,7 @@ void btree_search(point searchpt, triface* searchtet);
 void initialDT(point pa, point pb, point pc, point pd);
 enum location insertvertex(point, triface*, bool, bool, bool, bool);
 void flipinsertvertex(point, triface*, int);
-void incrementaldelaunay();
+void incrementaldelaunay(clock_t&);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

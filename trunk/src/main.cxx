@@ -144,18 +144,20 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
   if (b->refine) {
     // m.reconstructmesh();
   } else {
-    m.incrementaldelaunay();
+    m.incrementaldelaunay(tv[16]);
   }
 
   tv[2] = clock();
 
   if (!b->quiet) {
     if (b->refine) {
-      printf("Mesh reconstruction seconds:");
+      printf("Mesh reconstruction seconds:  %g\n", 
+        (tv[2] - tv[1]) / (REAL) CLOCKS_PER_SEC);
     } else {
-      printf("Delaunay seconds:");
+      printf("Delaunay (and sorting) seconds:  %g (%g)\n", 
+        (tv[2] - tv[1]) / (REAL) CLOCKS_PER_SEC,
+        (tv[16] - tv[1]) / (REAL) CLOCKS_PER_SEC);
     }
-    printf("  %g\n", (tv[2] - tv[1]) / (REAL) CLOCKS_PER_SEC);
   }
 
   if (b->plc) { // if has -p option

@@ -297,7 +297,7 @@ bool tetgenbehavior::parse_commandline(int argc, char **argv)
       } else if (argv[i][j] == 'A') {
         regionattrib++;
       } else if (argv[i][j] == 'b') {
-        bowyerwatson = 1;
+        bowyerwatson = 0;
       } else if (argv[i][j] == 'U') {
         unigrid = 1;
         if (((argv[i][j + 1] >= '0') && (argv[i][j + 1] <= '9')) ||

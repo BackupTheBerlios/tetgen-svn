@@ -134,6 +134,10 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
            axis == 0 ? "x" : (axis == 1 ? "y" : "z"));
   }
 
+  if (depth > max_tree_depth) {
+    max_tree_depth = depth;
+  }
+
   if (axis == 0) {
     // Split along x-axis.
     split = 0.5 * (bxmin + bxmax);
@@ -208,7 +212,7 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
   }
   lflag = rflag = false;
 
-  if (depth < max_tree_depth) {
+  // if (depth < max_tree_depth) {
     if (i > b->max_treenode_size) {
       // Recursively partition the left array (length = i).
       if (axis == 0) { // x
@@ -239,10 +243,10 @@ void tetgenmesh::sortvertices(point* vertexarray, int arraysize, int axis,
     } else {
       rflag = true;
     }
-  } else {
-    // Both left and right are done.
-    lflag = rflag = true;
-  }
+  // } else {
+  //   // Both left and right are done.
+  //   lflag = rflag = true;
+  // }
 
   if (lflag && (i > 0)) {
     // Remember the maximal length of the partitions.
@@ -1773,7 +1777,7 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::incrementaldelaunay()
+void tetgenmesh::incrementaldelaunay(clock_t& tv)
 {
   triface searchtet;
   point *permutarray, swapvertex;
@@ -1801,10 +1805,11 @@ void tetgenmesh::incrementaldelaunay()
 
   if (b->btree > 0) {
     treenode_list = new arraypool(sizeof(point*), 10);
-    max_tree_depth = (int) (log((REAL)in->numberofpoints)/log(2.0));
-    if (max_tree_depth == 0) {
-      max_tree_depth = 1; // At least one layer.
-    }
+    // max_tree_depth = (int) (log((REAL)in->numberofpoints)/log(2.0));
+    // if (max_tree_depth == 0) {
+    //   max_tree_depth = 1; // At least one layer.
+    // }
+    max_tree_depth = 0;
     maxedgelen2 = (xmax - xmin) * (xmax - xmin) +
                   (ymax - ymin) * (ymax - ymin) +
                   (zmax - zmin) * (zmax - zmin);
@@ -1818,13 +1823,13 @@ void tetgenmesh::incrementaldelaunay()
       permutarray[i] = (point) pointpool->traverse();
     }
     if (b->verbose) {
-      printf("  Sorting vertices by a b-tree. depth (%d).\n", 
-        max_tree_depth);
+      printf("  Sorting vertices by a bsp-tree.\n");
     }
     // Sort the points using a binary tree recursively.
     sortvertices(permutarray, in->numberofpoints, 0, xmin, xmax, ymin, ymax,
                  zmin, zmax, 0);
     if (b->verbose) {
+      printf("    Maximal tree depth: %d.\n", max_tree_depth);
       printf("    Number of tree nodes: %ld.\n", treenode_list->objects);
       printf("    Maximum tree node size: %d.\n", max_treenode_size);
     }
@@ -1840,6 +1845,8 @@ void tetgenmesh::incrementaldelaunay()
       permutarray[randindex] = (point) pointpool->traverse();
     }
   }
+
+  tv = clock(); // Remember the time for sorting points.
 
   // Calculate the diagonal size of its bounding box.
   bboxsize = sqrt(NORM2(xmax - xmin, ymax - ymin, zmax - zmin));

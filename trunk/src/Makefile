@@ -21,6 +21,10 @@ CXX = g++
 
 CXXFLAGS = -g
 
+# Compile flags for intel compiler "icc" on 64bit machine only.
+
+# CXXFLAGS = -fpic -m64 -axSSE4.1,SSSE3,SSSE2 -mp1 -ansi_alias -prec-div -prec-sqrt -cxxlib -O3 -ip
+
 # PREDCXXFLAGS is for compiling J. Shewchuk's predicates. It should
 # always be equal to -O0 (no optimization). Otherwise, TetGen may not
 # work properly.
@@ -38,7 +42,7 @@ PREDCXXFLAGS = -O0
 #   down the speed of TetGen.  They can be skipped by define the -DNDEBUG
 #   switch.
 
-SWITCHES = -Wall -DSELF_CHECK
+# SWITCHES = -Wall -DSELF_CHECK
 
 # SWITCHES = -Wall -Wabi -Wctor-dtor-privacy \
 #            -Woverloaded-virtual -Wno-pmf-conversions -Wsign-promo \
