@@ -1710,7 +1710,11 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
   }
 
   tetcount = ptloc_count;
-  
+
+  if (b->btree) {
+    btree_search(insertpt, searchtet);
+  }
+
   if (searchtet->tet == NULL) {
     randomsample(insertpt, searchtet);
   }
@@ -1758,6 +1762,10 @@ void tetgenmesh::flipinsertvertex(point insertpt, triface* searchtet,
   }
 
   recenttet = *searchtet; // Remember a handle.
+
+  if (b->btree) {
+    btree_insert(insertpt);
+  }
 
   // Set the point type.
   if (getpointtype(insertpt) == UNUSEDVERTEX) {
