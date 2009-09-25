@@ -300,7 +300,7 @@ void tetgenmesh::ordervertices(point* vertexarray, int arraysize)
 {
   point **ipptary, **jpptary, *swappptary; 
   point *ptary;
-  int arylen;
+  long arylen;
   int index, i, j;
 
   // First pick one vertex from each tree node.
@@ -321,7 +321,7 @@ void tetgenmesh::ordervertices(point* vertexarray, int arraysize)
     jpptary = (point **) fastlookup(treenode_list, j);
     // Order the points in the node.
     ptary = *jpptary;
-    arylen = (int) ptary[0];
+    arylen = (long) ptary[0];
     for (j = 2; j <= arylen; j++) { // Skip the first point.
       vertexarray[index] = ptary[j];
       index++;
@@ -347,13 +347,13 @@ void tetgenmesh::ordervertices(point* vertexarray, int arraysize)
 void tetgenmesh::btree_insert(point insertpt)
 {
   point *ptary;
-  int arylen;
+  long arylen;
 
   // Get the tree node (save in this point).
   ptary = (point *) point2ppt(insertpt);
   assert(ptary != NULL);
   // Get the current array length.
-  arylen = (int) ptary[0];
+  arylen = (long) ptary[0];
   // Insert the point into the node.
   ptary[arylen + 1] = insertpt;
   // Increase the array length by 1.
@@ -372,13 +372,14 @@ void tetgenmesh::btree_search(point insertpt, triface* searchtet)
   point nearpt, candpt;
   REAL dist2, mindist2;
   int ptsamples, ptidx;
-  int arylen, i;
+  long arylen;
+  int i;
 
   // Get the tree node (save in this point).
   ptary = (point *) point2ppt(insertpt);
   assert(ptary != NULL);
   // Get the current array length.
-  arylen = (int) ptary[0];
+  arylen = (long) ptary[0];
 
   if (arylen == 0) {
     searchtet->tet = NULL;

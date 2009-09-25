@@ -1767,12 +1767,12 @@ void tetgenmesh::dump_cavitynewtets()
 void tetgenmesh::print_btree()
 {
   point **pptary, *ptary;
-  int arylen, i, j;
+  long arylen, i, j;
 
   for (i = 0; i < (int) treenode_list->objects; i++) {
     pptary = (point **) fastlookup(treenode_list, i);
     ptary = *pptary;
-    arylen = (int) ptary[0];
+    arylen = (long) ptary[0];
     printf("%4d  (%2d)", i + 1, arylen);
     for (j = 1; j <= arylen; j++) {
       printf(" %d", pointmark(ptary[j]));
