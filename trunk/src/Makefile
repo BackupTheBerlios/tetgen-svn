@@ -19,7 +19,7 @@ CXX = g++
 # -O2, -O3 ... to find the best optimization level.
 # ===================================================================
 
-CXXFLAGS = -g
+CXXFLAGS = -g -m32
 
 # Compile flags for intel compiler "icc" on 64bit machine only.
 
@@ -29,7 +29,7 @@ CXXFLAGS = -g
 # always be equal to -O0 (no optimization). Otherwise, TetGen may not
 # work properly.
 
-PREDCXXFLAGS = -O0
+PREDCXXFLAGS = -O0 -m32
 
 # SWITCHES is a list of switches to compile TetGen.
 # =================================================

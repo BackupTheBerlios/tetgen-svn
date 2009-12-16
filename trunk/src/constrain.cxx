@@ -1927,23 +1927,29 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
       // Save this face in list.
       misfaces->newindex((void **) &parytet1);
       *parytet1 = *parytet;
-      /*if (dir == EDGETRIINT) {
+	  // FOR DEBUG BEGIN
+      if (dir == EDGETRIINT) {
         assert(0); // Face unmatched. Not process yet.
       }
       // Search an edge crossing this face.
       dir = scoutcrosstet(&tmpsh, &searchtet, NULL);
       assert(dir == ACROSSTET); // SELF_CHECK
-      // Save this pair of points.
+      /*// Save this pair of points.
       newflipface = (badface *) flippool->alloc();
       newflipface->forg = apex(searchtet);
       newflipface->fdest = oppo(searchtet);
       newflipface->nextitem = futureflip;
       futureflip = newflipface;
       // if (b->verbose > 1) {        
-        printf("  p:draw_subseg(%d, %d)\n", pointmark(newflipface->forg),
-          pointmark(newflipface->fdest));
+        printf("  p:draw_subseg(%d, %d)\n", pointmark(apex(searchtet)),
+          pointmark(oppo(searchtet)));
       // }
       miscount++;*/
+	  if (b->verbose > 1) {
+	    printf("  p:draw_subseg(%d, %d)\n", pointmark(apex(searchtet)),
+          pointmark(oppo(searchtet)));
+      }
+	  // FOR DEBUG END
       continue;
     }
     // Remember tmpsh (use the adjacent tet slot). 
