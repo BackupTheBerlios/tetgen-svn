@@ -1923,7 +1923,6 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
         printf("  p:draw_subface(%d, %d, %d) -- %d is missing\n",
           pointmark(pt[0]), pointmark(pt[1]), pointmark(pt[2]), i);
       }
-      shellfacedealloc(subfacepool, tmpsh.sh);
       // Save this face in list.
       misfaces->newindex((void **) &parytet1);
       *parytet1 = *parytet;
@@ -1950,6 +1949,7 @@ bool tetgenmesh::delaunizecavity(arraypool *cavpoints, arraypool *cavfaces,
           pointmark(oppo(searchtet)));
       }
 	  // FOR DEBUG END
+	  shellfacedealloc(subfacepool, tmpsh.sh);
       continue;
     }
     // Remember tmpsh (use the adjacent tet slot). 
