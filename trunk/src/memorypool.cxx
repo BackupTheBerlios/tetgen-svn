@@ -823,6 +823,8 @@ void tetgenmesh::makepoint(point* pnewpt)
   // Initialize the point marker (starting from in->firstnumber).
   pointmark(*pnewpt) = (int) pointpool->items - (in->firstnumber ? 0 : 1);
   point2tet(*pnewpt) = NULL;
+  // BUG fix: Clear the pinfect flag. 2010-04-24 
+  puninfect(*pnewpt);
   setpointtype(*pnewpt, UNUSEDVERTEX);
 }
 

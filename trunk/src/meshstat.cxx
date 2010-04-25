@@ -1790,4 +1790,28 @@ void tetgenmesh::print_vertexarray(point* vertexarray, int arraylen)
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// checkpinfect()    Check the pinfect() flags of points
+
+int tetgenmesh::checkpinfect()
+{
+  point pt;
+  int pinfectcount = 0;
+
+  printf("Checking point infections.\n");
+
+  pointpool->traversalinit();
+  pt = pointtraverse();
+  while (pt != NULL) {
+    if (pinfected(pt)) {
+      printf("  !! Point %d is infected.\n", pointmark(pt));
+      pinfectcount++;
+    }
+    pt = pointtraverse();
+  }
+
+  printf("  %d pinfected points.\n", pinfectcount);
+  return pinfectcount;
+}
+
 #endif // #ifndef meshstatCXX
