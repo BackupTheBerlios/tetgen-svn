@@ -988,7 +988,7 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
 
   tetcount = ptloc_count;
   updatecount = 0l;
-  
+
   if (b->unigrid) {
     unigrid_search(insertpt, searchtet);
   }
@@ -1521,7 +1521,6 @@ enum tetgenmesh::location tetgenmesh::insertvertex(point insertpt,
     // Update the unigrid.
     unigrid_insert(insertpt);
   }
-
   if (b->btree) {
     btree_insert(insertpt);
   }
@@ -1984,6 +1983,7 @@ void tetgenmesh::incrementaldelaunay(clock_t& tv)
       delete [] *pptary;
     }
     delete treenode_list;
+    b->btree = 0;
   }
 }
 

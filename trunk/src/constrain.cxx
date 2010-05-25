@@ -3789,12 +3789,13 @@ void tetgenmesh::constrainedsegments()
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void tetgenmesh::formskeleton()
+void tetgenmesh::formskeleton(clock_t& tv)
 {
   face *pssub, ssub;
   REAL bakeps;
   long bakflip22count;
   long bakcavitycount;
+  long bakpointcount;
   int s, i;
 
   if (!b->quiet) {
@@ -3850,6 +3851,8 @@ void tetgenmesh::formskeleton()
     constrainedsegments();
   }
 
+  tv = clock();
+
   // Randomly order the subfaces.
   subfacepool->traversalinit();
   for (i = 0; i < subfacepool->items; i++) {
@@ -3867,6 +3870,7 @@ void tetgenmesh::formskeleton()
   checksubfaces = 1;
   bakflip22count = flip22count;
   bakcavitycount = cavitycount;
+  bakpointcount = pointpool->items;
 
   if (b->verbose) {
     printf("  Constraining facets.\n");
@@ -3906,6 +3910,9 @@ void tetgenmesh::formskeleton()
   if (b->verbose) {
     printf("  %ld subedge flips.\n", flip22count - bakflip22count);
     printf("  %ld cavities remeshed.\n", cavitycount - bakcavitycount);
+    if (pointpool->items > bakpointcount) {
+      printf("  %ld points added.\n", pointpool->items - bakpointcount);
+    }
   }
 
   // checksubsegs = 0;

@@ -166,15 +166,17 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
 
   tv[3] = clock();
 
+  /*
   if (!b->quiet) {
     if (b->plc) {
       printf("Surface meshing seconds:  %g\n", 
         (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
     }
   }
+  */
 
   if (b->plc) { // if has -p option
-    m.formskeleton();
+    m.formskeleton(tv[15]);
   }
   
   tv[4] = clock();
@@ -186,7 +188,15 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
       } else {
         printf("Intersection "); 
       }
-      printf("seconds:  %g\n", (tv[4] - tv[3]) / (REAL) CLOCKS_PER_SEC);
+      printf("seconds:  %g\n", (tv[4] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+      if ((b->diagnose != 1) && (b->verbose > 0)) {
+        printf("  Surface mesh seconds:  %g\n",
+               (tv[3] - tv[2]) / (REAL) CLOCKS_PER_SEC);
+        printf("  Segment recovery seconds:  %g\n",
+               (tv[15] - tv[3]) / (REAL) CLOCKS_PER_SEC);
+        printf("  Facet recovery seconds:  %g\n",
+               (tv[4] - tv[15]) / (REAL) CLOCKS_PER_SEC);
+      }
     }
   }
   

@@ -1747,7 +1747,7 @@ bool recoversegments(arraypool*, arraypool*, arraypool*, arraypool*,
                      arraypool*, arraypool*);
 void constrainedsegments();
 
-void formskeleton();
+void formskeleton(clock_t& tv);
 void carveholes();
 
 ///////////////////////////////////////////////////////////////////////////////
