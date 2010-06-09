@@ -213,9 +213,9 @@ void tetrahedralize(tetgenbehavior *b, tetgenio *in, tetgenio *out,
   }
 
   if (b->plc) {
-    if (b->convexity == 0) { // if has no -c option.
+    //if (b->convexity == 0) { // if has no -c option.
       m.carveholes();
-    }
+      //}
   }
 
   tv[6] = clock();

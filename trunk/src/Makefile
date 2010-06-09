@@ -96,8 +96,8 @@ meshstat.o:	meshstat.cxx
 predicates.o: predicates.cxx
 	$(CXX) $(PREDCXXFLAGS) -c predicates.cxx
 
-tetlib:	behavior.o io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o refine.o meshio.o meshstat.o predicates.o
-	ar r libtet.a behavior.o io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o refine.o meshio.o meshstat.o predicates.o
+tetlib:	behavior.o io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o refine.o meshio.o meshstat.o dbg.o predicates.o
+	ar r libtet.a behavior.o io.o memorypool.o geom.o flip.o delaunay.o surface.o constrain.o refine.o meshio.o meshstat.o dbg.o predicates.o
 
 tetgen:	main.cxx
 	$(CXX) -I./ $(CXXFLAGS) -o tetgen main.cxx -L./ -ltet

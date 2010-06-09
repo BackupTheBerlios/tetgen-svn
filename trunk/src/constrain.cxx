@@ -3953,6 +3953,33 @@ void tetgenmesh::carveholes()
   maxattr = 0; // Choose a small number here.
   attrnum = in->numberoftetrahedronattributes;
 
+  if (b->regionattrib && (in->numberofregions > 0)) { // If has -A option.
+    // Record the tetrahedra that contains the region points for assigning
+    //   region attributes after the holes have been carved.
+    regiontets = new triface[in->numberofregions];
+    // Mark as marktested any tetrahedra inside volume regions.
+    for (i = 0; i < 5 * in->numberofregions; i += 5) {
+      // Search a tet containing the i-th hole point.
+      neightet.tet = NULL;
+      randomsample(&(in->regionlist[i]), &neightet);
+      loc = locate(&(in->regionlist[i]), &neightet);
+      if (loc != OUTSIDE) {
+        regiontets[i/5] = neightet;
+        if ((int) in->regionlist[i + 3] > maxattr) {
+          maxattr = (int) in->regionlist[i + 3];
+        }
+      } else {
+        if (b->verbose) {
+          printf("Warning:  The %d-th region point is in outside.\n", i/5+1);
+        }
+        regiontets[i/5].tet = NULL;
+      }
+    }
+  }
+
+  // Check if -c (convexity) option is used.
+if (b->convexity == 0) {
+
   // Mark as infected any unprotected hull tets.
   tetrahedronpool->traversalinit();
   tetloop.loc = 0;
@@ -3983,30 +4010,6 @@ void tetgenmesh::carveholes()
         infect(neightet);
         tetarray->newindex((void **) &parytet);
         *parytet = neightet;
-      }
-    }
-  }
-
-  if (b->regionattrib && (in->numberofregions > 0)) { // If has -A option.
-    // Record the tetrahedra that contains the region points for assigning
-    //   region attributes after the holes have been carved.
-    regiontets = new triface[in->numberofregions];
-    // Mark as marktested any tetrahedra inside volume regions.
-    for (i = 0; i < 5 * in->numberofregions; i += 5) {
-      // Search a tet containing the i-th hole point.
-      neightet.tet = NULL;
-      randomsample(&(in->regionlist[i]), &neightet);
-      loc = locate(&(in->regionlist[i]), &neightet);
-      if (loc != OUTSIDE) {
-        regiontets[i/5] = neightet;
-        if ((int) in->regionlist[i + 3] > maxattr) {
-          maxattr = (int) in->regionlist[i + 3];
-        }
-      } else {
-        if (b->verbose) {
-          printf("Warning:  The %d-th region point is in outside.\n", i/5+1);
-        }
-        regiontets[i/5].tet = NULL;
       }
     }
   }
@@ -4307,6 +4310,8 @@ void tetgenmesh::carveholes()
     }
   }
 
+} // if (b->convexity == 0) 
+
   /////////////////////////////////////////////////////////////////////////
 
   // Set region attributes (when has -A and -AA options).
@@ -4388,8 +4393,8 @@ void tetgenmesh::carveholes()
               // Is this side protected by a subface?
               tspivot(tetloop, checksh);
               if (checksh.sh == NULL) {
-                // Not protected. It must not be a hull tet.
-                assert((point) neightet.tet[7] != dummypoint);
+                // Not protected. It may be a hull tet if (-c option).
+                //assert((point) neightet.tet[7] != dummypoint);
                 if (!infected(neightet)) {
                   infect(neightet);
                   tetarray->newindex((void **) &parytet);
